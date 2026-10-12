@@ -1,5 +1,11 @@
 The Adorable web app: an [assistant-ui](https://github.com/Yonom/assistant-ui) chat front end over a pair of Freestyle VMs per project. See the [root README](../README.md) for the architecture.
 
+## New project foundation
+
+New projects open with a blank page. Next.js App Router, Tailwind, fonts, and editable shadcn components are already configured, so the agent can build the requested app without repeating framework setup. No sample page, logo, or predefined screen layout is included. Imported GitHub projects retain their own source code.
+
+`lib/blank-project.mjs` defines the blank page setup used both when creating a project and when building a base snapshot. Existing projects are not reset.
+
 ## Getting Started
 
 ### 1. Environment

@@ -31,6 +31,8 @@ Validation: `node --test tests/prototype.test.js` and `npm run build`. Domain te
 
 The studio is live at https://dreamforge.vercel.app. It uses Next.js on Vercel, Supabase for project/conversation data, Freestyle for isolated coding workspaces, and OpenRouter for coding models. It includes independent public-demo safety checks, screened progress streaming, a model picker with Cohere-free-to-Qwen quota fallback, highlighted source views, VM inactivity handling, and static publishing support (gated while safety is enabled).
 
+New studio projects start with a blank page and a prepared Next.js/Tailwind/shadcn foundation. The agent creates the app and its design from the user's request; reusable components are available without including sample screens or branding. Auto uses Cohere's free model first and falls back to Qwen3 Coder 30B A3B Instruct when free quota is exhausted. Manual selections are sent with each request, and response labels identify the model actually used.
+
 ```bash
 cd studio
 npm ci

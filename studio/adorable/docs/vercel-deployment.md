@@ -46,3 +46,19 @@ Cohere North Mini Code (`cohere/north-mini-code:free`) remains the default. If a
 ## Empty agent responses
 
 A provider can return a blank final completion before the step limit. `lib/final-response.ts` adds an explicitly labelled Harness status when the final assistant message has no non-whitespace text. It reports only confirmed tool writes and basic app availability, distinguishes failures, and does not claim visual or gameplay correctness. Streaming paths insert the status before the finish event; safety screening includes it before delivery/persistence. Older empty final turns receive the same status on read without rewriting their stored records. Deterministic SDK streaming tests reproduce empty provider output and verify visible and persisted text.
+
+### Sharing and model selection
+
+The workspace Share action creates or updates a saved release and copies a
+DreamForge `/s/{projectId}` link. For static releases this redirects directly to
+the saved static site. For server releases it checks the production VM, resumes
+paused or stopped VMs, and waits briefly for readiness before redirecting. An
+app that cannot wake receives a retry page. Sharing a workspace URL is not a
+substitute for creating a saved release.
+
+The shared demo defaults to Auto: Cohere's free model while OpenRouter reports
+remaining daily quota, then Qwen3 Coder 30B. Provider congestion alone does not
+permit paid fallback. Free only never uses paid inference. Manual coding model
+choices persist in the browser. Paid requests have no application-level daily spending cap. Provider price
+filters continue to select low-cost routes. OpenRouter account credit and
+provider limits still apply.

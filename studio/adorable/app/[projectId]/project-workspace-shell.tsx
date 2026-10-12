@@ -478,14 +478,6 @@ export function ProjectWorkspaceShell({
                         <FolderIcon className="size-4" />
                         All projects
                       </button>
-                      {selectedProject && (
-                        <ProjectRename
-                          projectId={selectedProject.id}
-                          name={selectedProject.name}
-                          onRenamed={onProjectRenamed}
-                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-200/70"
-                        />
-                      )}
                     </nav>
                     <div className="mt-5 border-t border-slate-200 pt-4">
                       <h2 className="px-3 text-xs font-medium text-slate-500">

@@ -1,5 +1,5 @@
-import {withQuotaFallback} from './quota-fallback';
-import {DEFAULT_CODING_MODEL,QUOTA_FALLBACK_MODEL} from './allowed-models';
+import { withQuotaFallback } from "./quota-fallback";
+import { DEFAULT_CODING_MODEL, QUOTA_FALLBACK_MODEL } from "./allowed-models";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import {
   createOpenAI,
@@ -12,6 +12,10 @@ import {
   type ToolSet,
   convertToModelMessages,
 } from "ai";
+
+import { normalizeModelHistory } from "./model-history";
+import { createModelRouting } from "./model-routing";
+import type { ModelChoice } from "./model-catalog";
 
 type LlmProviderName = "openai" | "anthropic";
 
@@ -26,16 +30,22 @@ type StreamLlmResponseParams = {
   messages: UIMessage[];
   tools: ToolSet;
   beforeStep?: (messages: unknown) => Promise<void>;
-  afterStep?: (usage: {inputTokens?: number; outputTokens?: number;modelId?: string}) => Promise<void>;
+  afterStep?: (usage: {
+    inputTokens?: number;
+    outputTokens?: number;
+    modelId?: string;
+  }) => Promise<void>;
   apiKey?: string;
   providerOverride?: string;
   maxSteps?: number;
+  modelChoice?: ModelChoice;
   modelOverride?: string;
 };
 
 type StreamLlmResponseResult = {
   result: ReturnType<typeof streamText>;
   provider: LlmProviderName;
+  routing?: ReturnType<typeof createModelRouting>;
 };
 
 export const streamLlmResponse = async ({
@@ -47,31 +57,60 @@ export const streamLlmResponse = async ({
   beforeStep,
   afterStep,
   maxSteps = 5,
+  modelChoice,
   modelOverride,
 }: StreamLlmResponseParams): Promise<StreamLlmResponseResult> => {
   const provider = getProviderName(providerOverride);
-  const modelMessages = await convertToModelMessages(messages);
+  const modelMessages = normalizeModelHistory(await convertToModelMessages(messages));
   const stepLimit = Math.max(2, Math.min(20, Math.floor(maxSteps)));
-  const prepareStep = async ({ messages, stepNumber }: { messages: unknown; stepNumber: number }) => {
+  const prepareStep = async ({
+    messages,
+    stepNumber,
+  }: {
+    messages: unknown;
+    stepNumber: number;
+  }) => {
     await beforeStep?.(messages);
     // Always leave one model call for an answer after the last tool result.
-    if (stepNumber >= stepLimit - 1) return {
-      toolChoice: "none" as const,
-      system: system + "\nThis is your final step. Do not call tools. Give a brief written answer based on the results so far. Clearly say if the requested task remains incomplete or checks failed; never claim success without evidence.",
-    };
+    if (stepNumber >= stepLimit - 1)
+      return {
+        toolChoice: "none" as const,
+        system:
+          system +
+          "\nThis is your final step. Do not call tools. Give a brief written answer based on the results so far. Clearly say if the requested task remains incomplete or checks failed; never claim success without evidence.",
+      };
     return {};
   };
 
   if (provider === "openai") {
     const baseURL = process.env["OPENAI_BASE_URL"];
+    const routing =
+      modelChoice && baseURL?.includes("openrouter.ai")
+        ? createModelRouting(
+            modelChoice,
+            apiKey || process.env.OPENROUTER_API_KEY!,
+          )
+        : undefined;
     const openaiProvider = createOpenAI({
-      apiKey: apiKey || process.env["OPENROUTER_API_KEY"] || process.env["OPENAI_API_KEY"],
+      ...(routing ? { fetch: routing.fetch } : {}),
+      apiKey:
+        apiKey ||
+        process.env["OPENROUTER_API_KEY"] ||
+        process.env["OPENAI_API_KEY"],
       ...(baseURL ? { baseURL } : {}),
     });
-    const modelName = modelOverride || process.env["LLM_MODEL"] || "gpt-5.3-codex";
-    const model = baseURL ? openaiProvider.chat(modelName) : openaiProvider.responses(modelName);
-    const routedModel = baseURL && modelName===DEFAULT_CODING_MODEL
-      ? withQuotaFallback(openaiProvider.chat(modelName),openaiProvider.chat(QUOTA_FALLBACK_MODEL)) : model;
+    const modelName =
+      modelOverride || process.env["LLM_MODEL"] || "gpt-5.3-codex";
+    const model = baseURL
+      ? openaiProvider.chat(modelName)
+      : openaiProvider.responses(modelName);
+    const routedModel =
+      !routing && baseURL && modelName === DEFAULT_CODING_MODEL
+        ? withQuotaFallback(
+            openaiProvider.chat(modelName),
+            openaiProvider.chat(QUOTA_FALLBACK_MODEL),
+          )
+        : model;
     const result = streamText({
       system,
       model: routedModel,
@@ -79,7 +118,10 @@ export const streamLlmResponse = async ({
       maxOutputTokens: Number(process.env["LLM_MAX_OUTPUT_TOKENS"] || 4096),
       tools,
       prepareStep,
-      onStepFinish: async ({ usage,response }) => { await afterStep?.({...usage,modelId:response.modelId}); },
+      maxRetries: routing ? 0 : 2,
+      onStepFinish: async ({ usage, response }) => {
+        await afterStep?.({ ...usage, modelId: response.modelId });
+      },
       providerOptions: {
         openai: {
           reasoningEffort: "low",
@@ -91,6 +133,7 @@ export const streamLlmResponse = async ({
     return {
       result,
       provider,
+      routing,
     };
   }
 
@@ -103,7 +146,9 @@ export const streamLlmResponse = async ({
     messages: modelMessages,
     tools,
     prepareStep,
-    onStepFinish: async ({ usage,response }) => { await afterStep?.({...usage,modelId:response.modelId}); },
+    onStepFinish: async ({ usage, response }) => {
+      await afterStep?.({ ...usage, modelId: response.modelId });
+    },
     stopWhen: stepCountIs(stepLimit),
   });
 

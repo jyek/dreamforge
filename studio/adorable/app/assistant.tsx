@@ -7,6 +7,7 @@ import {
 } from "@assistant-ui/react-ai-sdk";
 import { useChat } from "@ai-sdk/react";
 import { type UIMessage } from "ai";
+import { useModelSettings } from "@/components/assistant-ui/model-settings";
 import { Thread } from "@/components/assistant-ui/thread";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -51,7 +52,10 @@ export const Assistant = ({
   ) => void;
   welcome?: ReactNode;
 }) => {
-  const [progress,setProgress]=useState("");
+  const [progress, setProgress] = useState("");
+  const { choice: modelChoice } = useModelSettings();
+  const modelChoiceRef = useRef(modelChoice);
+  modelChoiceRef.current = modelChoice;
   const resolvedInitialMessages = initialMessages ?? EMPTY_MESSAGES;
 
   const [seedMessages, setSeedMessages] = useState<UIMessage[]>(
@@ -345,8 +349,11 @@ export const Assistant = ({
 
   const chat = useChat<UIMessage>({
     id: runtimeKey,
-    onData: (part) => {if(part.type==='data-progress')setProgress((part.data as {message:string}).message);},
-    onError: () => setProgress(''),
+    onData: (part) => {
+      if (part.type === "data-progress")
+        setProgress((part.data as { message: string }).message);
+    },
+    onError: () => setProgress(""),
     transport: new AssistantChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: async (options) => {
@@ -374,7 +381,7 @@ export const Assistant = ({
         return {
           body: {
             ...options.body,
-            model: (()=>{try{return localStorage.getItem("adorable:model") || undefined;}catch{return undefined;}})(),
+            modelChoice: modelChoiceRef.current,
             messages: options.messages,
             metadata: options.requestMetadata,
             id: undefined,

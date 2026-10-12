@@ -1,16 +1,22 @@
-export const DEFAULT_CODING_MODEL='cohere/north-mini-code:free';
-export const QUOTA_FALLBACK_MODEL='qwen/qwen3-coder';
-export const EXTRA_MODELS = [
- {id:QUOTA_FALLBACK_MODEL,name:'Qwen3-Coder',paid:true},
- {id:'deepseek/deepseek-v4.1-flash',name:'DeepSeek V4.1 Flash',paid:true},
- {id:'z-ai/glm-5.3-flash',name:'GLM 5.3 Flash',paid:true},
-] as const;
-export function modelOptions(){
- const id=process.env.LLM_MODEL || DEFAULT_CODING_MODEL;
- return [{id,name:EXTRA_MODELS.find(model=>model.id===id)?.name || (id==='cohere/north-mini-code:free'?'North Mini Code (free)':id),paid:!id.endsWith(':free')},...EXTRA_MODELS.filter(model=>model.id!==id)];
+import { MODELS } from "./model-catalog";
+export const DEFAULT_CODING_MODEL = MODELS.free.id;
+export const QUOTA_FALLBACK_MODEL = MODELS.qwen.id;
+export const EXTRA_MODELS = Object.entries(MODELS)
+  .filter(([key]) => key !== "free")
+  .map(([, model]) => ({ id: model.id, name: model.label, paid: true }));
+export function modelOptions() {
+  return [
+    { id: DEFAULT_CODING_MODEL, name: "North Mini Code (free)", paid: false },
+    ...EXTRA_MODELS,
+  ];
 }
-export function resolveModel(requested:unknown){
- const options=modelOptions();if(requested===undefined||requested===null)return options[0].id;
- if(typeof requested!=='string'||!options.some(model=>model.id===requested))throw new Error('Choose an available coding model.');
- return requested;
+export function resolveModel(requested: unknown) {
+  if (requested === undefined || requested === null)
+    return DEFAULT_CODING_MODEL;
+  if (
+    typeof requested !== "string" ||
+    !modelOptions().some((model) => model.id === requested)
+  )
+    throw Error("Choose an available coding model.");
+  return requested;
 }

@@ -17,7 +17,8 @@ import {
   ExternalLinkIcon,
   Loader2Icon,
   PencilIcon,
-  RocketIcon,
+  Share2Icon,
+  CopyIcon,
   RotateCcwIcon,
 } from "lucide-react";
 import type { ProjectItem, ProjectRelease } from "@/lib/project-types";
@@ -98,6 +99,23 @@ export function PublishDialog({
   const [isSavingDomain, setIsSavingDomain] = React.useState(false);
   const [domainError, setDomainError] = React.useState<string | null>(null);
 
+  const [copied, setCopied] = React.useState(false);
+  const [copyError, setCopyError] = React.useState("");
+  const [shareUrl, setShareUrl] = React.useState("");
+  React.useEffect(() => {
+    setShareUrl(`${window.location.origin}/s/${project.id}`);
+  }, [project.id]);
+  const hasSharedVersion = Boolean(project.liveReleaseId);
+  const copyLink = async () => {
+    setCopyError("");
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError("Select the link above to copy it manually.");
+    }
+  };
   const releases = project.releases;
   const isBuilding = releases.some((release) => release.state === "publishing");
   const productionDomain = new URL(project.productionUrl).host;
@@ -127,11 +145,13 @@ export function PublishDialog({
     setIsPublishing(true);
     setPublishError(null);
     try {
-      await onPublish(project.id, message.trim() || "Publish");
+      await onPublish(project.id, message.trim() || "Shared version");
       setMessage("");
     } catch (error) {
       setPublishError(
-        error instanceof Error ? error.message : "Failed to publish",
+        error instanceof Error
+          ? error.message
+          : "Could not create the shared version",
       );
     } finally {
       setIsPublishing(false);
@@ -159,17 +179,17 @@ export function PublishDialog({
           {isBuilding ? (
             <Loader2Icon className="size-3 animate-spin" />
           ) : (
-            <RocketIcon className="size-3" />
+            <Share2Icon className="size-3" />
           )}
-          Publish
+          Share
         </button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Publish</DialogTitle>
+          <DialogTitle>Share project</DialogTitle>
           <DialogDescription>
-            Publishes a static site when supported. Apps that need a server use a production VM.
+            Anyone with the link can open the shared version of your app.
           </DialogDescription>
         </DialogHeader>
 
@@ -177,10 +197,14 @@ export function PublishDialog({
           {/* Production address */}
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              Published address
+              Share link
             </p>
 
-            {isEditingDomain && project.hosting!=="static" ? (
+            {!hasSharedVersion ? (
+              <p className="text-sm text-muted-foreground">
+                Create a shared version to get a public link.
+              </p>
+            ) : isEditingDomain && project.hosting !== "static" ? (
               <div className="space-y-2">
                 <Input
                   value={domainInput}
@@ -210,36 +234,58 @@ export function PublishDialog({
             ) : (
               <div className="flex items-center gap-2 rounded-md border px-3 py-2">
                 <a
-                  href={project.productionUrl}
+                  href={shareUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="flex min-w-0 flex-1 items-center gap-1.5 text-sm hover:underline"
                 >
-                  <span className="truncate">{project.hosting==="static"?project.productionUrl.replace(/^https?:\/\//,""):productionDomain}</span>
+                  <span className="truncate">
+                    {shareUrl.replace(/^https?:\/\//, "")}
+                  </span>
                   <ExternalLinkIcon className="size-3 shrink-0 text-muted-foreground" />
                 </a>
-                {project.hosting!=="static" && <button
-                  type="button"
-                  onClick={() => {
-                    setDomainInput(productionDomain);
-                    setDomainError(null);
-                    setIsEditingDomain(true);
-                  }}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  title="Change domain"
-                >
-                  <PencilIcon className="size-3" />
-                </button>}
+                {project.hosting !== "static" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDomainInput(productionDomain);
+                      setDomainError(null);
+                      setIsEditingDomain(true);
+                    }}
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    title="Change domain"
+                  >
+                    <PencilIcon className="size-3" />
+                  </button>
+                )}
               </div>
             )}
           </div>
 
+          {hasSharedVersion && (
+            <div className="space-y-2">
+              <Button className="w-full" onClick={() => void copyLink()}>
+                <CopyIcon className="size-3.5" />
+                {copied ? "Copied!" : "Copy share link"}
+              </Button>
+              {copyError && (
+                <p role="alert" className="text-xs text-destructive">
+                  {copyError}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {project.hosting === "static"
+                  ? "The shared version stays online while your workspace is resting."
+                  : "Opening this link wakes the shared app if it is resting. The first visit may take a moment."}
+              </p>
+            </div>
+          )}
           {/* New release */}
           <div className="space-y-2">
             <Input
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="What changed in this release?"
+              placeholder="Optional note about this version"
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !isPublishing) void publish();
               }}
@@ -255,9 +301,13 @@ export function PublishDialog({
               {isPublishing || isBuilding ? (
                 <Loader2Icon className="size-3.5 animate-spin" />
               ) : (
-                <RocketIcon className="size-3.5" />
+                <Share2Icon className="size-3.5" />
               )}
-              {isBuilding ? "Building…" : "Publish to production"}
+              {isBuilding
+                ? "Preparing share link…"
+                : hasSharedVersion
+                  ? "Update shared version"
+                  : "Create share link"}
             </Button>
           </div>
 
@@ -265,7 +315,7 @@ export function PublishDialog({
           {releases.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">
-                Releases
+                Previous versions
               </p>
               <div className="max-h-56 divide-y divide-border/50 overflow-y-auto rounded-md border">
                 {releases.map((release) => {
@@ -295,7 +345,7 @@ export function PublishDialog({
                           onClick={() => void rollback(release.id)}
                           disabled={rollingBackId === release.id}
                           className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          title="Roll production back to this release"
+                          title="Restore this shared version"
                         >
                           {rollingBackId === release.id ? (
                             <Loader2Icon className="size-3 animate-spin" />

@@ -1,3 +1,4 @@
+import { ModelUsed } from "./model-settings";
 import { Loader2Icon } from "lucide-react";
 import { ModelSelector } from "./model-selector";
 import {
@@ -49,13 +50,15 @@ import {
   CopyIcon,
   DownloadIcon,
   MoreHorizontalIcon,
-  PencilIcon,
   RefreshCwIcon,
   SquareIcon,
 } from "lucide-react";
 import type { FC, ReactNode } from "react";
 
-export const Thread: FC<{ welcome?: ReactNode;progress?:string }> = ({ welcome,progress }) => {
+export const Thread: FC<{ welcome?: ReactNode; progress?: string }> = ({
+  welcome,
+  progress,
+}) => {
   return (
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
@@ -73,14 +76,22 @@ export const Thread: FC<{ welcome?: ReactNode;progress?:string }> = ({ welcome,p
         <ThreadPrimitive.Messages
           components={{
             UserMessage,
-            EditComposer,
             AssistantMessage,
           }}
         />
 
         <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
-          <AssistantIf condition={({thread})=>thread.isRunning}>
-            <div role="status" className="flex items-center gap-2 px-3 text-xs text-slate-400"><Loader2Icon aria-hidden="true" className="size-3.5 animate-spin"/>{progress||'Thinking about your request…'}</div>
+          <AssistantIf condition={({ thread }) => thread.isRunning}>
+            <div
+              role="status"
+              className="flex items-center gap-2 px-3 text-xs text-slate-400"
+            >
+              <Loader2Icon
+                aria-hidden="true"
+                className="size-3.5 animate-spin"
+              />
+              {progress || "Thinking about your request…"}
+            </div>
           </AssistantIf>
           <ThreadScrollToBottom />
           <Composer />
@@ -208,6 +219,7 @@ const AssistantMessage: FC = () => {
       <div className="aui-assistant-message-footer mt-1 ml-2 flex">
         <BranchPicker />
         <AssistantActionBar />
+        <ModelUsed />
       </div>
     </MessagePrimitive.Root>
   );
@@ -291,35 +303,17 @@ const UserActionBar: FC = () => {
       autohide="not-last"
       className="aui-user-action-bar-root flex flex-col items-end"
     >
-      <ActionBarPrimitive.Edit asChild>
-        <TooltipIconButton tooltip="Edit" className="aui-user-action-edit p-4">
-          <PencilIcon />
+      <ActionBarPrimitive.Copy asChild>
+        <TooltipIconButton tooltip="Copy" className="aui-user-action-copy p-4">
+          <AssistantIf condition={({ message }) => message.isCopied}>
+            <CheckIcon />
+          </AssistantIf>
+          <AssistantIf condition={({ message }) => !message.isCopied}>
+            <CopyIcon />
+          </AssistantIf>
         </TooltipIconButton>
-      </ActionBarPrimitive.Edit>
+      </ActionBarPrimitive.Copy>
     </ActionBarPrimitive.Root>
-  );
-};
-
-const EditComposer: FC = () => {
-  return (
-    <MessagePrimitive.Root className="aui-edit-composer-wrapper mx-auto flex w-full max-w-(--thread-max-width) flex-col px-2 py-3">
-      <ComposerPrimitive.Root className="aui-edit-composer-root ml-auto flex w-full max-w-[85%] flex-col rounded-2xl bg-muted">
-        <ComposerPrimitive.Input
-          className="aui-edit-composer-input min-h-14 w-full resize-none bg-transparent p-4 text-sm text-foreground outline-none"
-          autoFocus
-        />
-        <div className="aui-edit-composer-footer mx-3 mb-3 flex items-center gap-2 self-end">
-          <ComposerPrimitive.Cancel asChild>
-            <Button variant="ghost" size="sm">
-              Cancel
-            </Button>
-          </ComposerPrimitive.Cancel>
-          <ComposerPrimitive.Send asChild>
-            <Button size="sm">Update</Button>
-          </ComposerPrimitive.Send>
-        </div>
-      </ComposerPrimitive.Root>
-    </MessagePrimitive.Root>
   );
 };
 

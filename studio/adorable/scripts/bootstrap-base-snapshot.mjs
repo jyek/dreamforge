@@ -16,6 +16,7 @@ import "dotenv/config";
 import { Freestyle } from "freestyle";
 import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 import { activityCommand } from './activity-bridge.mjs';
+import { BLANK_PROJECT_COMMAND } from '../lib/blank-project.mjs';
 setDefaultAutoSelectFamilyAttemptTimeout(5000);
 
 const WORKDIR = "/workspace";
@@ -82,6 +83,7 @@ try {
     }),
   );
   log("cloned template");
+  check("Prepare blank app", await vm.exec({ command: BLANK_PROJECT_COMMAND }));
 
   check(
     "Install",

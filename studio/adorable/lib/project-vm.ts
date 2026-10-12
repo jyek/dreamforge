@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import type { FirewallSpec, Vm } from "freestyle";
 import { freestyle } from "./freestyle";
+import { BLANK_PROJECT_COMMAND } from "./blank-project.mjs";
 import {
   ADORABLE_DIR,
   BASE_SNAPSHOT_SLUG,
@@ -92,6 +93,16 @@ export const restartDevServer = async (vm: Vm) => {
 export const startDevServer = (vm: Vm) =>
   startServer(vm, APP_SESSION, "npm run dev");
 
+/** Start with a blank page and reusable UI components ready for the agent. */
+const clearStarterApp = async (vm: Vm) => {
+  const result = await vm.exec({
+    command: BLANK_PROJECT_COMMAND,
+  });
+  if (result.statusCode !== 0) {
+    throw new Error(`Could not prepare a blank project: ${result.stderr ?? result.stdout}`);
+  }
+};
+
 export type CreatedProjectVms = {
   projectId: string;
   previewDomain: string;
@@ -132,6 +143,8 @@ export const createProjectVms = async (
     // that server has to be replaced along with it.
     await importRepo(dev, sourceRepoUrl);
     await restartDevServer(dev);
+  } else {
+    await clearStarterApp(dev);
   }
 
   await Promise.all([mapDomain(previewDomain, projectId), startDevServer(dev)]);

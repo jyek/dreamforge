@@ -1,3 +1,4 @@
+import { ModelSettingsProvider } from "@/components/assistant-ui/model-settings";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { WorkspaceFrame } from "./workspace-frame";
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} h-full overflow-hidden overscroll-none antialiased`}
       >
         <StudentGate>
-          <WorkspaceFrame>{children}</WorkspaceFrame>
+          <ModelSettingsProvider>
+            <WorkspaceFrame>{children}</WorkspaceFrame>
+          </ModelSettingsProvider>
         </StudentGate>
       </body>
     </html>
