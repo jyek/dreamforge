@@ -9,7 +9,7 @@ import { ProjectRename } from "@/components/assistant-ui/project-rename";
 import { VmTerminal } from "@/components/assistant-ui/vm-terminal";
 import { ProjectConversationsProvider } from "@/lib/project-conversations-context";
 import { ProjectsProvider } from "@/lib/projects-context";
-import { PublishDialog } from "@/components/assistant-ui/publish-dialog";
+import { ShareDialog } from "@/components/assistant-ui/share-dialog";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -289,71 +289,6 @@ export function ProjectWorkspaceShell({
     [projectId, selectedProject?.conversations, router],
   );
 
-  const onSetProductionDomain = useCallback(
-    async (nextProjectId: string, domain: string) => {
-      const response = await fetch(
-        `/api/projects/${nextProjectId}/production-domain`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ domain }),
-        },
-      );
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(data?.error ?? "Failed to configure production domain");
-      }
-
-      await loadProjects();
-    },
-    [loadProjects],
-  );
-
-  /** Build the current dev code onto the project's production VM. */
-  const onPublish = useCallback(
-    async (nextProjectId: string, message: string) => {
-      const response = await fetch(`/api/projects/${nextProjectId}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(data?.error ?? "Failed to publish");
-      }
-
-      await loadProjects();
-    },
-    [loadProjects],
-  );
-
-  /** Put production back on an earlier release. */
-  const onRollback = useCallback(
-    async (nextProjectId: string, releaseId: string) => {
-      const response = await fetch(`/api/projects/${nextProjectId}/rollback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ releaseId }),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(data?.error ?? "Failed to roll back");
-      }
-
-      await loadProjects();
-    },
-    [loadProjects],
-  );
-
   const projectsContextValue = useMemo(
     () => ({
       projects,
@@ -630,9 +565,6 @@ export function ProjectWorkspaceShell({
                       project={selectedProject}
                       iframeRef={iframeRef}
                       running={threadIsRunning}
-                      onSetProductionDomain={onSetProductionDomain}
-                      onPublish={onPublish}
-                      onRollback={onRollback}
                     />
                   ) : (
                     <PreviewPlaceholder />
@@ -660,15 +592,9 @@ function AppPreview({
   project,
   iframeRef,
   running,
-  onSetProductionDomain,
-  onPublish,
-  onRollback,
 }: {
   toolbarHost: HTMLDivElement | null;
   running: boolean;
-  onSetProductionDomain: (projectId: string, domain: string) => Promise<void>;
-  onPublish: (projectId: string, message: string) => Promise<void>;
-  onRollback: (projectId: string, releaseId: string) => Promise<void>;
   project: ProjectItem;
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
 }) {
@@ -792,19 +718,11 @@ function AppPreview({
                 previewUrl={project.previewUrl}
                 iframeRef={iframeRef}
                 project={project}
-                onSetProductionDomain={onSetProductionDomain}
-                onPublish={onPublish}
-                onRollback={onRollback}
               />
             ) : (
               <>
                 <span className="flex-1" />
-                <PublishDialog
-                  project={project}
-                  onSetProductionDomain={onSetProductionDomain}
-                  onPublish={onPublish}
-                  onRollback={onRollback}
-                />
+                <ShareDialog project={project} />
               </>
             )}
           </div>,
@@ -949,16 +867,10 @@ function BrowserControls({
   previewUrl,
   iframeRef,
   project,
-  onSetProductionDomain,
-  onPublish,
-  onRollback,
 }: {
   previewUrl: string;
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
   project: ProjectItem;
-  onSetProductionDomain: (projectId: string, domain: string) => Promise<void>;
-  onPublish: (projectId: string, message: string) => Promise<void>;
-  onRollback: (projectId: string, releaseId: string) => Promise<void>;
 }) {
   const [urlValue, setUrlValue] = useState(() => {
     try {
@@ -1062,12 +974,7 @@ function BrowserControls({
         <ExternalLinkIcon className="size-4" />
       </a>
       <div className="ml-1.5 shrink-0">
-        <PublishDialog
-          project={project}
-          onSetProductionDomain={onSetProductionDomain}
-          onPublish={onPublish}
-          onRollback={onRollback}
-        />
+        <ShareDialog project={project} />
       </div>
     </>
   );

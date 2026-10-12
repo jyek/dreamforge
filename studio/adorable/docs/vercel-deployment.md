@@ -49,12 +49,12 @@ A provider can return a blank final completion before the step limit. `lib/final
 
 ### Sharing and model selection
 
-The workspace Share action creates or updates a saved release and copies a
-DreamForge `/s/{projectId}` link. For static releases this redirects directly to
-the saved static site. For server releases it checks the production VM, resumes
-paused or stopped VMs, and waits briefly for readiness before redirecting. An
-app that cannot wake receives a retry page. Sharing a workspace URL is not a
-substitute for creating a saved release.
+The workspace Share action displays and copies the project's direct preview URL.
+It is available immediately, does not create a release or call the publishing
+API, and is independent of the publishing safety gate. The preview shows current
+edits and requires the workspace VM to be running. Existing `/s/{projectId}` links
+remain compatible with previously published releases, including their VM wake-up
+behavior, but the Share dialog does not generate those links.
 
 The shared demo defaults to Auto: Cohere's free model while OpenRouter reports
 remaining daily quota, then Qwen3 Coder 30B. Provider congestion alone does not
