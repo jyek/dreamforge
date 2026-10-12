@@ -21,6 +21,12 @@ try{
  }
  assert.equal((await freestyle.vms.ref(id).data()).state,'paused');
  console.log('PASS Supabase Cron HTTP request authenticated and paused the expired project');
- const response=await fetch(`${origin}/api/projects/${id}/runtime`,{method:'POST',headers:{Origin:origin},signal:AbortSignal.timeout(60000)});assert.equal(response.status,200);
+ for(let attempt=0;attempt<30;attempt++){
+  const response=await fetch(`${origin}/api/projects/${id}/runtime`,{method:'POST',headers:{Origin:origin},signal:AbortSignal.timeout(60000)});
+  assert([200,202].includes(response.status),`Unexpected runtime status ${response.status}`);
+  if((await response.json()).ready)break;
+  if(attempt===29)throw Error('Preview did not become ready after resume');
+  await new Promise(resolve=>setTimeout(resolve,1500));
+ }
  assert.equal((await freestyle.vms.ref(id).data()).state,'running');console.log('PASS Vercel activity endpoint resumes the same project');
 }finally{await pool.end();}

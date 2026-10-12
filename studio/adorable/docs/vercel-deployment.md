@@ -49,6 +49,14 @@ A provider can return a blank final completion before the step limit. `lib/final
 
 ### Sharing and model selection
 
+The workspace preview waits for the runtime API to confirm that the app responds
+before mounting its iframe. During resume it shows “Starting up your VM…” and
+polls for readiness, then opens the preview automatically. A cold boot recreates
+the named dev-server session. Freestyle compute-limit errors show a clear
+allowance message and a retry action; they do not display a proxy 502 or spin
+indefinitely. The direct `style.dev` domain still uses Freestyle's own error page
+when its VM cannot run.
+
 The workspace Share action displays and copies the project's direct preview URL.
 It is available immediately, does not create a release or call the publishing
 API, and is independent of the publishing safety gate. The preview shows current

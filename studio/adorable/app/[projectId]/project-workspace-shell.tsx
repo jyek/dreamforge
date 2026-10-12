@@ -623,11 +623,11 @@ function AppPreview({
     running,
   );
   useEffect(() => {
-    if (activity.idle) {
+    if (!activity.ready) {
       setIframeLoaded(false);
       setView("preview");
     }
-  }, [activity.idle]);
+  }, [activity.ready, activity.generation]);
   const [extraTerminals, setExtraTerminals] = useState<TerminalTab[]>([]);
   const [activeTab, setActiveTab] = useState("dev-server");
   const [counter, setCounter] = useState(1);
@@ -694,7 +694,7 @@ function AppPreview({
               ).map(({ id, label, Icon }) => (
                 <button
                   key={id}
-                  disabled={activity.idle && id !== "preview"}
+                  disabled={!activity.ready && id !== "preview"}
                   role="tab"
                   aria-selected={view === id}
                   aria-controls={`workspace-${id}`}
@@ -738,13 +738,24 @@ function AppPreview({
         )}
       >
         <div className="relative min-h-0 flex-1 bg-muted/30">
-          {!iframeLoaded && !activity.idle && (
+          {(activity.starting || (activity.ready && !iframeLoaded)) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2Icon className="size-6 animate-spin text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground/40">
-                  Loading preview…
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex flex-col items-center gap-3 px-6 text-center"
+              >
+                <Loader2Icon className="size-6 animate-spin text-slate-400" />
+                <p className="text-sm font-medium text-slate-600">
+                  {activity.starting
+                    ? "Starting up your VM…"
+                    : "Loading preview…"}
                 </p>
+                {activity.starting && (
+                  <p className="text-xs text-slate-400">
+                    Your preview will open automatically when it is ready.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -767,8 +778,27 @@ function AppPreview({
                 )}
               </div>
             </div>
-          ) : (
+          ) : activity.error ? (
+            <div
+              role="alert"
+              className="flex h-full items-center justify-center bg-white px-6"
+            >
+              <div className="max-w-sm text-center">
+                <p className="mb-2 text-sm font-medium text-slate-700">
+                  VM could not start
+                </p>
+                <p className="mb-4 text-sm text-slate-500">{activity.error}</p>
+                <button
+                  onClick={() => void activity.resume()}
+                  className="rounded-full bg-blue-600 px-5 py-2 text-sm text-white"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          ) : activity.ready ? (
             <iframe
+              key={activity.generation}
               sandbox="allow-scripts allow-same-origin"
               referrerPolicy="no-referrer"
               ref={iframeRef}
@@ -779,7 +809,7 @@ function AppPreview({
               )}
               onLoad={() => setIframeLoaded(true)}
             />
-          )}
+          ) : null}
         </div>
       </div>
 

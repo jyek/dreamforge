@@ -4,6 +4,8 @@ import { database } from './database';
 import { usesDatabaseStorage } from './project-storage';
 import { freestyle } from './freestyle';
 import { PROJECT_IDLE_SECONDS } from './vars';
+import { startDevServer } from './project-vm';
+import { wakeVm } from './runtime-readiness';
 type Lease={lastActivity:number;pausedAt?:number};
 type State={leases:Record<string,Lease>;queue:Promise<unknown>;jobs:Set<string>;sweeping?:boolean;timer?:ReturnType<typeof setInterval>};
 const globalState=globalThis as unknown as {adorableRuntimeState?:State};
@@ -18,15 +20,13 @@ export async function touchRuntime(projectId:string){
   try {
    await db.query('begin');
    await db.query('insert into adorable.runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do update set last_activity=now(),paused_at=null',[projectId]);
-   const vm=freestyle.vms.ref(projectId);const info=await vm.data();
-   if(info.state==='paused'||info.state==='stopped')await vm.start();
+   const vm=freestyle.vms.ref(projectId);await wakeVm(vm,()=>startDevServer(vm));
    await db.query('commit');
    return {state:'active',idleSeconds:PROJECT_IDLE_SECONDS};
   }catch(error){await db.query('rollback');throw error;}finally{db.release();}
  }
  await load();state.leases[projectId]={lastActivity:Date.now()};await persist();
- const vm=freestyle.vms.ref(projectId);const info=await vm.data();
- if(info.state==='paused'||info.state==='stopped')await vm.start();
+ const vm=freestyle.vms.ref(projectId);await wakeVm(vm,()=>startDevServer(vm));
  return {state:'active',idleSeconds:PROJECT_IDLE_SECONDS};
 }
 export async function holdRuntime(projectId:string){
