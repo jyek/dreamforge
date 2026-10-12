@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": [
+    "icn1"
+  ],
+  "functions": {
+    "app/api/**/route.ts": {
+      "maxDuration": 300
+    }
+  },
+  "alias": [
+    "dreamforge.vercel.app"
+  ]
+}

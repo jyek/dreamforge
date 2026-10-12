@@ -1,0 +1,1082 @@
+"use client";
+
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import type { ProjectItem } from "@/lib/project-types";
+import { ProjectRename } from "@/components/assistant-ui/project-rename";
+import { VmTerminal } from "@/components/assistant-ui/vm-terminal";
+import { ProjectConversationsProvider } from "@/lib/project-conversations-context";
+import { ProjectsProvider } from "@/lib/projects-context";
+import { PublishDialog } from "@/components/assistant-ui/publish-dialog";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  MenuIcon,
+  FolderIcon,
+  SearchIcon,
+  CodeIcon,
+  Loader2Icon,
+  MonitorIcon,
+  PlusIcon,
+  RotateCwIcon,
+  XIcon,
+} from "lucide-react";
+import { useProjectActivity } from "@/components/assistant-ui/use-project-activity";
+import { ProjectCode } from "@/components/assistant-ui/project-code";
+import {
+  GlobeIcon,
+  TerminalIcon,
+  Maximize2Icon,
+  Minimize2Icon,
+  MessageSquareIcon,
+  ExternalLinkIcon,
+} from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+type TerminalTab = {
+  id: string;
+  label: string;
+  /** The named PTY session on the VM this tab is attached to. */
+  session: string;
+  closable: boolean;
+};
+
+/** The session the project's app server runs in. Matches APP_SESSION in lib/vars.ts. */
+const APP_SESSION = "dev";
+
+type OptimisticMetadataDetail = {
+  projectId: string;
+  conversationId: string;
+  projectName: string;
+  conversationTitle: string;
+};
+
+type ThreadStateDetail = {
+  projectId: string | null;
+  isRunning: boolean;
+};
+
+export function ProjectWorkspaceShell({
+  projectId,
+  children,
+  selectedConversationIdOverride,
+}: {
+  projectId: string | null;
+  children: React.ReactNode;
+  selectedConversationIdOverride?: string | null;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const selectedConversationId =
+    selectedConversationIdOverride ??
+    pathname.split("/").filter(Boolean)[1] ??
+    null;
+
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [threadIsRunning, setThreadIsRunning] = useState(false);
+  const hasPublishingProject = projects.some((project) =>
+    project.releases.some((release) => release.state === "publishing"),
+  );
+
+  const loadProjects = useCallback(async () => {
+    const response = await fetch("/api/projects", { cache: "no-store" });
+    if (response.ok) {
+      const data = (await response.json()) as { projects?: ProjectItem[] };
+      setProjects(data.projects ?? []);
+    }
+    setProjectsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    loadProjects();
+  }, [loadProjects, projectId]);
+
+  useEffect(() => {
+    if (!threadIsRunning && !hasPublishingProject) return;
+    const interval = window.setInterval(() => {
+      void loadProjects();
+    }, 10000);
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [loadProjects, threadIsRunning, hasPublishingProject]);
+
+  useEffect(() => {
+    const handleProjectsUpdated = () => {
+      void loadProjects();
+    };
+
+    window.addEventListener("adorable:projects-updated", handleProjectsUpdated);
+    return () => {
+      window.removeEventListener(
+        "adorable:projects-updated",
+        handleProjectsUpdated,
+      );
+    };
+  }, [loadProjects]);
+
+  useEffect(() => {
+    const handleThreadState = (event: Event) => {
+      const customEvent = event as CustomEvent<ThreadStateDetail>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+      if (projectId && detail.projectId && detail.projectId !== projectId)
+        return;
+      setThreadIsRunning(Boolean(detail.isRunning));
+    };
+
+    window.addEventListener(
+      "adorable:thread-state",
+      handleThreadState as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "adorable:thread-state",
+        handleThreadState as EventListener,
+      );
+    };
+  }, [projectId]);
+
+  useEffect(() => {
+    const handleOptimisticMetadata = (event: Event) => {
+      const customEvent = event as CustomEvent<OptimisticMetadataDetail>;
+      const detail = customEvent.detail;
+      if (!detail?.projectId || !detail?.conversationId) return;
+
+      const now = new Date().toISOString();
+
+      setProjects((previous) =>
+        previous.map((project) => {
+          if (project.id !== detail.projectId) return project;
+
+          const hasConversation = project.conversations.some(
+            (conversation) => conversation.id === detail.conversationId,
+          );
+
+          const nextConversations = hasConversation
+            ? project.conversations.map((conversation) =>
+                conversation.id === detail.conversationId
+                  ? {
+                      ...conversation,
+                      title: detail.conversationTitle,
+                      updatedAt: now,
+                    }
+                  : conversation,
+              )
+            : [
+                {
+                  id: detail.conversationId,
+                  title: detail.conversationTitle,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+                ...project.conversations,
+              ];
+
+          return {
+            ...project,
+            name:
+              project.name === "Untitled Project"
+                ? detail.projectName
+                : project.name,
+            conversations: nextConversations,
+          };
+        }),
+      );
+    };
+
+    window.addEventListener(
+      "adorable:metadata-optimistic",
+      handleOptimisticMetadata as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "adorable:metadata-optimistic",
+        handleOptimisticMetadata as EventListener,
+      );
+    };
+  }, []);
+
+  const handleSelectProject = useCallback(
+    (nextProjectId: string) => {
+      router.push(`/${nextProjectId}`);
+    },
+    [router],
+  );
+
+  const selectedProject = projectId
+    ? (projects.find((project) => project.id === projectId) ?? null)
+    : null;
+  const showWorkspacePanel = Boolean(projectId);
+  const isMobile = useIsMobile();
+  const [chatHidden, setChatHidden] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
+  const onProjectRenamed = useCallback((id: string, name: string) => {
+    setProjects((previous) =>
+      previous.map((project) =>
+        project.id === id ? { ...project, name } : project,
+      ),
+    );
+    window.dispatchEvent(new Event("adorable:projects-updated"));
+  }, []);
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
+  const [chatPercent, setChatPercent] = useState(29);
+  const [resizing, setResizing] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const resizeStart = useRef<{ x: number; width: number } | null>(null);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem("adorable:chat-width"));
+      if (saved >= 20 && saved <= 65) setChatPercent(saved);
+    } catch {}
+  }, []);
+  const resizeChat = useCallback((width: number) => {
+    const available = gridRef.current?.clientWidth;
+    if (!available) return;
+    const clamped = Math.max(240, Math.min(width, available - 240));
+    const percent = (clamped / available) * 100;
+    setChatPercent(percent);
+    try {
+      localStorage.setItem("adorable:chat-width", String(percent));
+    } catch {}
+  }, []);
+
+  const [mobileView, setMobileView] = useState<"chat" | "preview">("chat");
+
+  // Reset to chat view when navigating away
+  useEffect(() => {
+    if (!projectId) setMobileView("chat");
+  }, [projectId]);
+
+  // On mobile, compute which panel to show
+  const gridColumns = (() => {
+    if (!showWorkspacePanel) return "1fr 0fr";
+    if (isMobile) return mobileView === "chat" ? "1fr 0fr" : "0fr 1fr";
+    return chatHidden
+      ? "0px minmax(0, 1fr)"
+      : `minmax(240px, ${chatPercent}%) minmax(0, 1fr)`;
+  })();
+
+  const conversationsContextValue = useMemo(
+    () => ({
+      projectId,
+      conversations: selectedProject?.conversations ?? [],
+      onSelectConversation: (conversationId: string) => {
+        if (projectId) {
+          router.push(`/${projectId}/${conversationId}`);
+        }
+      },
+    }),
+    [projectId, selectedProject?.conversations, router],
+  );
+
+  const onSetProductionDomain = useCallback(
+    async (nextProjectId: string, domain: string) => {
+      const response = await fetch(
+        `/api/projects/${nextProjectId}/production-domain`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error ?? "Failed to configure production domain");
+      }
+
+      await loadProjects();
+    },
+    [loadProjects],
+  );
+
+  /** Build the current dev code onto the project's production VM. */
+  const onPublish = useCallback(
+    async (nextProjectId: string, message: string) => {
+      const response = await fetch(`/api/projects/${nextProjectId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error ?? "Failed to publish");
+      }
+
+      await loadProjects();
+    },
+    [loadProjects],
+  );
+
+  /** Put production back on an earlier release. */
+  const onRollback = useCallback(
+    async (nextProjectId: string, releaseId: string) => {
+      const response = await fetch(`/api/projects/${nextProjectId}/rollback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ releaseId }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error ?? "Failed to roll back");
+      }
+
+      await loadProjects();
+    },
+    [loadProjects],
+  );
+
+  const projectsContextValue = useMemo(
+    () => ({
+      projects,
+      isLoading: projectsLoading,
+      onSelectProject: handleSelectProject,
+    }),
+    [projects, projectsLoading, handleSelectProject],
+  );
+
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  return (
+    <ProjectsProvider value={projectsContextValue}>
+      <ProjectConversationsProvider value={conversationsContextValue}>
+        <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
+          {projectId && (
+            <header
+              aria-label="Project toolbar"
+              className="flex h-12 shrink-0 flex-nowrap items-center gap-2 bg-[#f7f7f8] px-2"
+            >
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  aria-label="Open navigation"
+                  title="Open navigation"
+                  aria-expanded={sidebarOpen}
+                  onClick={() => setSidebarOpen(true)}
+                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                >
+                  <MenuIcon className="size-4" />
+                </button>
+                {selectedProject && (
+                  <ProjectRename
+                    projectId={selectedProject.id}
+                    name={selectedProject.name}
+                    onRenamed={onProjectRenamed}
+                    className="group hidden max-w-40 items-center gap-1 rounded-lg px-1 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 lg:flex"
+                  >
+                    <span className="truncate">{selectedProject.name}</span>
+                  </ProjectRename>
+                )}
+                {!isMobile && (
+                  <button
+                    aria-label={
+                      chatHidden ? "Exit full preview" : "Full preview"
+                    }
+                    title={chatHidden ? "Exit full preview" : "Full preview"}
+                    aria-pressed={chatHidden}
+                    onClick={() => setChatHidden((value) => !value)}
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                  >
+                    {chatHidden ? (
+                      <Minimize2Icon className="size-4" />
+                    ) : (
+                      <Maximize2Icon className="size-4" />
+                    )}
+                  </button>
+                )}
+                {isMobile && (
+                  <button
+                    aria-label={
+                      mobileView === "chat" ? "Show preview" : "Show chat"
+                    }
+                    title={mobileView === "chat" ? "Show preview" : "Show chat"}
+                    onClick={() =>
+                      setMobileView((value) =>
+                        value === "chat" ? "preview" : "chat",
+                      )
+                    }
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                  >
+                    {mobileView === "chat" ? (
+                      <MonitorIcon className="size-4" />
+                    ) : (
+                      <MessageSquareIcon className="size-4" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <div
+                ref={setToolbarHost}
+                className="flex min-w-0 flex-1 items-center gap-2"
+              />
+            </header>
+          )}
+          <div className="relative flex min-h-0 flex-1">
+            {projectId && (
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetContent
+                  side="left"
+                  className="w-72 gap-0 bg-[#f7f7f8] sm:max-w-72"
+                >
+                  <SheetHeader className="border-b border-slate-200 pb-4">
+                    <SheetTitle>Adorable</SheetTitle>
+                    <SheetDescription className="truncate">
+                      {selectedProject?.name || "Project workspace"}
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                    <nav
+                      aria-label="Workspace navigation"
+                      className="space-y-1"
+                    >
+                      <button
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-200/70"
+                        onClick={() => {
+                          setSidebarOpen(false);
+                          window.dispatchEvent(new Event("adorable:go-home"));
+                          router.push("/");
+                        }}
+                      >
+                        <PlusIcon className="size-4" />
+                        New project
+                      </button>
+                      <button
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-200/70"
+                        onClick={() => {
+                          setSidebarOpen(false);
+                          window.dispatchEvent(new Event("adorable:go-home"));
+                          router.push("/");
+                        }}
+                      >
+                        <FolderIcon className="size-4" />
+                        All projects
+                      </button>
+                      {selectedProject && (
+                        <ProjectRename
+                          projectId={selectedProject.id}
+                          name={selectedProject.name}
+                          onRenamed={onProjectRenamed}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-200/70"
+                        />
+                      )}
+                    </nav>
+                    <div className="mt-5 border-t border-slate-200 pt-4">
+                      <h2 className="px-3 text-xs font-medium text-slate-500">
+                        Projects
+                      </h2>
+                      <label className="mx-2 my-3 flex items-center gap-2 rounded-lg border bg-white px-2">
+                        <SearchIcon className="size-3.5 text-slate-400" />
+                        <input
+                          aria-label="Search projects"
+                          placeholder="Search projects…"
+                          value={projectSearch}
+                          onChange={(event) =>
+                            setProjectSearch(event.target.value)
+                          }
+                          className="h-9 min-w-0 flex-1 bg-transparent text-xs outline-none"
+                        />
+                      </label>
+                      <nav aria-label="Recent projects" className="space-y-1">
+                        {projects
+                          .filter((project) =>
+                            project.name
+                              .toLowerCase()
+                              .includes(projectSearch.toLowerCase()),
+                          )
+                          .map((project) => (
+                            <button
+                              key={project.id}
+                              aria-current={
+                                project.id === projectId ? "page" : undefined
+                              }
+                              className={cn(
+                                "block w-full truncate rounded-lg px-3 py-2.5 text-left text-sm",
+                                project.id === projectId
+                                  ? "bg-white font-medium text-slate-800 shadow-sm"
+                                  : "text-slate-600 hover:bg-slate-200/70",
+                              )}
+                              onClick={() => {
+                                setSidebarOpen(false);
+                                handleSelectProject(project.id);
+                              }}
+                            >
+                              {project.name}
+                            </button>
+                          ))}
+                        {!projectsLoading &&
+                          !projects.filter((project) =>
+                            project.name
+                              .toLowerCase()
+                              .includes(projectSearch.toLowerCase()),
+                          ).length && (
+                            <p className="px-3 py-2 text-xs text-slate-400">
+                              No matching projects.
+                            </p>
+                          )}
+                      </nav>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+
+            {/* Main content grid */}
+            <div
+              ref={gridRef}
+              className={cn(
+                "relative grid min-h-0 min-w-0 flex-1 bg-[#f7f7f8]",
+                !isMobile &&
+                  !resizing &&
+                  "transition-[grid-template-columns] duration-500 ease-in-out",
+              )}
+              style={
+                isMobile ? undefined : { gridTemplateColumns: gridColumns }
+              }
+            >
+              <div
+                className={cn(
+                  "studio-chat relative min-w-0 overflow-hidden bg-[#f7f7f8]",
+
+                  !isMobile && chatHidden && "invisible",
+                  isMobile && mobileView === "preview" && "hidden",
+                )}
+              >
+                {children}
+              </div>
+
+              {showWorkspacePanel && !isMobile && !chatHidden && (
+                <div
+                  role="separator"
+                  aria-label="Resize chat panel"
+                  aria-orientation="vertical"
+                  aria-valuemin={20}
+                  aria-valuemax={65}
+                  aria-valuenow={Math.round(chatPercent)}
+                  tabIndex={0}
+                  className="absolute inset-y-0 z-30 w-2 -translate-x-1 cursor-col-resize touch-none outline-none hover:bg-blue-400/30 focus-visible:bg-blue-400/30"
+                  style={{ left: `${chatPercent}%` }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    resizeStart.current = {
+                      x: event.clientX,
+                      width:
+                        ((gridRef.current?.clientWidth || 0) * chatPercent) /
+                        100,
+                    };
+                    setResizing(true);
+                  }}
+                  onPointerMove={(event) => {
+                    const start = resizeStart.current;
+                    if (start)
+                      resizeChat(start.width + event.clientX - start.x);
+                  }}
+                  onPointerUp={(event) => {
+                    resizeStart.current = null;
+                    setResizing(false);
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                  }}
+                  onLostPointerCapture={() => {
+                    resizeStart.current = null;
+                    setResizing(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+                      return;
+                    event.preventDefault();
+                    resizeChat(
+                      ((gridRef.current?.clientWidth || 0) * chatPercent) /
+                        100 +
+                        (event.key === "ArrowRight" ? 20 : -20),
+                    );
+                  }}
+                />
+              )}
+              <div
+                className={cn(
+                  "min-w-0 overflow-hidden pr-2 pb-2",
+
+                  !isMobile && "transition-opacity duration-500",
+                  showWorkspacePanel && (!isMobile || mobileView === "preview")
+                    ? "opacity-100"
+                    : !isMobile && "pointer-events-none opacity-0",
+                  isMobile && mobileView === "chat" && "hidden",
+                )}
+              >
+                {showWorkspacePanel &&
+                  (selectedProject?.previewUrl ? (
+                    <AppPreview
+                      toolbarHost={toolbarHost}
+                      key={selectedProject.id}
+                      project={selectedProject}
+                      iframeRef={iframeRef}
+                      running={threadIsRunning}
+                      onSetProductionDomain={onSetProductionDomain}
+                      onPublish={onPublish}
+                      onRollback={onRollback}
+                    />
+                  ) : (
+                    <PreviewPlaceholder />
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </ProjectConversationsProvider>
+    </ProjectsProvider>
+  );
+}
+
+function PreviewPlaceholder() {
+  return (
+    <div className="flex h-full items-center justify-center rounded-2xl border bg-white text-sm text-slate-400">
+      <Loader2Icon className="mr-2 size-4 animate-spin" />
+      Opening workspace…
+    </div>
+  );
+}
+
+function AppPreview({
+  toolbarHost,
+  project,
+  iframeRef,
+  running,
+  onSetProductionDomain,
+  onPublish,
+  onRollback,
+}: {
+  toolbarHost: HTMLDivElement | null;
+  running: boolean;
+  onSetProductionDomain: (projectId: string, domain: string) => Promise<void>;
+  onPublish: (projectId: string, message: string) => Promise<void>;
+  onRollback: (projectId: string, releaseId: string) => Promise<void>;
+  project: ProjectItem;
+  iframeRef: React.RefObject<HTMLIFrameElement | null>;
+}) {
+  const [view, setView] = useState<"preview" | "code" | "terminal">("preview");
+  useEffect(() => {
+    const handleView = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; view: string }>)
+        .detail;
+      if (
+        detail?.projectId === project.id &&
+        (detail.view === "code" ||
+          detail.view === "terminal" ||
+          detail.view === "preview")
+      )
+        setView(detail.view);
+    };
+    window.addEventListener("adorable:workspace-view", handleView);
+    return () =>
+      window.removeEventListener("adorable:workspace-view", handleView);
+  }, [project.id]);
+
+  const activity = useProjectActivity(
+    project.id,
+    project.previewUrl,
+    iframeRef,
+    running,
+  );
+  useEffect(() => {
+    if (activity.idle) {
+      setIframeLoaded(false);
+      setView("preview");
+    }
+  }, [activity.idle]);
+  const [extraTerminals, setExtraTerminals] = useState<TerminalTab[]>([]);
+  const [activeTab, setActiveTab] = useState("dev-server");
+  const [counter, setCounter] = useState(1);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
+  useEffect(() => {
+    setIframeLoaded(false);
+  }, [project.previewUrl]);
+
+  /**
+   * Terminal sessions are named on the VM, so a tab's name is all the state a
+   * new terminal needs: the guest creates the shell on first connect and keeps
+   * it alive afterwards.
+   */
+  const addTerminal = useCallback(() => {
+    const id = `terminal-${counter}`;
+    setExtraTerminals((previous) => [
+      ...previous,
+      {
+        id,
+        label: `Terminal ${counter}`,
+        session: `shell-${counter}`,
+        closable: true,
+      },
+    ]);
+    setActiveTab(id);
+    setCounter((current) => current + 1);
+  }, [counter]);
+
+  const closeTerminal = useCallback(
+    (id: string) => {
+      setExtraTerminals((previous) => previous.filter((tab) => tab.id !== id));
+      if (activeTab === id) setActiveTab("dev-server");
+    },
+    [activeTab],
+  );
+
+  const allTabs: TerminalTab[] = [
+    {
+      id: "dev-server",
+      label: "Dev Server",
+      session: APP_SESSION,
+      closable: false,
+    },
+    ...extraTerminals,
+  ];
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {toolbarHost &&
+        createPortal(
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2">
+            <div
+              role="tablist"
+              aria-label="Workspace view"
+              className="flex shrink-0 items-center rounded-full border border-slate-200 bg-slate-100/80 p-0.5"
+            >
+              {(
+                [
+                  { id: "preview", label: "Preview", Icon: GlobeIcon },
+                  { id: "code", label: "Code", Icon: CodeIcon },
+                  { id: "terminal", label: "Terminal", Icon: TerminalIcon },
+                ] as const
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  disabled={activity.idle && id !== "preview"}
+                  role="tab"
+                  aria-selected={view === id}
+                  aria-controls={`workspace-${id}`}
+                  title={label}
+                  onClick={() => setView(id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
+                    view === id
+                      ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
+                      : "text-slate-500 hover:text-slate-800",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sr-only sm:hidden">{label}</span>
+                </button>
+              ))}
+            </div>
+            {view === "preview" ? (
+              <BrowserControls
+                previewUrl={project.previewUrl}
+                iframeRef={iframeRef}
+                project={project}
+                onSetProductionDomain={onSetProductionDomain}
+                onPublish={onPublish}
+                onRollback={onRollback}
+              />
+            ) : (
+              <>
+                <span className="flex-1" />
+                <PublishDialog
+                  project={project}
+                  onSetProductionDomain={onSetProductionDomain}
+                  onPublish={onPublish}
+                  onRollback={onRollback}
+                />
+              </>
+            )}
+          </div>,
+          toolbarHost,
+        )}
+      <div
+        id="workspace-preview"
+        role="tabpanel"
+        aria-label="Preview"
+        className={cn(
+          "relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm",
+          view !== "preview" && "hidden",
+        )}
+      >
+        <div className="relative min-h-0 flex-1 bg-muted/30">
+          {!iframeLoaded && !activity.idle && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2Icon className="size-6 animate-spin text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground/40">
+                  Loading preview…
+                </p>
+              </div>
+            </div>
+          )}
+          {activity.idle ? (
+            <div className="flex h-full items-center justify-center bg-white">
+              <div className="text-center">
+                <p className="mb-3 text-sm text-slate-500">
+                  Project resting after 20 minutes without activity.
+                </p>
+                <button
+                  onClick={() => void activity.resume()}
+                  className="rounded-full bg-blue-600 px-5 py-2 text-sm text-white"
+                >
+                  Resume project
+                </button>
+                {activity.error && (
+                  <p role="alert" className="mt-3 text-sm text-red-700">
+                    {activity.error}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <iframe
+              sandbox="allow-scripts allow-same-origin"
+              referrerPolicy="no-referrer"
+              ref={iframeRef}
+              src={project.previewUrl}
+              className={cn(
+                "h-full w-full transition-opacity duration-300",
+                iframeLoaded ? "opacity-100" : "opacity-0",
+              )}
+              onLoad={() => setIframeLoaded(true)}
+            />
+          )}
+        </div>
+      </div>
+
+      {view === "code" && (
+        <div
+          id="workspace-code"
+          role="tabpanel"
+          aria-label="Code"
+          className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <ProjectCode projectId={project.id} />
+        </div>
+      )}
+      {view === "terminal" && !activity.idle && (
+        <div
+          id="workspace-terminal"
+          role="tabpanel"
+          aria-label="Terminal"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <div className="flex shrink-0 items-center gap-0 border-y bg-slate-100 px-1">
+            {allTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`group flex items-center gap-1 px-2 py-1.5 text-xs transition-colors ${
+                  activeTab === tab.id
+                    ? "border-b-2 border-foreground bg-slate-100 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>{tab.label}</span>
+                {tab.closable && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTerminal(tab.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        closeTerminal(tab.id);
+                      }
+                    }}
+                    className="ml-0.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
+                  >
+                    <XIcon className="size-3" />
+                  </span>
+                )}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={addTerminal}
+              className="ml-1 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="New terminal"
+            >
+              <PlusIcon className="size-3.5" />
+            </button>
+          </div>
+
+          <div className="relative min-h-0 flex-1 bg-white">
+            {allTabs.map((tab) => (
+              <VmTerminal
+                key={tab.id}
+                projectId={project.id}
+                session={tab.session}
+                className="absolute inset-0 h-full w-full p-1"
+                // Kept mounted so a background terminal keeps receiving output.
+                style={{ display: activeTab === tab.id ? "block" : "none" }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BrowserControls({
+  previewUrl,
+  iframeRef,
+  project,
+  onSetProductionDomain,
+  onPublish,
+  onRollback,
+}: {
+  previewUrl: string;
+  iframeRef: React.RefObject<HTMLIFrameElement | null>;
+  project: ProjectItem;
+  onSetProductionDomain: (projectId: string, domain: string) => Promise<void>;
+  onPublish: (projectId: string, message: string) => Promise<void>;
+  onRollback: (projectId: string, releaseId: string) => Promise<void>;
+}) {
+  const [urlValue, setUrlValue] = useState(() => {
+    try {
+      return new URL(previewUrl).pathname;
+    } catch {
+      return "/";
+    }
+  });
+
+  useEffect(() => {
+    try {
+      setUrlValue(new URL(previewUrl).pathname);
+    } catch {
+      setUrlValue("/");
+    }
+  }, [previewUrl]);
+
+  const baseUrl = (() => {
+    try {
+      const u = new URL(previewUrl);
+      return `${u.protocol}//${u.host}`;
+    } catch {
+      return previewUrl;
+    }
+  })();
+
+  const navigate = (path: string) => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    setUrlValue(normalizedPath);
+    iframe.src = `${baseUrl}${normalizedPath}`;
+  };
+
+  const handleReload = () => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    iframe.src = iframe.src;
+  };
+
+  const handleBack = () => {
+    try {
+      iframeRef.current?.contentWindow?.history.back();
+    } catch {}
+  };
+
+  const handleForward = () => {
+    try {
+      iframeRef.current?.contentWindow?.history.forward();
+    } catch {}
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={handleBack}
+        className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+        title="Back"
+      >
+        <ArrowLeftIcon className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={handleForward}
+        className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+        title="Forward"
+      >
+        <ArrowRightIcon className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={handleReload}
+        className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+        title="Reload"
+      >
+        <RotateCwIcon className="size-3.5" />
+      </button>
+      <form
+        className="ml-1 min-w-0 flex-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          navigate(urlValue);
+        }}
+      >
+        <input
+          type="text"
+          value={urlValue}
+          onChange={(e) => setUrlValue(e.target.value)}
+          className="h-8 w-full rounded-full border border-slate-200 bg-white px-3 text-left text-xs text-slate-600 outline-none focus:ring-1 focus:ring-blue-200"
+          aria-label="URL path"
+        />
+      </form>
+      <a
+        href={`${baseUrl}${urlValue.startsWith("/") ? urlValue : `/${urlValue}`}`}
+        target="_blank"
+        rel="noreferrer"
+        title="Open preview in new tab"
+        className="hidden rounded-md p-1.5 text-slate-500 hover:bg-slate-200 sm:block"
+      >
+        <ExternalLinkIcon className="size-4" />
+      </a>
+      <div className="ml-1.5 shrink-0">
+        <PublishDialog
+          project={project}
+          onSetProductionDomain={onSetProductionDomain}
+          onPublish={onPublish}
+          onRollback={onRollback}
+        />
+      </div>
+    </>
+  );
+}

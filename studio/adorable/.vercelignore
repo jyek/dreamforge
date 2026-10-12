@@ -1,0 +1,7 @@
+.env*
+.deployment
+.runtime
+.next
+node_modules
+docs
+tests

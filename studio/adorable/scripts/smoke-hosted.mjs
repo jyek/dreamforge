@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+const origin = 'https://dreamforge-studio-demo.jyek.chatgpt.site';
+const projectId = 'vm-f127d81deb6147d08dfe3be862ae13f3';
+const conversationId = '45318b7f-7d55-490a-a42f-a773dbb2ab0c';
+const check = async (name, path, init, status = 200) => {
+  const response = await fetch(origin + path, { ...init, signal: AbortSignal.timeout(15000) });
+  assert.equal(response.status, status, name);
+  console.log(`PASS ${name}: HTTP ${status}`);
+  return response;
+};
+const session = await (await check('demo session', '/api/session')).json();
+assert.equal(session.demo, true);
+const projects = await (await check('project list', '/api/projects')).json();
+const project = projects.projects.find(p => p.id === projectId);
+assert(project, 'Original project must remain listed');
+const history = await (await check('original conversation', `/api/projects/${projectId}/conversations/${conversationId}`)).json();
+assert(history.messages.some(message => message.role === 'assistant' && message.parts.some(part => part.type === 'text' && part.text.includes('CHAT_SMOKE_OK'))));
+console.log('PASS actual browser-generated LLM answer persisted');
+await check('invalid chat validation', '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin }, body: '{}' }, 400);
+await check('cross-origin mutation rejected', '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://untrusted.example' }, body: '{}' }, 403);
+const preview = await fetch(project.previewUrl, { signal: AbortSignal.timeout(15000) });
+assert.equal(preview.status, 200);
+console.log('PASS project live preview: HTTP 200');
+const route = await fetch(new URL('/shooter', project.previewUrl), { signal: AbortSignal.timeout(15000) });
+assert.equal(route.status, 200);
+console.log('PASS shooter route: HTTP 200');

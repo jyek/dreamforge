@@ -1,0 +1,13 @@
+{
+  "name": "adorable-root",
+  "private": true,
+  "workspaces": [
+    "adorable"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace ./adorable",
+    "build": "npm run build --workspace ./adorable",
+    "start": "npm run start --workspace ./adorable",
+    "lint": "npm run lint --workspace ./adorable"
+  }
+}

@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {highlightSource} from '../lib/source-highlight';
+test('TypeScript and JSON receive syntax tokens',()=>{assert.match(highlightSource('const count: number = 1;','app/page.tsx'),/hljs-keyword/);assert.match(highlightSource('{"score":1,"active":true}','settings.json'),/hljs-attr/);});
+test('HTML and unknown files display source without rendering executable markup',()=>{for(const file of ['test.html','test.txt']){const result=highlightSource('<script>alert(1)</script><img onerror="alert(2)">',file);assert.ok(!result.includes('<script>'));assert.ok(!result.includes('<img'));assert.match(result,/&lt;/);}});
