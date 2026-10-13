@@ -382,7 +382,9 @@ export const Assistant = ({
           body: {
             ...options.body,
             modelChoice: modelChoiceRef.current,
-            messages: options.messages,
+            // The server loads authoritative history. Resending old image
+            // bytes can exceed Vercel's request size limit.
+            messages: options.messages.slice(-1),
             metadata: options.requestMetadata,
             id: undefined,
             trigger: "submit-message",

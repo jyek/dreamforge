@@ -29,3 +29,9 @@ Never commit the private environment file, backups or bearer URLs. The productio
 ## Validation
 
 The provider smoke test checks a real Next.js preview, live edits, persistent files, pause/wake and named terminal reconnection. Validate the deployed `/api/projects`, runtime readiness, file reading and preview before completing cutover.
+
+## Image references in the shared demo
+
+DeepSeek V4.1 Flash and GLM 5.3 Flash accept PNG, JPEG, WebP and GIF references. The demo permits 32,000 text characters and up to three images totaling 2 MiB per message. Image bytes are stored intact and excluded from text redaction and text safety logs. These local text checks do not moderate image content. Classroom requests retain their existing text-only, 4,000-character policy.
+
+Chat requests send only the latest user message; the server loads stored history so prior images do not inflate every browser request. The combined server-side conversation limit is 3.5 MB.

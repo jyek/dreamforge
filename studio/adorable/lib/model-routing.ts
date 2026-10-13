@@ -64,15 +64,20 @@ export function createModelRouting(
       );
       delete body.max_completion_tokens;
       if (model === MODELS.qwen) delete body.reasoning_effort;
+      const visual = /"type"\s*:\s*"image_url"/.test(
+        JSON.stringify(body.messages),
+      );
+      const otherMedia = /"type"\s*:\s*"(?:input_audio|video_url)"/.test(
+        JSON.stringify(body.messages),
+      );
+      if (
+        otherMedia ||
+        (visual && model !== MODELS.deepseek && model !== MODELS.glm)
+      )
+        throw new ModelRoutingError(
+          "Choose DeepSeek V4.1 Flash or GLM 5.3 Flash to use image attachments.",
+        );
       if (model !== MODELS.free) {
-        if (
-          /"type"\s*:\s*"(?:image_url|input_audio|video_url)"/.test(
-            JSON.stringify(body.messages),
-          )
-        )
-          throw new ModelRoutingError(
-            "Paid model routing currently supports text prompts only.",
-          );
         body.provider = {
           sort: "price",
           require_parameters: true,
