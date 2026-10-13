@@ -15,6 +15,8 @@ export default function SandboxTestPage() {
   const [error, setError] = useState("");
   const [generation, setGeneration] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   useEffect(() => {
     void fetch("/api/sandbox-test")
       .then((r) => r.json())
@@ -43,6 +45,8 @@ export default function SandboxTestPage() {
   useEffect(() => {
     if (!workspace?.name || !running) return;
     let lastActivity = Date.now();
+    let lastSent = lastActivity;
+    let inFlight = false;
     let cancelled = false;
     const activity = () => {
       lastActivity = Date.now();
@@ -59,23 +63,34 @@ export default function SandboxTestPage() {
     window.addEventListener("keydown", activity);
     window.addEventListener("message", message);
     const timer = setInterval(() => {
+      if (inFlight || busyRef.current) return;
       const active = Date.now() - lastActivity < workspace.idleSeconds * 1000;
-      void fetch(
-        "/api/sandbox-test",
-        active
-          ? {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "touch" }),
-            }
-          : {},
-      )
+      if (!active) {
+        inFlight = true;
+        void act("pause").finally(() => {
+          inFlight = false;
+        });
+        return;
+      }
+      if (Date.now() - lastSent < 45000 || lastActivity <= lastSent) return;
+      inFlight = true;
+      void fetch("/api/sandbox-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "touch" }),
+      })
         .then((r) => r.json())
         .then((data) => {
-          if (!cancelled && data.workspace) setWorkspace(data.workspace);
+          if (!cancelled && data.workspace) {
+            lastSent = Date.now();
+            setWorkspace(data.workspace);
+          }
         })
-        .catch(() => {});
-    }, 45000);
+        .catch(() => {})
+        .finally(() => {
+          inFlight = false;
+        });
+    }, 5000);
     return () => {
       cancelled = true;
       clearInterval(timer);
