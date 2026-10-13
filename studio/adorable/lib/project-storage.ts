@@ -37,6 +37,9 @@ export const writeProjectMetadata = async (
 ) => {
   if (usesDatabaseStorage()) {
     await database().query("insert into adorable.projects(vm_id,metadata) values($1,$2) on conflict(vm_id) do update set metadata=excluded.metadata,updated_at=now()", [projectId, JSON.stringify(metadata)]);
+    // A created workspace must rest even if its creator closes the browser
+    // before the first activity request reaches Vercel.
+    await database().query("insert into adorable.runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do nothing", [projectId]);
     return metadata;
   }
   await devVm(projectId).fs.writeTextFile(
