@@ -10,6 +10,7 @@ import { VmTerminal } from "@/components/assistant-ui/vm-terminal";
 import { ProjectConversationsProvider } from "@/lib/project-conversations-context";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { ShareDialog } from "@/components/assistant-ui/share-dialog";
+import { PROJECT_IDLE_SECONDS } from "@/lib/runtime-policy.mjs";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -763,7 +764,8 @@ function AppPreview({
             <div className="flex h-full items-center justify-center bg-white">
               <div className="text-center">
                 <p className="mb-3 text-sm text-slate-500">
-                  Project resting after 20 minutes without activity.
+                  Project resting after {PROJECT_IDLE_SECONDS / 60} minutes
+                  without activity.
                 </p>
                 <button
                   onClick={() => void activity.resume()}

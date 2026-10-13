@@ -19,7 +19,7 @@ async function main(){
    if(release.state==='failed')throw Error(release.error||'Server publish failed');
    if(release.state==='live'){
     assert.equal(release.hosting,'server');assert(temporaryProd);assert.equal(meta.staticProductionUrl,null);
-    const prod=await freestyle.vms.get(temporaryProd);assert.equal(prod.resources.memory,4096);assert.equal(prod.idleTimeoutSeconds,1200);
+    const prod=await freestyle.vms.get(temporaryProd);assert.equal(prod.resources.memory,4096);assert.equal(prod.idleTimeoutSeconds,300);
     const response=await fetch(`https://${meta.productionDomain}/api/smoke-runtime`);assert.equal(response.status,200);assert.equal((await response.json()).smoke,'server-fallback-ok');
     console.log('PASS server-dependent app falls back to a small production VM and serves its API');
     await rollbackToRelease(id,staticRelease);const restored=await readProjectMetadata(id);assert.equal(restored.staticProductionUrl,before.staticProductionUrl);

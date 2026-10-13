@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ProjectWorkspaceShell } from "./[projectId]/project-workspace-shell";
 
-
 type ActiveConversationDetail = {
   projectId: string;
   conversationId: string;
@@ -103,6 +102,8 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
   const effectiveRepoId = routeRepoId ?? activeProjectId;
   const effectiveConversationId = routeConversationId ?? activeConversationId;
 
+  if (pathname === "/sandbox-test") return <>{children}</>;
+
   return (
     <ProjectWorkspaceShell
       projectId={effectiveRepoId}
@@ -110,9 +111,7 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
     >
       {children}
       {/* Settings button */}
-      <div className="fixed bottom-3 left-3 z-50 md:right-3 md:left-auto">
-
-      </div>
+      <div className="fixed bottom-3 left-3 z-50 md:right-3 md:left-auto"></div>
     </ProjectWorkspaceShell>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PROJECT_IDLE_SECONDS } from "@/lib/runtime-policy.mjs";
 
 type Status = "starting" | "ready" | "idle" | "error";
 type RuntimeResponse = { ready?: boolean; state?: string; error?: string };
@@ -116,7 +117,7 @@ export function useProjectActivity(
     const timer = setInterval(() => {
       if (runningRef.current) lastActivity = Date.now();
       if (inFlight || currentStatus === "error") return;
-      if (Date.now() - lastActivity >= 20 * 60 * 1000) {
+      if (Date.now() - lastActivity >= PROJECT_IDLE_SECONDS * 1000) {
         changeStatus("idle");
         return;
       }

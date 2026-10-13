@@ -74,6 +74,7 @@ export async function pauseInactiveRuntimes(now=Date.now()){
  } finally {state.sweeping=false;}
 }
 export async function startRuntimeWatchdog(){
+ if(process.env.VERCEL_SANDBOX_TEST_ENABLED==='true')return;
  if(process.env.VERCEL)return;
  if(!usesDatabaseStorage())await load();if(state.timer)return;
  state.timer=setInterval(()=>{void pauseInactiveRuntimes().catch(()=>console.error('Idle watchdog failed'));},30000);state.timer.unref();
