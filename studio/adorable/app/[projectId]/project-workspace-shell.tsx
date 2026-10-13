@@ -763,7 +763,7 @@ function AppPreview({
             <div className="flex h-full items-center justify-center bg-white">
               <div className="text-center">
                 <p className="mb-3 text-sm text-slate-500">
-                  Project resting after 20 minutes without activity.
+                  Project resting after 5 minutes without activity.
                 </p>
                 <button
                   onClick={() => void activity.resume()}
@@ -918,21 +918,20 @@ function BrowserControls({
     }
   }, [previewUrl]);
 
-  const baseUrl = (() => {
-    try {
-      const u = new URL(previewUrl);
-      return `${u.protocol}//${u.host}`;
-    } catch {
-      return previewUrl;
-    }
-  })();
+  const previewPathUrl = (path: string) => {
+    const url = new URL(previewUrl);
+    const requested = new URL(path.startsWith("/") ? path : `/${path}`, url.origin);
+    url.pathname = requested.pathname;
+    for (const [key, value] of requested.searchParams) url.searchParams.set(key, value);
+    return url.toString();
+  };
 
   const navigate = (path: string) => {
     const iframe = iframeRef.current;
     if (!iframe) return;
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     setUrlValue(normalizedPath);
-    iframe.src = `${baseUrl}${normalizedPath}`;
+    iframe.src = previewPathUrl(normalizedPath);
   };
 
   const handleReload = () => {
@@ -995,7 +994,7 @@ function BrowserControls({
         />
       </form>
       <a
-        href={`${baseUrl}${urlValue.startsWith("/") ? urlValue : `/${urlValue}`}`}
+        href={previewPathUrl(urlValue)}
         target="_blank"
         rel="noreferrer"
         title="Open preview in new tab"

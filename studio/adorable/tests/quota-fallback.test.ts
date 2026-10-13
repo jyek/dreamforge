@@ -13,5 +13,5 @@ test('mid-stream quota drops partial tool calls before retry, preventing duplica
 });
 test('successful free calls and non-quota failures do not spend on fallback',async()=>{
  let fallback=0;const paid=model(async()=>{fallback++;return response([]);});await parts(await withQuotaFallback(model(async()=>response([])),paid).doStream(options));
- for(const statusCode of [401,402,500])await assert.rejects(()=>withQuotaFallback(model(async()=>{throw {statusCode};}),paid).doStream(options));assert.equal(fallback,0);assert.equal(isQuotaError({statusCode:402}),false);
+ for(const statusCode of [401,402,500])await assert.rejects(async()=>withQuotaFallback(model(async()=>{throw {statusCode};}),paid).doStream(options));assert.equal(fallback,0);assert.equal(isQuotaError({statusCode:402}),false);
 });

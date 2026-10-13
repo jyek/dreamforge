@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import type { Vm } from "freestyle";
+import type { Vm } from "./project-runtime";
 import { z } from "zod";
 import { restartDevServer } from "./project-vm";
 import { APP_SESSION, VM_PORT, WORKDIR } from "./vars";
@@ -43,18 +43,9 @@ export const createTools = (vm: Vm) => {
    * has printed, and detaching leaves the server running.
    */
   const readDevServerLogs = async (): Promise<string> => {
-    const chunks: string[] = [];
-    const decoder = new TextDecoder();
-
-    const session = await vm.pty.attach({
-      session: APP_SESSION,
-      onData: (data) => chunks.push(decoder.decode(data, { stream: true })),
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    session.detach();
-
-    return chunks.join("").replace(ANSI_ESCAPE, "").replace(/\r/g, "");
+    return (await vm.fs.readTextFile("/adorable/dev.log"))
+      .replace(ANSI_ESCAPE, "")
+      .replace(/\r/g, "");
   };
 
   const bashTool = tool({

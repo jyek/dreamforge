@@ -1,6 +1,6 @@
 import { authorizeProject } from "@/lib/project-access";
 import { touchRuntime } from "@/lib/runtime-lifecycle";
-import { readProjectMetadata } from "@/lib/project-storage";
+import { runtimePreview } from "@/lib/project-runtime";
 import { devVm, startDevServer } from "@/lib/project-vm";
 import { previewResponding, runtimeFailure } from "@/lib/runtime-readiness";
 
@@ -17,8 +17,15 @@ export async function POST(
     return Response.json({ error: "Project not found" }, { status: 404 });
   try {
     const activity = await touchRuntime(projectId);
-    const metadata = await readProjectMetadata(projectId);
-    const ready = await previewResponding(`https://${metadata.previewDomain}`);
+    const preview = await runtimePreview(projectId);
+    const ready = await previewResponding(preview.baseUrl, (url, options) =>
+      fetch(url, {
+        ...options,
+        headers: preview.token
+          ? { "x-runtime-preview-token": preview.token }
+          : {},
+      }),
+    );
     if (!ready) {
       const vm = devVm(projectId);
       if ((await vm.data()).state === "running") await startDevServer(vm);

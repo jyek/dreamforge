@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import type { Vm } from 'freestyle';
+import type { Vm } from './project-runtime';
 export class StaticUnsupported extends Error {}
 const quote=(value:string)=>`'${value.replace(/'/g,"'\\''")}'`;
 async function request(path:string,init:RequestInit){

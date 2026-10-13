@@ -22,11 +22,18 @@ import type { ProjectItem } from "@/lib/project-types";
 export function ShareDialog({ project }: { project: ProjectItem }) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
+  const [shareUrl, setShareUrl] = useState(project.previewUrl);
 
   const copyLink = async () => {
     setCopyError("");
     try {
-      await navigator.clipboard.writeText(project.previewUrl);
+      const response = await fetch(`/api/projects/${project.id}/share`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw Error("Could not create share link");
+      const { url } = await response.json();
+      setShareUrl(url);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
     } catch {
       setCopyError("Select the link to copy it manually.");
@@ -38,6 +45,7 @@ export function ShareDialog({ project }: { project: ProjectItem }) {
       onOpenChange={() => {
         setCopied(false);
         setCopyError("");
+        setShareUrl(project.previewUrl);
       }}
     >
       <DialogTrigger asChild>
@@ -60,7 +68,7 @@ export function ShareDialog({ project }: { project: ProjectItem }) {
           <div className="flex gap-2">
             <Input
               aria-label="Share link"
-              value={project.previewUrl}
+              value={shareUrl}
               readOnly
               onFocus={(event) => event.currentTarget.select()}
             />
@@ -80,11 +88,12 @@ export function ShareDialog({ project }: { project: ProjectItem }) {
           )}
           <div className="flex items-start justify-between gap-4 text-xs text-muted-foreground">
             <p>
-              This link shows your latest changes and works while the workspace
-              is running.
+              This link shows your latest changes and wakes a resting workspace.
+              Runtime trial links expire after seven days; copy a fresh link
+              here.
             </p>
             <a
-              href={project.previewUrl}
+              href={shareUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex shrink-0 items-center gap-1 hover:underline"

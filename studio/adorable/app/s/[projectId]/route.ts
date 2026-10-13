@@ -1,3 +1,4 @@
+import { runtimePreview } from "@/lib/project-runtime";
 import { readProjectMetadata } from "@/lib/project-storage";
 import { prodVm, startDevServer } from "@/lib/project-vm";
 export const maxDuration = 60;
@@ -13,7 +14,7 @@ export async function GET(
     return new Response("This project has not been shared yet.", {
       status: 404,
     });
-  const target =
+  let target =
     metadata.staticProductionUrl || `https://${metadata.productionDomain}`;
   if (metadata.staticProductionUrl) return Response.redirect(target, 307);
   if (!metadata.prodVmId)
@@ -21,12 +22,17 @@ export async function GET(
       status: 503,
     });
   try {
+    const preview = await runtimePreview(metadata.prodVmId);
+    target = preview.url;
     const vm = prodVm(metadata.prodVmId);
     const info = await vm.data();
     if (info.state === "paused" || info.state === "stopped") await vm.start();
     if (info.state === "stopped") await startDevServer(vm);
     for (let attempt = 0; attempt < 10; attempt++) {
-      const response = await fetch(target, {
+      const response = await fetch(preview.baseUrl, {
+        headers: preview.token
+          ? { "x-runtime-preview-token": preview.token }
+          : {},
         signal: AbortSignal.timeout(3000),
         cache: "no-store",
       }).catch(() => null);

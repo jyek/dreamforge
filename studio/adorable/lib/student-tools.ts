@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { Vm } from 'freestyle';
+import type { Vm } from './project-runtime';
 import { codeRisk, redactIdentity, screenContent, SafetyError } from './kids-safety';
 const fileSchema=z.string().max(240).regex(/^(app|src|components|styles|public)\/[A-Za-z0-9_./-]+\.(tsx?|jsx?|css|json|svg)$/);
 function path(file:string){if(file.includes('..')||file.includes('/.')||file.includes('\\')||file.includes('/api/')||file.endsWith('middleware.ts'))throw new SafetyError('That file is outside your learning workspace.');return '/workspace/'+file;}

@@ -1,221 +1,141 @@
 import { randomUUID } from "crypto";
-import type { FirewallSpec, Vm } from "freestyle";
-import { freestyle } from "./freestyle";
+import type { Vm } from "./project-runtime";
+import {
+  bindRuntime,
+  deleteRuntime,
+  projectVm,
+  runtime,
+  runtimeSandbox,
+} from "./project-runtime";
 import { BLANK_PROJECT_COMMAND } from "./blank-project.mjs";
+import { activityCommand } from "../scripts/activity-bridge.mjs";
 import {
   ADORABLE_DIR,
-  BASE_SNAPSHOT_SLUG,
   APP_SESSION,
-  DOMAIN_SUFFIX,
-  META_KIND,
-  META_PROJECT,
-  META_ROLE,
   VM_PORT,
   WORKDIR,
   PROJECT_IDLE_SECONDS,
+  TEMPLATE_REPO,
 } from "./vars";
 
-/**
- * Every project VM may reach the Internet — npm, git, whatever the app calls.
- * Inbound needs no rule: traffic arriving through a mapped domain is delivered
- * by the platform itself, ahead of the firewall.
- */
-const PROJECT_FIREWALL: FirewallSpec = {
-  rules: [{ action: "allow", source: {}, destination: { public: true } }],
-};
+export const devVm = projectVm;
+export const prodVm = projectVm;
+const quote = (value: string) => "'" + value.replace(/'/g, "'\\''") + "'";
 
-/** A project id is its dev VM's id, so a handle never needs a lookup. */
-export const devVm = (projectId: string): Vm => freestyle.vms.ref(projectId);
-export const prodVm = (prodVmId: string): Vm => freestyle.vms.ref(prodVmId);
-
-/**
- * Point a domain at a VM's port. This is the only way a VM is reachable from
- * the outside in v5 — `domains` on a VM and serverless deployments are both
- * gone.
- */
-export const mapDomain = async (
-  domain: string,
-  vmId: string,
-  port: number = VM_PORT,
-) => {
-  await freestyle.tls.rules.create({
-    action: "allow",
-    domain,
-    source: { public: true },
-    destination: { vmId, port },
-  });
-};
-
-/**
- * Repoint a domain at a different VM, replacing whatever rule holds it now.
- * Used when production is cut over to a freshly built VM.
- */
-export const remapDomain = async (
-  domain: string,
-  vmId: string,
-  port: number = VM_PORT,
-) => {
-  const { rules } = await freestyle.tls.rules.list({ limit: 200 });
-  const existing = rules.filter((rule) => rule.domain === domain);
-  await Promise.all(
-    existing.map((rule) => freestyle.tls.rules.delete(rule.id)),
-  );
-  await mapDomain(domain, vmId, port);
-};
-
-/**
- * Make sure a VM's long-lived server session is running. Naming the session
- * makes this get-or-create: it never starts a second server, and
- * `replaceOnExit` brings the shell back if the command dies.
- *
- * For a dev VM this is normally a no-op — the base snapshot is captured with
- * the dev server already running and warmed, and a snapshot restores memory as
- * well as disk, so the server is serving before the create call returns.
- */
-const startServer = async (vm: Vm, slug: string, command: string) => {
+export async function startDevServer(vm: Vm) {
   const session = await vm.pty.open({
-    slug,
-    exec: `cd ${WORKDIR} && ${command}`,
-    replaceOnExit: true,
+    slug: APP_SESSION,
+    exec: `cd ${WORKDIR} && npm run dev -- --hostname 0.0.0.0 > /adorable/dev.log 2>&1`,
     cols: 120,
     rows: 30,
   });
-  // The session belongs to the guest and outlives this connection.
   session.detach();
-};
-
-/** Stop the dev server and start a fresh one, for when its workdir changed underneath it. */
-export const restartDevServer = async (vm: Vm) => {
+}
+export async function restartDevServer(vm: Vm) {
   await vm.pty.close(APP_SESSION).catch(() => {});
   await startDevServer(vm);
-};
-
-export const startDevServer = (vm: Vm) =>
-  startServer(vm, APP_SESSION, "npm run dev");
-
-/** Start with a blank page and reusable UI components ready for the agent. */
-const clearStarterApp = async (vm: Vm) => {
-  const result = await vm.exec({
-    command: BLANK_PROJECT_COMMAND,
-  });
-  if (result.statusCode !== 0) {
-    throw new Error(`Could not prepare a blank project: ${result.stderr ?? result.stdout}`);
-  }
-};
+}
 
 export type CreatedProjectVms = {
   projectId: string;
   previewDomain: string;
-  /** Reserved now, mapped at the first publish along with the VM behind it. */
   productionDomain: string;
 };
 
-/**
- * Create a project's dev VM from the base snapshot, map its preview domain,
- * and make sure the dev server is running.
- *
- * Only the dev VM. A project that is never published never needs a production
- * VM, and one created here would sit idle burning a machine — so it is created
- * by the first publish instead. See {@link createProdVm}.
- */
-export const createProjectVms = async (
+/** Provision Runtime compute while retaining provider-independent project URLs. */
+export async function createProjectVms(
   name: string,
-  /** A public git URL to build the project from instead of the template. */
   sourceRepoUrl?: string,
-): Promise<CreatedProjectVms> => {
-  const handle = `adorable-${randomUUID().slice(0, 8)}`;
-  const previewDomain = `${handle}.${DOMAIN_SUFFIX}`;
-  const productionDomain = `${handle}-live.${DOMAIN_SUFFIX}`;
-
-  const { vm: dev, vmId: projectId } = await freestyle.vms.create({
-    snapshotId: BASE_SNAPSHOT_SLUG,
-    displayName: name,
-    idleTimeoutSeconds: PROJECT_IDLE_SECONDS,
-    persistence: { type: "persistent" },
-    metadata: { [META_KIND]: "project", [META_ROLE]: "dev" },
-    firewall: PROJECT_FIREWALL,
+): Promise<CreatedProjectVms> {
+  const projectId = `vm-${randomUUID().replaceAll("-", "")}`;
+  const sandbox = await runtime().sandboxes.create({
+    name: `dreamforge-${projectId}`,
+    vcpu: 2,
+    memoryMiB: 4096,
+    diskMiB: 10240,
+    idlePauseSeconds: PROJECT_IDLE_SECONDS,
+    autoWake: true,
+    labels: { application: "dreamforge", projectId, role: "dev" },
+    ...(process.env.RUNTIME_BASE_SNAPSHOT
+      ? { snapshot: process.env.RUNTIME_BASE_SNAPSHOT }
+      : {}),
   });
-
-  await dev.exec(`mkdir -p ${ADORABLE_DIR}/conversations`);
-
-  if (sourceRepoUrl) {
-    // The clone replaces the workdir the inherited dev server is watching, so
-    // that server has to be replaced along with it.
-    await importRepo(dev, sourceRepoUrl);
-    await restartDevServer(dev);
-  } else {
-    await clearStarterApp(dev);
+  try {
+    await bindRuntime(projectId, sandbox.id);
+    const vm = devVm(projectId);
+    const setup = await vm.exec({
+      command: `sudo mkdir -p ${ADORABLE_DIR}/conversations && sudo chown -R $(id -u):$(id -g) ${ADORABLE_DIR}`,
+      timeoutMs: 30000,
+    });
+    if (setup.statusCode !== 0)
+      throw Error("Could not prepare workspace storage");
+    if (!process.env.RUNTIME_BASE_SNAPSHOT || sourceRepoUrl) {
+      const repo = sourceRepoUrl || TEMPLATE_REPO;
+      const install = await vm.exec({
+        command: `git clone --depth 1 ${quote(repo)} /tmp/dreamforge-source && cp -a /tmp/dreamforge-source/. ${WORKDIR}/ && rm -rf /tmp/dreamforge-source && cd ${WORKDIR} && npm install --no-audit --no-fund`,
+        timeoutMs: 240000,
+      });
+      if (install.statusCode !== 0)
+        throw Error(
+          `Could not prepare project: ${install.stderr?.slice(-500) || install.stdout?.slice(-500)}`,
+        );
+    }
+    if (!sourceRepoUrl) {
+      const reset = await vm.exec({ command: BLANK_PROJECT_COMMAND });
+      if (reset.statusCode !== 0)
+        throw Error("Could not prepare a blank project");
+    }
+    const activity = await vm.exec({ command: activityCommand });
+    if (activity.statusCode !== 0)
+      throw Error("Could not prepare preview activity tracking");
+    const preview = await sandbox.previews.create(VM_PORT, {
+      visibility: "private",
+      ttlSeconds: 7 * 86400,
+    });
+    await startDevServer(vm);
+    const previewDomain = new URL(preview.url).host;
+    return { projectId, previewDomain, productionDomain: previewDomain };
+  } catch (error) {
+    await deleteRuntime(projectId).catch(() => {});
+    await sandbox.delete().catch(() => {});
+    throw error;
   }
+}
 
-  await Promise.all([mapDomain(previewDomain, projectId), startDevServer(dev)]);
+export async function listProjectVms() {
+  const page = await runtime().sandboxes.list({
+    labels: { application: "dreamforge", role: "dev" },
+  });
+  return page.data.map((s) => ({
+    id: s.info.labels.projectId,
+    createdAt: s.info.createdAt,
+  }));
+}
+export async function deleteProjectVms(projectId: string, prodVmId: string) {
+  await deleteRuntime(projectId);
+  if (prodVmId) await deleteRuntime(prodVmId);
+}
 
-  return { projectId, previewDomain, productionDomain };
-};
-
-/**
- * Create the production VM for a project that does not have one yet, and put
- * its production domain in front of it. Called by the first publish.
- */
-export const createProdVm = async (
+export async function createProdVm(
   projectId: string,
   name: string,
-  productionDomain: string,
-) => {
-  const { vmId: prodVmId } = await freestyle.vms.create({
-    snapshotId: BASE_SNAPSHOT_SLUG,
-    displayName: `${name} (production)`,
-    idleTimeoutSeconds: PROJECT_IDLE_SECONDS,
-    persistence: { type: "persistent" },
-    metadata: {
-      [META_KIND]: "project",
-      [META_ROLE]: "prod",
-      [META_PROJECT]: projectId,
-    },
-    firewall: PROJECT_FIREWALL,
+  _domain: string,
+) {
+  const source = await runtimeSandbox(projectId);
+  const clone = await source.fork({
+    name: `dreamforge-live-${randomUUID()}`,
+    labels: { application: "dreamforge", role: "prod", projectId },
   });
-
-  await mapDomain(productionDomain, prodVmId);
-  return prodVmId;
-};
-
-/**
- * Replace the template in a fresh VM with a git project's contents. The clone's
- * own history is kept: the VM is a real machine, so the project keeps working
- * as a git checkout the agent can commit to.
- */
-const importRepo = async (vm: Vm, repoUrl: string) => {
-  const clone = await vm.exec({
-    command: `rm -rf ${WORKDIR} && git clone --depth 1 ${JSON.stringify(repoUrl)} ${WORKDIR}`,
-    timeoutMs: 300_000,
-  });
-  if (clone.statusCode !== 0) {
-    throw new Error(`Could not clone ${repoUrl}: ${clone.stderr ?? ""}`.trim());
+  const id = `vm-${randomUUID().replaceAll("-", "")}`;
+  try {
+    await bindRuntime(id, clone.id);
+    await clone.previews.create(VM_PORT, {
+      visibility: "private",
+      ttlSeconds: 7 * 86400,
+    });
+    return id;
+  } catch (error) {
+    await clone.delete();
+    throw error;
   }
-
-  const install = await vm.exec({
-    command: `cd ${WORKDIR} && npm install --no-audit --no-fund`,
-    timeoutMs: 300_000,
-  });
-  if (install.statusCode !== 0) {
-    throw new Error(
-      `Dependency install failed: ${install.stderr ?? ""}`.trim(),
-    );
-  }
-};
-
-/** The dev VMs of every project, newest first. */
-export const listProjectVms = async () => {
-  const { vms } = await freestyle.vms.list({
-    metadata: `${META_KIND}:project,${META_ROLE}:dev`,
-    limit: 200,
-  });
-  return [...vms].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-};
-
-/** Delete a project: both VMs, and with them the rules naming either. */
-export const deleteProjectVms = async (projectId: string, prodVmId: string) => {
-  await Promise.all([
-    freestyle.vms.delete(projectId),
-    freestyle.vms.delete(prodVmId),
-  ]);
-};
+}

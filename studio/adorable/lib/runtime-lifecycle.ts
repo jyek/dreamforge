@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { database } from './database';
 import { usesDatabaseStorage } from './project-storage';
-import { freestyle } from './freestyle';
+import { devVm } from './project-vm';
 import { PROJECT_IDLE_SECONDS } from './vars';
 import { startDevServer } from './project-vm';
 import { wakeVm } from './runtime-readiness';
@@ -20,13 +20,13 @@ export async function touchRuntime(projectId:string){
   try {
    await db.query('begin');
    await db.query('insert into adorable.runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do update set last_activity=now(),paused_at=null',[projectId]);
-   const vm=freestyle.vms.ref(projectId);await wakeVm(vm,()=>startDevServer(vm));
+   const vm=devVm(projectId);await wakeVm(vm,()=>startDevServer(vm));
    await db.query('commit');
    return {state:'active',idleSeconds:PROJECT_IDLE_SECONDS};
   }catch(error){await db.query('rollback');throw error;}finally{db.release();}
  }
  await load();state.leases[projectId]={lastActivity:Date.now()};await persist();
- const vm=freestyle.vms.ref(projectId);await wakeVm(vm,()=>startDevServer(vm));
+ const vm=devVm(projectId);await wakeVm(vm,()=>startDevServer(vm));
  return {state:'active',idleSeconds:PROJECT_IDLE_SECONDS};
 }
 export async function holdRuntime(projectId:string){
@@ -48,7 +48,7 @@ export async function pauseInactiveRuntimes(now=Date.now()){
     where exists(select 1 from jsonb_array_elements(p.metadata->'releases') r where r->>'state'='publishing' and (r->>'createdAt')::timestamptz < now()-interval '6 minutes')`);
    const {rows}=await db.query(`select vm_id from adorable.runtime_leases where last_activity < to_timestamp($1/1000.0)-($2 * interval '1 second') and paused_at is null and (hold_until is null or hold_until < now()) order by last_activity limit 10 for update skip locked`,[now,PROJECT_IDLE_SECONDS]);
    for(const row of rows){
-    const vm=freestyle.vms.ref(row.vm_id);const info=await vm.data();
+    const vm=devVm(row.vm_id);const info=await vm.data();
     if(info.state==='running')await vm.pause();
     await db.query('update adorable.runtime_leases set paused_at=now() where vm_id=$1',[row.vm_id]);
    }
@@ -62,7 +62,7 @@ export async function pauseInactiveRuntimes(now=Date.now()){
  for(const [id,lease] of Object.entries(state.leases)){
   if(state.jobs.has(id)||now-lease.lastActivity<PROJECT_IDLE_SECONDS*1000)continue;
   const expected=lease.lastActivity;
-  try {const vm=freestyle.vms.ref(id);const info=await vm.data();
+  try {const vm=devVm(id);const info=await vm.data();
    if(state.leases[id]?.lastActivity!==expected||state.jobs.has(id))continue;
    if(info.state==='running')await vm.pause();
    else if(lease.pausedAt)continue;

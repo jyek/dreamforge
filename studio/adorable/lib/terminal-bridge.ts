@@ -1,4 +1,4 @@
-import type { PtySession } from "freestyle";
+import type { PtySession } from "./project-runtime";
 import { devVm } from "./project-vm";
 
 /**
@@ -72,7 +72,7 @@ const bridge = (vmId: string, slug: string, command?: string) => {
       pty.open({
         slug,
         ...(command ? { exec: command } : {}),
-        replaceOnExit: true,
+
         cols: 120,
         rows: 30,
         ...events,
@@ -106,9 +106,19 @@ export const subscribeToTerminal = async (
   if (process.env.VERCEL) {
     // A stream owns its connection; process-local registries can retain frozen
     // opening promises between serverless invocations.
-    const pty=devVm(vmId).pty;
-    const session=await pty.attach({session:slug,onData:onChunk}).catch(()=>pty.open({slug,...(command?{exec:command}:{}),replaceOnExit:true,cols:120,rows:30,onData:onChunk}));
-    return ()=>session.detach();
+    const pty = devVm(vmId).pty;
+    const session = await pty
+      .attach({ session: slug, onData: onChunk })
+      .catch(() =>
+        pty.open({
+          slug,
+          ...(command ? { exec: command } : {}),
+          cols: 120,
+          rows: 30,
+          onData: onChunk,
+        }),
+      );
+    return () => session.detach();
   }
   const connection = await bridge(vmId, slug, command);
 
@@ -119,23 +129,48 @@ export const subscribeToTerminal = async (
     connection.subscribers.delete(onChunk);
     if (!connection.subscribers.size) {
       connection.session.detach();
-      registry.delete(key(vmId,slug));
+      registry.delete(key(vmId, slug));
     }
   };
 };
 
-async function withInputSession(vmId: string, slug: string, action: (session: PtySession) => void) {
-  if (!process.env.VERCEL) { action((await bridge(vmId,slug)).session); return; }
+async function withInputSession(
+  vmId: string,
+  slug: string,
+  action: (session: PtySession) => void | Promise<void>,
+) {
+  if (!process.env.VERCEL) {
+    await action((await bridge(vmId, slug)).session);
+    return;
+  }
   // Each serverless input request owns its socket. The browser then reattaches
   // its output stream and receives the guest's retained scrollback.
-  const pty=devVm(vmId).pty;
-  const session=await pty.attach({session:slug}).catch(()=>pty.open({slug,exec:slug === "dev" ? undefined : "cd /workspace && exec bash -l",replaceOnExit:true,cols:120,rows:30}));
-  try { action(session); } finally { session.detach(); }
+  const pty = devVm(vmId).pty;
+  const session = await pty.attach({ session: slug }).catch(() =>
+    pty.open({
+      slug,
+      exec: slug === "dev" ? undefined : "cd /workspace && exec bash -l",
+      cols: 120,
+      rows: 30,
+    }),
+  );
+  try {
+    await action(session);
+  } finally {
+    session.detach();
+  }
 }
 
-export const writeToTerminal = (vmId:string,slug:string,data:string) =>
-  withInputSession(vmId,slug,session=>session.write(data));
-export const resizeTerminal = (vmId:string,slug:string,cols:number,rows:number) =>
-  withInputSession(vmId,slug,session=>session.resize({cols,rows}));
-export const signalTerminal = (vmId:string,slug:string,signal:"sigint"|"sigkill") =>
-  withInputSession(vmId,slug,session=>session.signal(signal));
+export const writeToTerminal = (vmId: string, slug: string, data: string) =>
+  withInputSession(vmId, slug, (session) => session.write(data));
+export const resizeTerminal = (
+  vmId: string,
+  slug: string,
+  cols: number,
+  rows: number,
+) => withInputSession(vmId, slug, (session) => session.resize({ cols, rows }));
+export const signalTerminal = (
+  vmId: string,
+  slug: string,
+  signal: "sigint" | "sigkill",
+) => withInputSession(vmId, slug, (session) => session.signal(signal));

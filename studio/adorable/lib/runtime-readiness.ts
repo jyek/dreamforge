@@ -30,6 +30,29 @@ export async function previewResponding(
 
 export function runtimeFailure(error: unknown) {
   const failure = error as { code?: string; message?: string } | null;
+  if (failure?.code === "PROJECT_MIGRATION_REQUIRED")
+    return {
+      status: 409,
+      body: {
+        state: "blocked",
+        ready: false,
+        error: failure.message || "This project's files need to be migrated.",
+      },
+    };
+  if (
+    /^(INCLUDED_USAGE_USED_UP|NO_CREDIT_|QUOTA_EXCEEDED|CREDIT)/i.test(
+      failure?.code || "",
+    )
+  )
+    return {
+      status: 429,
+      body: {
+        state: "blocked",
+        ready: false,
+        error:
+          "Runtime's included usage or account limit has been reached. Wait for the monthly reset or add Runtime credit, then try again.",
+      },
+    };
   if (failure?.code === "LIMIT_EXCEEDED") {
     return {
       status: 429,

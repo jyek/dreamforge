@@ -116,7 +116,7 @@ export function useProjectActivity(
     const timer = setInterval(() => {
       if (runningRef.current) lastActivity = Date.now();
       if (inFlight || currentStatus === "error") return;
-      if (Date.now() - lastActivity >= 20 * 60 * 1000) {
+      if (Date.now() - lastActivity >= 5 * 60 * 1000) {
         changeStatus("idle");
         return;
       }

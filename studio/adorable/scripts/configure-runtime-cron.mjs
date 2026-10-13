@@ -14,7 +14,7 @@ try{
  else await pool.query('select vault.create_secret($1,$2,$3)',[cronSecret,'adorable-runtime-cron','Vercel runtime maintenance authentication']);
  const {rows:command}=await pool.query(`select format($fmt$
  select net.http_get(url := %L, headers := jsonb_build_object('Authorization','Bearer '||(select decrypted_secret from vault.decrypted_secrets where name='adorable-runtime-cron')),timeout_milliseconds:=60000)
- where exists(select 1 from adorable.runtime_leases where last_activity < now()-interval '20 minutes' and paused_at is null and (hold_until is null or hold_until < now()))
+ where exists(select 1 from adorable.runtime_leases where last_activity < now()-interval '5 minutes' and paused_at is null and (hold_until is null or hold_until < now()))
  or exists(select 1 from adorable.projects p,jsonb_array_elements(p.metadata->'releases') r where r->>'state'='publishing' and (r->>'createdAt')::timestamptz < now()-interval '6 minutes')
  $fmt$,$1::text) as sql`,[origin+'/api/cron/runtime']);
  const {rows:job}=await pool.query('select cron.schedule($1,$2,$3) as id',['adorable-runtime-maintenance','* * * * *',command[0].sql]);

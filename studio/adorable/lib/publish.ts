@@ -1,7 +1,13 @@
 import { after } from "next/server";
 import { randomUUID } from "crypto";
-import type { Vm } from "freestyle";
-import { freestyle } from "./freestyle";
+import type { Vm } from "./project-runtime";
+import {
+  runtime,
+  runtimeSandbox,
+  bindRuntime,
+  deleteRuntime,
+  runtimePreview,
+} from "./project-runtime";
 import {
   addRelease,
   readProjectMetadata,
@@ -11,17 +17,27 @@ import {
 } from "./project-storage";
 import { createProdVm, devVm, prodVm, startDevServer } from "./project-vm";
 import { holdRuntime } from "./runtime-lifecycle";
-import { exportAndPublishStatic, activateStaticRelease, StaticUnsupported } from "./static-publish";
+import {
+  exportAndPublishStatic,
+  activateStaticRelease,
+  StaticUnsupported,
+} from "./static-publish";
 import { VM_PORT, WORKDIR } from "./vars";
 
-const TARBALL = "/tmp/adorable-release.tgz";
+const TARBALL = "/workspace/.adorable-release.tgz";
 const STAGING = "/tmp/adorable-incoming";
 
 /**
  * Everything the app needs and nothing it can rebuild: source and lockfile
  * cross, installed packages and build output do not.
  */
-const EXCLUDES = ["node_modules", ".next", ".git", ".env*"]
+const EXCLUDES = [
+  "node_modules",
+  ".next",
+  ".git",
+  ".env*",
+  ".adorable-release.tgz",
+]
   .map((entry) => `--exclude=./${entry}`)
   .join(" ");
 
@@ -151,24 +167,47 @@ export const publishProject = async (projectId: string, message: string) => {
 
   const releaseLease = await holdRuntime(projectId);
   try {
-    await addRelease(projectId,{id:releaseId,message,createdAt:new Date().toISOString(),snapshotId:"",state:"publishing",error:null});
-  } catch(error) {await releaseLease();throw error;}
-  const publish = async()=>{
+    await addRelease(projectId, {
+      id: releaseId,
+      message,
+      createdAt: new Date().toISOString(),
+      snapshotId: "",
+      state: "publishing",
+      error: null,
+    });
+  } catch (error) {
+    await releaseLease();
+    throw error;
+  }
+  const publish = async () => {
     try {
       try {
-        const url=await exportAndPublishStatic(dev,projectId,releaseId);
-        await setStaticProductionUrl(projectId,url);
-        await updateRelease(projectId,releaseId,{hosting:"static",url});
-        if(metadata.prodVmId)await prodVm(metadata.prodVmId).pause().catch(()=>{});
+        const url = await exportAndPublishStatic(dev, projectId, releaseId);
+        await setStaticProductionUrl(projectId, url);
+        await updateRelease(projectId, releaseId, { hosting: "static", url });
+        if (metadata.prodVmId)
+          await prodVm(metadata.prodVmId)
+            .pause()
+            .catch(() => {});
         return;
-      }catch(error){if(!(error instanceof StaticUnsupported))throw error;}
-      const {snapshotId}=await dev.snapshot({displayName:`${metadata.name}: ${message}`.slice(0,200)});
-      await updateRelease(projectId,releaseId,{snapshotId,hosting:"server",url:`https://${metadata.productionDomain}`});
-      await shipToProduction(dev,await resolveProdVmId(projectId,metadata));
-      await setStaticProductionUrl(projectId,null);
-    } finally {await releaseLease();}
+      } catch (error) {
+        if (!(error instanceof StaticUnsupported)) throw error;
+      }
+      const { snapshotId } = await dev.snapshot({
+        displayName: `${metadata.name}: ${message}`.slice(0, 200),
+      });
+      await updateRelease(projectId, releaseId, {
+        snapshotId,
+        hosting: "server",
+        url: `https://${metadata.productionDomain}`,
+      });
+      await shipToProduction(dev, await resolveProdVmId(projectId, metadata));
+      await setStaticProductionUrl(projectId, null);
+    } finally {
+      await releaseLease();
+    }
   };
-  settleRelease(projectId,releaseId,publish());
+  settleRelease(projectId, releaseId, publish());
 
   return releaseId;
 };
@@ -186,11 +225,14 @@ export const rollbackToRelease = async (
   const metadata = await readProjectMetadata(projectId);
   const release = metadata.releases.find((entry) => entry.id === releaseId);
   if (!release) throw new Error("Release not found.");
-  if(release.hosting==="static"){
-    const url=await activateStaticRelease(projectId,releaseId);
-    await setStaticProductionUrl(projectId,url);
-    await updateRelease(projectId,releaseId,{state:"live",error:null});
-    if(metadata.prodVmId)await prodVm(metadata.prodVmId).pause().catch(()=>{});
+  if (release.hosting === "static") {
+    const url = await activateStaticRelease(projectId, releaseId);
+    await setStaticProductionUrl(projectId, url);
+    await updateRelease(projectId, releaseId, { state: "live", error: null });
+    if (metadata.prodVmId)
+      await prodVm(metadata.prodVmId)
+        .pause()
+        .catch(() => {});
     return;
   }
 
@@ -201,19 +243,20 @@ export const rollbackToRelease = async (
 
   const restore = async () => {
     const prodVmId = await resolveProdVmId(projectId, metadata);
-    const { vm: source, vmId } = await freestyle.vms.create({
-      snapshotId: release.snapshotId,
-      displayName: `${metadata.name} rollback source`,
-      persistence: { type: "ephemeral" },
-      ttlSeconds: 1800,
-      firewall: { rules: [] },
+    const restored = await runtime().sandboxes.create({
+      snapshot: release.snapshotId,
+      name: `dreamforge-rollback-${randomUUID()}`,
+      idlePauseSeconds: 300,
     });
+    const vmId = `vm-${randomUUID().replaceAll("-", "")}`;
+    await bindRuntime(vmId, restored.id);
+    const source = devVm(vmId);
 
     try {
       await shipToProduction(source, prodVmId);
-      await setStaticProductionUrl(projectId,null);
+      await setStaticProductionUrl(projectId, null);
     } finally {
-      await freestyle.vms.delete(vmId).catch(() => {});
+      await deleteRuntime(vmId).catch(() => {});
     }
   };
 
