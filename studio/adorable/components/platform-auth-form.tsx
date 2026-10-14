@@ -71,7 +71,7 @@ export function PlatformAuthForm({
             {signup
               ? teacherInvite
                 ? "Welcome, teacher!"
-                : "Hello, dream builder!"
+                : "Hello, builder!"
               : "Welcome back!"}
           </h2>
           <p className="df-muted" style={{ fontSize: 14, marginBottom: 25 }}>

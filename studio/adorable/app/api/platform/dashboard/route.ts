@@ -13,13 +13,13 @@ export async function GET() {
     [user.id],
   );
   const { rows: projects } = await db.query(
-    `select p.vm_id,p.metadata,pr.display_name as child_name from adorable.projects p join adorable.profiles pr on pr.id=p.owner_id where not p.is_example and (p.owner_id=$1 or ($2='teacher' and exists(select 1 from adorable.class_members m join adorable.classes c on c.id=m.class_id where m.child_id=p.owner_id and c.teacher_id=$1))) order by p.updated_at desc`,
+    `select p.vm_id,p.metadata,pr.display_name as child_name from adorable.projects p join adorable.profiles pr on pr.id=p.owner_id where not p.is_example and (p.owner_id=$1 or ($2='teacher' and exists(select 1 from adorable.teacher_builders b where b.child_id=p.owner_id and b.teacher_id=$1))) order by p.updated_at desc`,
     [user.id, user.role],
   );
   const { rows: children } =
     user.role === "teacher"
       ? await db.query(
-          `select distinct pr.id,pr.display_name,pr.username,a.token_limit,a.used_tokens,a.reserved_tokens,a.input_tokens,a.output_tokens,a.estimated_cost_usd from adorable.profiles pr join adorable.class_members m on m.child_id=pr.id join adorable.classes c on c.id=m.class_id left join adorable.token_accounts a on a.child_id=pr.id where c.teacher_id=$1`,
+          `select distinct pr.id,pr.display_name,pr.username,a.token_limit,a.used_tokens,a.reserved_tokens,a.input_tokens,a.output_tokens,a.estimated_cost_usd from adorable.profiles pr join adorable.teacher_builders b on b.child_id=pr.id left join adorable.token_accounts a on a.child_id=pr.id where b.teacher_id=$1`,
           [user.id],
         )
       : { rows: [] };
@@ -33,7 +33,7 @@ export async function GET() {
   const { rows: unconfirmed } =
     user.role === "teacher"
       ? await db.query(
-          `select r.id,r.reserved_tokens,pr.display_name from adorable.usage_runs r join adorable.profiles pr on pr.id=r.child_id where r.state='uncertain' and exists(select 1 from adorable.class_members m join adorable.classes c on c.id=m.class_id where m.child_id=r.child_id and c.teacher_id=$1)`,
+          `select r.id,r.reserved_tokens,pr.display_name from adorable.usage_runs r join adorable.profiles pr on pr.id=r.child_id where r.state='uncertain' and exists(select 1 from adorable.teacher_builders b where b.child_id=r.child_id and b.teacher_id=$1)`,
           [user.id],
         )
       : await db.query(

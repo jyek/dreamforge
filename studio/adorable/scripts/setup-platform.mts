@@ -34,6 +34,16 @@ try {
         "utf8",
       ),
     );
+  const roster = await db.query(
+    "select to_regclass('adorable.teacher_builders') as existing",
+  );
+  if (!roster.rows[0].existing)
+    await db.query(
+      readFileSync(
+        "supabase/migrations/202610140003_builder_roster.sql",
+        "utf8",
+      ),
+    );
   if (process.argv.includes("--invite")) {
     const token = randomBytes(24).toString("base64url");
     await db.query(

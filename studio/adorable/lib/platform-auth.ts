@@ -24,7 +24,7 @@ export const tokenHash = (token: string) =>
 export const inviteToken = () => randomBytes(24).toString("base64url");
 export async function canReadChild(teacherId: string, childId: string) {
   const { rowCount } = await database().query(
-    "select 1 from adorable.classes c join adorable.class_members m on m.class_id=c.id where c.teacher_id=$1 and m.child_id=$2",
+    "select 1 from adorable.teacher_builders where teacher_id=$1 and child_id=$2",
     [teacherId, childId],
   );
   return !!rowCount;

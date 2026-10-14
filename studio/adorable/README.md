@@ -6,7 +6,7 @@ New projects use a blank Next.js/shadcn foundation, with no sample layout. Exist
 
 ## Teacher and child accounts
 
-Apply `supabase/migrations/202610140001_dreamforge_classrooms.sql` and `202610140002_uncertain_usage.sql` before enabling `DREAMFORGE_AUTH_ENABLED=true`. Configure server-only variables from `.env.example`, including `SUPABASE_SERVICE_ROLE_KEY` and the canonical `DREAMFORGE_SITE_URL`. Never expose the service key through a `NEXT_PUBLIC_*` variable.
+Apply `supabase/migrations/202610140001_dreamforge_classrooms.sql` `202610140002_uncertain_usage.sql` and `202610140003_builder_roster.sql` before enabling `DREAMFORGE_AUTH_ENABLED=true`. Configure server-only variables from `.env.example`, including `SUPABASE_SERVICE_ROLE_KEY` and the canonical `DREAMFORGE_SITE_URL`. Never expose the service key through a `NEXT_PUBLIC_*` variable.
 
 The setup script reads a private `.deployment/production.env`, applies missing platform migrations, and can create a first teacher invitation:
 
@@ -16,7 +16,7 @@ npx tsx scripts/setup-platform.mts --invite
 
 It stores the one-use token in `.deployment/initial-teacher-invite.json`. Use `/signup?teacherInvite=<token>` within seven days. Teachers can then create classes and copy class codes. They can invite other teachers, who receive access only to their own classes.
 
-Children sign up with a username; email and class code are optional. They can create projects before joining a class. Existing child accounts can join additional classes. Login accepts username or email. Supabase Admin creates confirmed accounts directly, so DreamForge does not send verification emails or change the Supabase project's global email-confirmation setting. Sessions currently expire after one hour; sign in again to continue.
+Children sign up with a username; email and class code are optional. They can create projects before joining a class. Existing child accounts can join additional classes. Teachers can rename and delete their own classes. Deleting a class removes its code and memberships, while retaining builders in the teacher’s roster with their accounts, projects and review history. Login accepts username or email. Supabase Admin creates confirmed accounts directly, so DreamForge does not send verification emails or change the Supabase project's global email-confirmation setting. Sessions currently expire after one hour; sign in again to continue.
 
 Children edit only their own projects. Teachers can view all projects and prompt histories belonging to children in their classes, without editing. Existing demo projects are marked `is_example` and remain separate, read-only examples. Server authorization applies to APIs as well as the UI. Classroom tables live in the `adorable` schema and deny direct access by browser Supabase keys. The older public LMS tables are preserved and are not used by the new platform.
 
@@ -42,7 +42,7 @@ Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and register `/api/platform/st
 
 ## Prompt reviews and brand
 
-The teacher dashboard shows paginated prompt history with a flagged-only filter, redacted personal identifiers, local safety decisions/categories, and review status. Marking a prompt reviewed does not override a blocked request. Current checks are local text rules and safe source-file tools; they do not classify images or provide comprehensive moderation. Existing external-moderation LMS routes remain separate.
+The teacher dashboard shows projects grouped by their builder, with paginated prompt history and a flagged-only filter inside each project, redacted personal identifiers, local safety decisions/categories, and review status. Marking a prompt reviewed does not override a blocked request. Current checks are local text rules and safe source-file tools; they do not classify images or provide comprehensive moderation. Existing external-moderation LMS routes remain separate.
 
 The original vector logo is `public/brand/dreamforge-mark.svg`. New account, classroom and parent-payment pages use cream, purple, orange, yellow and lime with rounded cards and hard shadows. Project workspaces retain the familiar conversation/preview layout.
 

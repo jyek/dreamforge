@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   try {
     await db.query("begin");
     const { rows } = await db.query(
-      `select r.* from adorable.usage_runs r where r.id=$2 and r.state='uncertain' and exists(select 1 from adorable.class_members m join adorable.classes c on c.id=m.class_id where m.child_id=r.child_id and c.teacher_id=$1) for update`,
+      `select r.* from adorable.usage_runs r where r.id=$2 and r.state='uncertain' and exists(select 1 from adorable.teacher_builders b where b.child_id=r.child_id and b.teacher_id=$1) for update`,
       [user.id, body.id],
     );
     if (!rows[0]) {

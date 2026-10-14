@@ -48,3 +48,48 @@ export async function POST(req: Request) {
   );
   return Response.json({ ok: true });
 }
+
+async function manageClass(req: Request, remove = false) {
+  const user = platformEnabled() ? await getProfile() : null;
+  if (user?.role !== "teacher" || !checkOrigin(req))
+    return Response.json(
+      { error: "Teacher access required." },
+      { status: 403 },
+    );
+  const body = await req.json().catch(() => ({}));
+  if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
+    return Response.json({ error: "Invalid class." }, { status: 400 });
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (
+    !remove &&
+    (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name))
+  )
+    return Response.json(
+      { error: "Use a class name of 1–80 characters." },
+      { status: 400 },
+    );
+  try {
+    const query = {
+      text: remove
+        ? "delete from adorable.classes where id=$1 and teacher_id=$2"
+        : "update adorable.classes set name=$3 where id=$1 and teacher_id=$2",
+      values: remove ? [body.id, user.id] : [body.id, user.id, name],
+      query_timeout: 15000,
+    };
+    const { rowCount } = await database().query(query);
+    if (!rowCount)
+      return Response.json({ error: "Class not found." }, { status: 404 });
+    return Response.json({ ok: true });
+  } catch {
+    return Response.json(
+      { error: "Could not update your class. Please refresh and try again." },
+      { status: 503 },
+    );
+  }
+}
+export async function PATCH(req: Request) {
+  return manageClass(req);
+}
+export async function DELETE(req: Request) {
+  return manageClass(req, true);
+}

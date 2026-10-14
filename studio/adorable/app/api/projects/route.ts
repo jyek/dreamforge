@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     const user = await getProfile();
     const requested = new URL(req.url).searchParams.get("projectId");
     const { rows } = await database().query(
-      `select p.vm_id,p.metadata,p.owner_id,p.is_example from adorable.projects p where (p.is_example and p.vm_id=$3) or p.owner_id=$1 or ($2='teacher' and exists(select 1 from adorable.class_members m join adorable.classes c on c.id=m.class_id where m.child_id=p.owner_id and c.teacher_id=$1)) order by p.updated_at desc`,
+      `select p.vm_id,p.metadata,p.owner_id,p.is_example from adorable.projects p where (p.is_example and p.vm_id=$3) or p.owner_id=$1 or ($2='teacher' and exists(select 1 from adorable.teacher_builders b where b.child_id=p.owner_id and b.teacher_id=$1)) order by p.updated_at desc`,
       [user?.id || null, user?.role || null, requested],
     );
     return NextResponse.json({

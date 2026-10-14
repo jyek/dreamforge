@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { PlatformClassCard } from "./platform-class-card";
 import { DreamForgeBrand, DreamForgeArt } from "./dreamforge-brand";
 type Project = {
   vm_id: string;
@@ -22,6 +23,14 @@ type Data = {
   wallet: Wallet | null;
   unconfirmed: { id: string; reserved_tokens: string; display_name?: string }[];
   paymentsEnabled: boolean;
+};
+type ReviewProject = {
+  vm_id: string;
+  project_name: string;
+  child_name: string;
+  prompt_count: number;
+  flagged_count: number;
+  pending_count: number;
 };
 type Review = {
   id: string;
@@ -59,10 +68,19 @@ export function PlatformDashboard() {
     [reviews, setReviews] = useState<Review[]>([]),
     [view, setView] = useState("projects"),
     [reviewCursor, setReviewCursor] = useState<string | null>(null),
-    [flagsOnly, setFlagsOnly] = useState(false);
-  async function loadReviews(flags = flagsOnly, before?: string) {
+    [flagsOnly, setFlagsOnly] = useState(false),
+    [reviewProjects, setReviewProjects] = useState<ReviewProject[]>([]),
+    [selectedReviewProject, setSelectedReviewProject] = useState<string | null>(
+      null,
+    );
+  async function loadReviews(
+    flags = flagsOnly,
+    before?: string,
+    projectId = selectedReviewProject,
+  ) {
+    if (!projectId) return;
     const page = await api(
-      `/api/platform/reviews?flags=${flags ? "1" : "0"}${before ? `&before=${encodeURIComponent(before)}` : ""}`,
+      `/api/platform/reviews?projectId=${encodeURIComponent(projectId)}&flags=${flags ? "1" : "0"}${before ? `&before=${encodeURIComponent(before)}` : ""}`,
     );
     setReviews((old) => (before ? [...old, ...page.reviews] : page.reviews));
     setReviewCursor(page.nextCursor);
@@ -71,7 +89,12 @@ export function PlatformDashboard() {
     try {
       const d = await api("/api/platform/dashboard");
       setData(d);
-      if (d.user.role === "teacher") await loadReviews();
+      if (d.user.role === "teacher") {
+        setReviewProjects(
+          (await api("/api/platform/reviews?group=projects")).projects,
+        );
+        if (selectedReviewProject) await loadReviews();
+      }
     } catch (e) {
       setError((e as Error).message);
     }
@@ -147,7 +170,7 @@ export function PlatformDashboard() {
             <section className="df-card df-hero">
               <div>
                 <span className="df-pill">
-                  {teacher ? "TEACHER STUDIO" : "DREAM BUILDER"}
+                  {teacher ? "TEACHER STUDIO" : "BUILDER"}
                 </span>
                 <h1>
                   {teacher
@@ -156,7 +179,7 @@ export function PlatformDashboard() {
                 </h1>
                 <p style={{ margin: "0 0 24px" }}>
                   {teacher
-                    ? "Follow your class’s creations, progress and prompts."
+                    ? "Follow your builders’ projects, progress and prompts."
                     : "What will your imagination build today?"}
                 </p>
                 {!teacher && (
@@ -175,8 +198,8 @@ export function PlatformDashboard() {
               {teacher ? (
                 <>
                   <div className="df-card df-stat">
-                    Dream builders<strong>{data.children.length}</strong>Across
-                    your classes
+                    Builders<strong>{data.children.length}</strong>In your
+                    roster
                   </div>
                   <div className="df-card df-stat">
                     Ideas in progress<strong>{data.projects.length}</strong>
@@ -185,11 +208,10 @@ export function PlatformDashboard() {
                   <div className="df-card df-stat">
                     Prompts to check
                     <strong>
-                      {
-                        reviews.filter(
-                          (r) => r.decision !== "allow" && !r.reviewed_at,
-                        ).length
-                      }
+                      {reviewProjects.reduce(
+                        (total, p) => total + p.pending_count,
+                        0,
+                      )}
                     </strong>
                     Unreviewed safety flags
                   </div>
@@ -263,7 +285,7 @@ export function PlatformDashboard() {
                     {v === "projects"
                       ? "Projects"
                       : v === "builders"
-                        ? "Dream builders"
+                        ? "Builders"
                         : "Prompt reviews"}
                   </button>
                 ))}
@@ -274,7 +296,7 @@ export function PlatformDashboard() {
                 <div className="df-section-head">
                   <h2>
                     {teacher
-                      ? "Your class’s projects"
+                      ? "Your builders’ projects"
                       : "Your little masterpieces"}
                   </h2>
                   <span className="df-pill">
@@ -356,7 +378,13 @@ export function PlatformDashboard() {
             {teacher && view === "prompts" && (
               <>
                 <div className="df-section-head">
-                  <h2>Every prompt, in view</h2>
+                  <h2>
+                    {selectedReviewProject
+                      ? reviewProjects.find(
+                          (p) => p.vm_id === selectedReviewProject,
+                        )?.project_name || "Project prompts"
+                      : "Prompt reviews by project"}
+                  </h2>
                   <label className="df-inline">
                     <input
                       type="checkbox"
@@ -379,61 +407,138 @@ export function PlatformDashboard() {
                   reviewed does not override a blocked request. Image content is
                   not covered by these text checks.
                 </p>
-                {reviews.length ? (
-                  reviews.map((r) => (
-                    <article
-                      key={r.id}
-                      className={`df-card df-review ${r.decision === "allow" ? "safe" : "flagged"}`}
-                    >
-                      <div className="df-inline">
-                        <strong>{r.child_name}</strong>
-                        <span className="df-pill">
-                          {r.decision === "allow"
-                            ? "No text flags"
-                            : `${r.decision} · ${r.severity}`}
-                        </span>
-                        <Link
-                          className="df-purple"
-                          href={`/${r.vm_id}/${r.conversation_id}`}
+                {selectedReviewProject ? (
+                  <>
+                    <div className="df-inline" style={{ marginBottom: 20 }}>
+                      <button
+                        disabled={busy}
+                        className="df-button secondary small"
+                        onClick={() => {
+                          setSelectedReviewProject(null);
+                          setReviews([]);
+                          setReviewCursor(null);
+                        }}
+                      >
+                        ← All projects
+                      </button>
+                      <span className="df-pill">
+                        Builder:{" "}
+                        {
+                          reviewProjects.find(
+                            (p) => p.vm_id === selectedReviewProject,
+                          )?.child_name
+                        }
+                      </span>
+                    </div>
+                    {reviews.length ? (
+                      reviews.map((r) => (
+                        <article
+                          key={r.id}
+                          className={`df-card df-review ${r.decision === "allow" ? "safe" : "flagged"}`}
                         >
-                          {r.project_name} ↗
-                        </Link>
+                          <div className="df-inline">
+                            <strong>{r.child_name}</strong>
+                            <span className="df-pill">
+                              {r.decision === "allow"
+                                ? "No text flags"
+                                : `${r.decision} · ${r.severity}`}
+                            </span>
+                            <Link
+                              className="df-purple"
+                              href={`/${r.vm_id}/${r.conversation_id}`}
+                            >
+                              {r.project_name} ↗
+                            </Link>
+                          </div>
+                          <p>{r.content}</p>
+                          <div className="df-inline">
+                            <small>
+                              {r.categories.join(", ") ||
+                                "No categories flagged"}{" "}
+                              · {new Date(r.created_at).toLocaleString()}
+                            </small>
+                            {r.reviewed_at ? (
+                              <span className="df-pill">Reviewed</span>
+                            ) : (
+                              <button
+                                className="df-button secondary small"
+                                onClick={() =>
+                                  action("/api/platform/reviews", { id: r.id })
+                                }
+                              >
+                                Mark reviewed
+                              </button>
+                            )}
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <div className="df-empty">
+                        {busy
+                          ? "Loading project prompts…"
+                          : "No prompts found."}
                       </div>
-                      <p>{r.content}</p>
-                      <div className="df-inline">
-                        <small>
-                          {r.categories.join(", ") || "No categories flagged"} ·{" "}
-                          {new Date(r.created_at).toLocaleString()}
-                        </small>
-                        {r.reviewed_at ? (
-                          <span className="df-pill">Reviewed</span>
-                        ) : (
-                          <button
-                            className="df-button secondary small"
-                            onClick={() =>
-                              action("/api/platform/reviews", { id: r.id })
-                            }
-                          >
-                            Mark reviewed
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  ))
+                    )}
+                    {reviewCursor && (
+                      <button
+                        className="df-button secondary"
+                        onClick={() =>
+                          loadReviews(flagsOnly, reviewCursor).catch((e) =>
+                            setError(e.message),
+                          )
+                        }
+                      >
+                        Load older prompts
+                      </button>
+                    )}
+                  </>
                 ) : (
-                  <div className="df-empty">No prompts found.</div>
-                )}
-                {reviewCursor && (
-                  <button
-                    className="df-button secondary"
-                    onClick={() =>
-                      loadReviews(flagsOnly, reviewCursor).catch((e) =>
-                        setError(e.message),
-                      )
-                    }
-                  >
-                    Load older prompts
-                  </button>
+                  <div className="df-projects">
+                    {reviewProjects
+                      .filter((p) => !flagsOnly || p.flagged_count > 0)
+                      .map((p) => (
+                        <button
+                          key={p.vm_id}
+                          className="df-card df-project"
+                          style={{ textAlign: "left", cursor: "pointer" }}
+                          disabled={busy}
+                          onClick={async () => {
+                            setBusy(true);
+                            setSelectedReviewProject(p.vm_id);
+                            setReviews([]);
+                            setReviewCursor(null);
+                            try {
+                              await loadReviews(flagsOnly, undefined, p.vm_id);
+                            } catch (e) {
+                              setError((e as Error).message);
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                        >
+                          <span className="df-project-icon">✧</span>
+                          <h3>{p.project_name}</h3>
+                          <p className="df-muted">Builder: {p.child_name}</p>
+                          <div className="df-inline">
+                            <span className="df-pill">
+                              {p.prompt_count}{" "}
+                              {p.prompt_count === 1 ? "prompt" : "prompts"}
+                            </span>
+                            <span className="df-pill">
+                              {p.pending_count}{" "}
+                              {p.pending_count === 1 ? "flag" : "flags"} to
+                              review
+                            </span>
+                          </div>
+                          <footer style={{ marginTop: 18 }}>
+                            Review project prompts →
+                          </footer>
+                        </button>
+                      ))}
+                    {!reviewProjects.some(
+                      (p) => !flagsOnly || p.flagged_count > 0,
+                    ) && <div className="df-empty">No projects found.</div>}
+                  </div>
                 )}
               </>
             )}
@@ -442,24 +547,12 @@ export function PlatformDashboard() {
             </div>
             <div className="df-inline" style={{ marginBottom: 20 }}>
               {data.classes.map((c) => (
-                <div className="df-card" key={c.id}>
-                  <strong>{c.name}</strong>
-                  {c.invite_code && (
-                    <>
-                      <p className="df-muted" style={{ fontSize: 12 }}>
-                        Class invitation code
-                      </p>
-                      <button
-                        className="df-button secondary small"
-                        onClick={() =>
-                          navigator.clipboard.writeText(c.invite_code!)
-                        }
-                      >
-                        {c.invite_code} ⧉
-                      </button>
-                    </>
-                  )}
-                </div>
+                <PlatformClassCard
+                  key={c.id}
+                  classroom={c}
+                  teacher={!!teacher}
+                  onChanged={load}
+                />
               ))}
             </div>
             <form className="df-inline" onSubmit={classForm}>
@@ -535,10 +628,6 @@ export function PlatformDashboard() {
                 </div>
               </div>
             )}
-            <p className="df-footer">
-              Made for curious minds. 100,000 starter tokens · Teacher-guided
-              learning
-            </p>
           </>
         )}
       </div>

@@ -21,6 +21,7 @@ async function call(
   method?: string,
 ) {
   const r = await fetch(base + path, {
+    signal: AbortSignal.timeout(30000),
     method: method || (body ? "POST" : "GET"),
     headers: {
       Origin: base,
@@ -115,6 +116,38 @@ try {
     await call("/api/platform/classes", { name: "Test class B" }, b.cookie)
   ).body.class;
   classes.push(cb.id);
+  assert.equal(
+    (
+      await call(
+        "/api/platform/classes",
+        { id: ca.id, name: "Renamed class" },
+        a.cookie,
+        "PATCH",
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call("/api/platform/dashboard", undefined, a.cookie)).body.classes[0]
+      .name,
+    "Renamed class",
+  );
+  assert.equal(
+    (
+      await call(
+        "/api/platform/classes",
+        { id: ca.id, name: "Unauthorized" },
+        b.cookie,
+        "PATCH",
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (await call("/api/platform/classes", { id: ca.id }, b.cookie, "DELETE"))
+      .status,
+    404,
+  );
   const sign = await call("/api/platform/auth", {
     action: "signup",
     classCode: ca.invite_code,
@@ -282,6 +315,100 @@ try {
       .length,
     1,
   );
+  assert.equal(
+    (await call("/api/platform/classes", { id: ca.id }, sign.cookie, "DELETE"))
+      .status,
+    403,
+  );
+  const secondProject = "vm-" + randomBytes(16).toString("hex");
+  projects.push(secondProject);
+  await db.query(
+    "insert into adorable.projects(vm_id,metadata,owner_id) values($1,$2,$3)",
+    [
+      secondProject,
+      JSON.stringify({ ...metadata, name: "Another builder project" }),
+      child.id,
+    ],
+  );
+  await db.query(
+    "insert into adorable.prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,'Please review this example prompt','review','{privacy}','low')",
+    [secondProject, child.id, conversation],
+  );
+  const groups = (
+    await call("/api/platform/reviews?group=projects", undefined, a.cookie)
+  ).body.projects;
+  assert.equal(groups.length, 2);
+  assert.ok(groups.every((p: any) => p.child_name === "Test Builder"));
+  assert.equal(
+    groups.find((p: any) => p.vm_id === secondProject).pending_count,
+    1,
+  );
+  const projectReviews = (
+    await call(`/api/platform/reviews?projectId=${id}`, undefined, a.cookie)
+  ).body.reviews;
+  assert.equal(projectReviews.length, 1);
+  assert.ok(projectReviews.every((r: any) => r.vm_id === id));
+  assert.equal(
+    (
+      await call(
+        `/api/platform/reviews?projectId=${secondProject}&flags=1`,
+        undefined,
+        a.cookie,
+      )
+    ).body.reviews.length,
+    1,
+  );
+  assert.equal(
+    (await call("/api/platform/classes", { id: ca.id }, a.cookie, "DELETE"))
+      .status,
+    200,
+  );
+  const kept = (await call("/api/platform/dashboard", undefined, a.cookie))
+    .body;
+  assert.equal(kept.classes.length, 0);
+  assert.equal(kept.children.length, 1);
+  assert.equal(kept.projects.length, 2);
+  assert.equal(
+    (
+      await call(
+        `/api/projects/${id}/conversations/${conversation}`,
+        undefined,
+        a.cookie,
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call("/api/platform/reviews?group=projects", undefined, a.cookie))
+      .body.projects.length,
+    2,
+  );
+  assert.equal(
+    Number(
+      (
+        await db.query(
+          "select used_tokens from adorable.token_accounts where child_id=$1",
+          [child.id],
+        )
+      ).rows[0].used_tokens,
+    ),
+    3000,
+  );
+  assert.equal(
+    (
+      await db.query(
+        "select count(*)::int as n from adorable.profiles where id=$1",
+        [child.id],
+      )
+    ).rows[0].n,
+    1,
+  );
+  if (process.argv.includes("--keep")) {
+    const visualClass = (
+      await call("/api/platform/classes", { name: "Creative Coders" }, a.cookie)
+    ).body.class;
+    classes.push(visualClass.id);
+  }
   if (process.argv.includes("--keep"))
     fs.writeFileSync(
       ".deployment/test-platform-session.json",
@@ -295,7 +422,7 @@ try {
       { mode: 0o600 },
     );
   console.log(
-    "PASS: username signup/login, no email verification, single-use teacher invites, role protection, class joins, scoped teacher reviews, child ownership, concurrent quota reservation, idempotent settlement, disabled checkout.",
+    "PASS: username signup/login, no email verification, single-use teacher invites, role protection, class joins, scoped teacher reviews, child ownership, concurrent quota reservation, idempotent settlement, project-grouped reviews, class renaming/deletion ownership, retained builder roster/accounts/projects/tokens, disabled checkout.",
   );
   // Retain test accounts temporarily for browser visual checks; cleanup script consumes manifest.
   fs.writeFileSync(
