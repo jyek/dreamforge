@@ -2170,3 +2170,84 @@
     transition: none;
   }
 }
+
+/* The idea canvas fills Home; only its decorative stickers move. */
+.df-teacher-content.df-builder-home {
+  padding: 0;
+}
+.df-builder-home > .df-container {
+  max-width: none;
+  margin: 0;
+}
+.df-builder-home .df-builder-start {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  min-height: max(680px, 100svh);
+}
+.df-builder-home .df-home-project-section {
+  max-width: 1200px;
+  margin: auto;
+  padding: 38px 40px 50px;
+}
+.df-idea-rocket {
+  animation: df-rocket-float 7s ease-in-out infinite;
+}
+.df-idea-star {
+  animation: df-star-sway 8s ease-in-out infinite;
+}
+.df-idea-game {
+  animation: df-game-float 7.5s ease-in-out infinite;
+}
+.df-idea-spark {
+  animation: df-spark-turn 6.5s ease-in-out infinite;
+}
+@keyframes df-rocket-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(10deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(13deg);
+  }
+}
+@keyframes df-star-sway {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-5deg);
+  }
+}
+@keyframes df-game-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-3deg);
+  }
+}
+@keyframes df-spark-turn {
+  0%,
+  100% {
+    transform: rotate(8deg) scale(1);
+  }
+  50% {
+    transform: rotate(16deg) scale(1.04);
+  }
+}
+@media (max-width: 760px) {
+  .df-builder-home .df-builder-start {
+    min-height: max(740px, calc(100svh - 68px));
+  }
+  .df-builder-home .df-home-project-section {
+    padding: 28px 22px 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-idea-art svg {
+    animation: none;
+  }
+}

@@ -133,7 +133,9 @@ export function PlatformDashboardLayout({
           </div>
         )}
       </StudioSidebar>
-      <main className="df-page df-teacher-content">
+      <main
+        className={`df-page df-teacher-content ${!teacher && section === "home" ? "df-builder-home" : ""}`}
+      >
         {(teacher || section !== "home") && (
           <header className="df-teacher-header">
             <div>
