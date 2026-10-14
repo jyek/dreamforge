@@ -1,3 +1,4 @@
+import { paymentMode } from "@/lib/payment-mode";
 import { notFound } from "next/navigation";
 import { database } from "@/lib/database";
 import { tokenHash, platformEnabled } from "@/lib/platform-auth";
@@ -8,7 +9,7 @@ export default async function Pay({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ paid?: string }>;
+  searchParams: Promise<{ paid?: string; session_id?: string }>;
 }) {
   if (!platformEnabled()) notFound();
   const { token } = await params;
@@ -22,6 +23,8 @@ export default async function Pay({
       token={token}
       enabled={paymentsEnabled()}
       paid={(await searchParams).paid === "1"}
+      sessionId={(await searchParams).session_id}
+      sandbox={paymentMode() === "sandbox"}
     />
   );
 }

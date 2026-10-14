@@ -30,7 +30,8 @@ export async function POST(req: Request) {
     );
   const params = new URLSearchParams({
     mode: "payment",
-    success_url: `${site}/pay/${body.token}?paid=1`,
+    "payment_method_types[0]": "card",
+    success_url: `${site}/pay/${body.token}?paid=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${site}/pay/${body.token}`,
     "line_items[0][price_data][currency]": "sgd",
     "line_items[0][price_data][unit_amount]": String(pack.amount),

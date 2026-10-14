@@ -1,3 +1,4 @@
+import { paymentKeyMatchesMode } from "./payment-mode";
 // Proposed pilot packages; live checkout also requires the explicit payment flag.
 export const TOPUP_PACKAGES = [
   { id: "spark", name: "Spark", amount: 500, tokens: 1000000 },
@@ -6,5 +7,5 @@ export const TOPUP_PACKAGES = [
 ] as const;
 export const paymentsEnabled = () =>
   process.env.DREAMFORGE_PAYMENTS_ENABLED === "true" &&
-  !!process.env.STRIPE_SECRET_KEY &&
+  paymentKeyMatchesMode() &&
   !!process.env.STRIPE_WEBHOOK_SECRET;

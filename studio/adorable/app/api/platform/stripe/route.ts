@@ -1,3 +1,4 @@
+import { paymentEventMatchesMode } from "@/lib/payment-mode";
 import { database } from "@/lib/database";
 import { verifiedStripeBody } from "@/lib/stripe-signature";
 import { TOPUP_PACKAGES, paymentsEnabled } from "@/lib/topup-packages";
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
     ].includes(event.type)
   )
     return Response.json({ ok: true });
+  if (!paymentEventMatchesMode(event))
+    return Response.json({ error: "Incorrect payment mode" }, { status: 400 });
   const session = event.data?.object,
     pack = TOPUP_PACKAGES.find((p) => p.id === session?.metadata?.package);
   if (

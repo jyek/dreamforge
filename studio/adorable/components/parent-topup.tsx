@@ -1,19 +1,52 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TOPUP_PACKAGES } from "@/lib/topup-packages";
 import { DreamForgeBrand } from "./dreamforge-brand";
 export function ParentTopup({
   token,
   enabled,
   paid,
+  sessionId,
+  sandbox = false,
 }: {
   token: string;
   enabled: boolean;
   paid: boolean;
+  sessionId?: string;
+  sandbox?: boolean;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState("");
+  const [credit, setCredit] = useState<number | null>(null);
+  useEffect(() => {
+    if (!paid || !sessionId) return;
+    let stopped = false;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    async function poll() {
+      try {
+        const r = await fetch(
+          `/api/platform/payment-status?${new URLSearchParams({ token, session: sessionId! })}`,
+          { signal: controller.signal },
+        );
+        const data = await r.json();
+        if (r.ok && data.credited && !stopped) {
+          setCredit(data.tokens);
+          return;
+        }
+      } catch {}
+      if (!stopped && ++attempts < 30) timer = setTimeout(poll, 2000);
+    }
+    void poll();
+    return () => {
+      stopped = true;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [paid, sessionId, token]);
   async function pay(id: string) {
+    setError("");
     setBusy(id);
     try {
       const r = await fetch("/api/platform/checkout", {
@@ -41,10 +74,18 @@ export function ParentTopup({
           Add a token allowance to your child’s DreamForge account. This is a
           one-time purchase, with no subscription or automatic renewal.
         </p>
+        {sandbox && (
+          <p className="df-notice">
+            <strong>Sandbox payments</strong> · No real money is charged. Use
+            test card 4242 4242 4242 4242, any future expiry date and any
+            three-digit CVC.
+          </p>
+        )}
         {paid && (
           <p className="df-notice">
-            If your payment completed, tokens will appear once Stripe confirms
-            it. This page alone does not confirm a payment.
+            {credit !== null
+              ? `${credit.toLocaleString()} tokens added to the account. You can return to DreamForge and keep building.`
+              : "Waiting for Stripe to confirm your payment and add tokens. If this takes a moment, refresh this page shortly."}
           </p>
         )}
         {!enabled && (
@@ -68,7 +109,11 @@ export function ParentTopup({
                 disabled={!enabled || !!busy}
                 onClick={() => pay(p.id)}
               >
-                {busy === p.id ? "Opening Stripe…" : "Add tokens →"}
+                {busy === p.id
+                  ? "Opening Stripe…"
+                  : sandbox
+                    ? "Test top-up →"
+                    : "Add tokens →"}
               </button>
             </article>
           ))}

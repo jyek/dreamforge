@@ -1,3 +1,4 @@
+import { paymentsEnabled } from "@/lib/topup-packages";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
 export async function GET() {
@@ -60,9 +61,6 @@ export async function GET() {
     children,
     unconfirmed,
     wallet: wallet[0] || null,
-    paymentsEnabled:
-      !!process.env.STRIPE_SECRET_KEY &&
-      !!process.env.STRIPE_WEBHOOK_SECRET &&
-      process.env.DREAMFORGE_PAYMENTS_ENABLED === "true",
+    paymentsEnabled: paymentsEnabled(),
   });
 }
