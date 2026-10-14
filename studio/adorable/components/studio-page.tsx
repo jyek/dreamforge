@@ -7,7 +7,15 @@ export async function StudioPage({ section }: { section: string }) {
   if (!user) redirect("/login");
   const allowed =
     user.role === "teacher"
-      ? ["home", "projects", "classrooms", "builders", "prompts", "settings"]
+      ? [
+          "home",
+          "projects",
+          "classrooms",
+          "students",
+          "prompts",
+          "settings",
+          "profile",
+        ]
       : ["home", "classrooms", "profile", "settings"];
   if (!allowed.includes(section)) redirect("/home");
   return (

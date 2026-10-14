@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { ChevronUp } from "lucide-react";
 import { DreamForgeBrand } from "./dreamforge-brand";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -111,6 +112,37 @@ export function StudioSidebar({
             >
               {account}
             </Link>
+          ) : role === "teacher" ? (
+            <details
+              className="df-account-menu"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") event.currentTarget.open = false;
+              }}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget))
+                  event.currentTarget.open = false;
+              }}
+            >
+              <summary
+                className="df-profile-link"
+                aria-label="Teacher profile menu"
+              >
+                {account}
+                <ChevronUp size={16} aria-hidden="true" />
+              </summary>
+              <div
+                className="df-account-menu-content"
+                role="menu"
+                aria-label="Teacher account"
+              >
+                <Link role="menuitem" href="/profile" onClick={onProfileOpen}>
+                  Manage profile
+                </Link>
+                <button role="menuitem" onClick={signOut}>
+                  Log out
+                </button>
+              </div>
+            </details>
           ) : (
             account
           )}
