@@ -49,7 +49,7 @@ export function PlatformAuthForm({
           <h1 className="df-title">
             Dream it.
             <br />
-            <span className="df-purple">Build it.</span>
+            <span className="df-highlight">Build it.</span>
             <br />
             Make it yours.
           </h1>
@@ -59,7 +59,7 @@ export function PlatformAuthForm({
           </p>
           <DreamForgeArt />
         </div>
-        <div className="df-card">
+        <div className="df-card df-auth-card">
           <span className="df-pill">
             {teacherInvite
               ? "Teacher invitation"

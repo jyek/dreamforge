@@ -1,4 +1,5 @@
 "use client";
+import { School } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   Dialog,
@@ -46,7 +47,10 @@ export function PlatformClassCard({
     void change("PATCH");
   }
   return (
-    <section className="df-card">
+    <section className="df-card df-class-card">
+      <span className="df-project-icon">
+        <School size={23} aria-hidden="true" />
+      </span>
       {editing ? (
         <form className="df-form" onSubmit={rename}>
           <label>

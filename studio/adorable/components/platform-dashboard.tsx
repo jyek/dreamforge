@@ -2,7 +2,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { PlatformClassCard } from "./platform-class-card";
-import { DreamForgeArt } from "./dreamforge-brand";
+import {
+  School,
+  FolderKanban,
+  ShieldCheck,
+  Sparkles,
+  Coins,
+  UsersRound,
+} from "lucide-react";
+import { DreamForgeArt, DreamForgeProjectArt } from "./dreamforge-brand";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 type Project = {
   vm_id: string;
@@ -137,6 +145,7 @@ export function PlatformDashboard({
       window.location.assign(`/${result.id}/${result.conversationId}`);
   }
   const teacher = (data?.user || initialUser)?.role === "teacher";
+  const HeroHeading = teacher ? "h2" : "h1";
   const remaining = data?.wallet
     ? Math.max(
         0,
@@ -168,20 +177,39 @@ export function PlatformDashboard({
           {(!teacher || view === "home") && (
             <>
               <section className="df-card df-hero">
-                <div>
-                  <span className="df-pill">
+                <div className="df-hero-copy">
+                  <span className="df-pill df-sticker">
                     {teacher ? "TEACHER STUDIO" : "BUILDER"}
                   </span>
-                  <h1>
-                    {teacher
-                      ? "A little guidance. Big ideas."
-                      : `Hey, ${data.user.display_name}!`}
-                  </h1>
+                  <HeroHeading className="df-hero-title">
+                    {teacher ? (
+                      <>
+                        A little guidance.
+                        <br />
+                        <span className="df-highlight">Big ideas.</span>
+                      </>
+                    ) : (
+                      <>
+                        Hey,{" "}
+                        <span className="df-highlight">
+                          {data.user.display_name}!
+                        </span>
+                      </>
+                    )}
+                  </HeroHeading>
                   <p style={{ margin: "0 0 24px" }}>
                     {teacher
                       ? "Follow your builders’ projects, progress and prompts."
                       : "What will your imagination build today?"}
                   </p>
+                  {teacher && (
+                    <button
+                      className="df-button"
+                      onClick={() => setView("projects")}
+                    >
+                      Explore your builders’ projects ↗
+                    </button>
+                  )}
                   {!teacher && (
                     <button
                       className="df-button"
@@ -200,14 +228,29 @@ export function PlatformDashboard({
                 {teacher ? (
                   <>
                     <div className="df-card df-stat">
+                      <UsersRound
+                        className="df-stat-icon"
+                        size={22}
+                        aria-hidden="true"
+                      />
                       Builders<strong>{data.children.length}</strong>In your
                       roster
                     </div>
                     <div className="df-card df-stat">
+                      <FolderKanban
+                        className="df-stat-icon"
+                        size={22}
+                        aria-hidden="true"
+                      />
                       Ideas in progress<strong>{data.projects.length}</strong>
                       Projects to explore
                     </div>
                     <div className="df-card df-stat">
+                      <ShieldCheck
+                        className="df-stat-icon"
+                        size={22}
+                        aria-hidden="true"
+                      />
                       Prompts to check
                       <strong>
                         {reviewProjects.reduce(
@@ -221,11 +264,21 @@ export function PlatformDashboard({
                 ) : (
                   <>
                     <div className="df-card df-stat">
+                      <Sparkles
+                        className="df-stat-icon"
+                        size={22}
+                        aria-hidden="true"
+                      />
                       Tokens remaining
                       <strong>{remaining.toLocaleString()}</strong>From your
                       token allowance
                     </div>
                     <div className="df-card df-stat">
+                      <Coins
+                        className="df-stat-icon"
+                        size={22}
+                        aria-hidden="true"
+                      />
                       Tokens used
                       <strong>
                         {Number(data.wallet?.used_tokens || 0).toLocaleString()}
@@ -233,6 +286,11 @@ export function PlatformDashboard({
                       Includes prompts, replies & tools
                     </div>
                     <div className="df-card df-stat">
+                      <FolderKanban
+                        className="df-stat-icon"
+                        size={22}
+                        aria-hidden="true"
+                      />
                       Your creations<strong>{data.projects.length}</strong>Every
                       idea starts somewhere
                     </div>
@@ -289,7 +347,9 @@ export function PlatformDashboard({
                   className="df-card df-project"
                   onClick={() => setView("classrooms")}
                 >
-                  <span className="df-project-icon">✧</span>
+                  <span className="df-project-icon">
+                    <School size={23} aria-hidden="true" />
+                  </span>
                   <h3>Classrooms</h3>
                   <p className="df-muted">
                     {data.classes.length}{" "}
@@ -302,7 +362,9 @@ export function PlatformDashboard({
                   className="df-card df-project"
                   onClick={() => setView("projects")}
                 >
-                  <span className="df-project-icon">✧</span>
+                  <span className="df-project-icon">
+                    <FolderKanban size={23} aria-hidden="true" />
+                  </span>
                   <h3>Projects</h3>
                   <p className="df-muted">
                     Explore what your builders are making.
@@ -313,7 +375,9 @@ export function PlatformDashboard({
                   className="df-card df-project"
                   onClick={() => setView("prompts")}
                 >
-                  <span className="df-project-icon">✧</span>
+                  <span className="df-project-icon">
+                    <ShieldCheck size={23} aria-hidden="true" />
+                  </span>
                   <h3>Prompt reviews</h3>
                   <p className="df-muted">
                     {reviewProjects.reduce(
@@ -339,13 +403,13 @@ export function PlatformDashboard({
               </div>
               {data.projects.length ? (
                 <div className="df-projects">
-                  {data.projects.map((p) => (
+                  {data.projects.map((p, index) => (
                     <Link
                       key={p.vm_id}
                       className="df-card df-project"
                       href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
                     >
-                      <span className="df-project-icon">✧</span>
+                      <DreamForgeProjectArt variant={index} />
                       <h3>{p.metadata.name}</h3>
                       <p className="df-muted">
                         {teacher

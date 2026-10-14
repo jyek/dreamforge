@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none"><rect x="5" y="8" width="66" height="66" rx="19" fill="#1A0F2E"/><rect x="3" y="3" width="66" height="66" rx="19" fill="#6B3FF7" stroke="#1A0F2E" stroke-width="3"/><path d="M21 22h12c13 0 22 8 22 17S46 56 33 56H21V22Z" fill="#FFF6E6"/><path d="m29 32-7 7 7 7m13-14 7 7-7 7" stroke="#6B3FF7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="m61 1 3 9 9 3-9 3-3 9-3-9-9-3 9-3 3-9Z" fill="#FFD23F" stroke="#1A0F2E" stroke-width="2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <path d="M13 14h23c21 0 34 13 34 31S57 76 36 76H13V14Z" fill="#1A0F2E"/>
+  <path d="M9 10h23c21 0 34 13 34 31S53 72 32 72H9V10Z" fill="#6B3FF7" stroke="#1A0F2E" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M24 25h9c12 0 19 6 19 16s-7 16-19 16h-9V25Z" fill="#FFF6E6"/>
+  <path d="m32 33-8 8 8 8m9-16 8 8-8 8" stroke="#6B3FF7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m63 3 4 10 10 4-10 4-4 10-4-10-10-4 10-4 4-10Z" fill="#FFD23F" stroke="#1A0F2E" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M13 61h7" stroke="#FF6B2B" stroke-width="4" stroke-linecap="round"/>
+</svg>

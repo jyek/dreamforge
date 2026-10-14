@@ -1,4 +1,7 @@
-import { DreamForgeBrand } from "@/components/dreamforge-brand";
+import {
+  DreamForgeBrand,
+  DreamForgeProjectArt,
+} from "@/components/dreamforge-brand";
 import { database } from "@/lib/database";
 import Link from "next/link";
 import { platformEnabled } from "@/lib/platform-auth";
@@ -24,13 +27,13 @@ export default async function Examples() {
           your studio.
         </p>
         <div className="df-projects" style={{ marginTop: 35 }}>
-          {rows.map((p) => (
+          {rows.map((p, index) => (
             <Link
               className="df-card df-project"
               key={p.vm_id}
               href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
             >
-              <span className="df-project-icon">✧</span>
+              <DreamForgeProjectArt variant={index} />
               <h3>{p.metadata.name}</h3>
               <p className="df-muted">Demo example</p>
               <footer>Explore ↗</footer>

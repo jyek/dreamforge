@@ -56,3 +56,7 @@ node --import tsx --test tests/stripe-signature.test.ts
 ```
 
 Keep real credentials, migration backups and test artifacts in ignored local files. Runtime trial retention is provider-controlled; a paid operating plan and source backups are needed before promising long-term classroom project retention.
+
+### DreamForge visual language
+
+The account screens, teacher studio, builder dashboard and example cards use the existing cream, purple, orange, yellow and lime palette. The Magnum kids-learning [design reference](https://www.behance.net/gallery/220686341/Magnum-Kids-Learning-website-Website-Redesign) informs framed headers, bold outlines, offset shadows, compact labels and clearer card hierarchy. The logo and coding illustrations are original SVG assets; project illustrations are decorative, not screenshots of a builder’s project. Mobile navigation and reduced-motion preferences are supported.
