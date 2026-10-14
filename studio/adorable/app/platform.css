@@ -473,11 +473,11 @@
 }
 .df-studio-nav button[aria-current="page"],
 .df-studio-nav a[aria-current="page"] {
-  background: #6b3ff7;
-  border-color: #1a0f2e;
-  box-shadow: 3px 3px 0 #1a0f2e;
-  color: #fff6e6;
-  font-weight: 800;
+  background: #f0e9ff;
+  border-color: transparent;
+  box-shadow: none;
+  color: #6b3ff7;
+  font-weight: 750;
 }
 .df-sidebar-account {
   margin-top: auto;
@@ -1041,8 +1041,8 @@
   white-space: nowrap;
 }
 .df-recent-projects button[aria-current="page"] {
-  background: #e5d6ff;
-  color: #1a0f2e;
+  background: #f0e9ff;
+  color: #6b3ff7;
 }
 .df-workspace-projects .df-muted {
   font-size: 12px;
