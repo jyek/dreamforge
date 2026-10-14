@@ -2439,10 +2439,10 @@
   }
   .df-teacher-dashboard > .df-studio-sidebar > .df-studio-nav > button,
   .df-teacher-dashboard > .df-studio-sidebar > .df-studio-nav > a {
-    height: 52px;
+    height: 42px;
   }
   .df-teacher-dashboard > .df-studio-sidebar > .df-sidebar-create .df-button {
-    height: 46px;
+    height: 42px;
     margin-top: 0;
     margin-bottom: 0;
   }
@@ -2806,4 +2806,20 @@
 }
 .df-class-menu-delete {
   color: #c43e48;
+}
+
+/* Expanded dashboard rows use the collapsed rail's compact 42px height. */
+@media (min-width: 768px) {
+  .df-teacher-dashboard
+    > .df-studio-sidebar:not([data-collapsed="true"])
+    > .df-studio-nav
+    > :is(a, button),
+  .df-teacher-dashboard
+    > .df-studio-sidebar:not([data-collapsed="true"])
+    > .df-sidebar-create
+    .df-button {
+    height: 42px;
+    min-height: 42px;
+    padding-block: 8px;
+  }
 }
