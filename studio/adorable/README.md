@@ -42,7 +42,7 @@ Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and register `/api/platform/st
 
 ## Prompt reviews and brand
 
-The teacher dashboard uses a left navigation panel with Home, Classrooms, Students, Projects and Prompts. Teacher invitations are in Profile. Prompts shows projects grouped by their builder, with paginated prompt history and a flagged-only filter inside each project, redacted personal identifiers, local safety decisions/categories, and review status. Marking a prompt reviewed does not override a blocked request. Current checks are local text rules and safe source-file tools; they do not classify images or provide comprehensive moderation. Existing external-moderation LMS routes remain separate.
+The teacher dashboard uses a left navigation panel with Home, Classrooms, Students, Projects and Prompts. Teacher invitations are in Profile. Students and Prompts show a student overview table with project/prompt counts and guidance categories. Opening a student shows paginated prompt history with project, category and text filters, redacted personal identifiers, safety decisions, and coaching suggestions. Bad language and vague-request hints are teacher guidance only; they do not alter moderation decisions. Review-status controls are omitted. Current checks are local text rules and safe source-file tools; they do not classify images or provide comprehensive moderation. Existing external-moderation LMS routes remain separate.
 
 The original vector logo is `public/brand/dreamforge-mark.svg`. New account, classroom and parent-payment pages use cream, purple, orange, yellow and lime with rounded cards and hard shadows. Project workspaces retain the familiar conversation/preview layout.
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BuilderIdeaArt } from "./builder-idea-art";
 import { BuilderHomePrompt } from "./builder-home-prompt";
+import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { TeacherProfile } from "./teacher-profile";
 import { CopyButton } from "./copy-button";
 import { signOut } from "./studio-sidebar";
@@ -51,27 +52,6 @@ type Data = {
     output_tokens: string;
   }[];
 };
-type ReviewProject = {
-  vm_id: string;
-  project_name: string;
-  child_name: string;
-  prompt_count: number;
-  flagged_count: number;
-  pending_count: number;
-};
-type Review = {
-  id: string;
-  vm_id: string;
-  conversation_id: string;
-  content: string;
-  decision: string;
-  categories: string[];
-  severity: string;
-  reviewed_at: string | null;
-  child_name: string;
-  project_name: string;
-  created_at: string;
-};
 async function api(url: string, body?: unknown) {
   const r = await fetch(
     url,
@@ -99,14 +79,8 @@ export function PlatformDashboard({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [link, setLink] = useState(""),
-    [reviews, setReviews] = useState<Review[]>([]),
-    [view, setView] = useState(initialSection),
-    [reviewCursor, setReviewCursor] = useState<string | null>(null),
-    [flagsOnly, setFlagsOnly] = useState(false),
-    [reviewProjects, setReviewProjects] = useState<ReviewProject[]>([]),
-    [selectedReviewProject, setSelectedReviewProject] = useState<string | null>(
-      null,
-    );
+    [guidanceCount, setGuidanceCount] = useState(0),
+    [view, setView] = useState(initialSection);
   useEffect(() => {
     setView(initialSection);
   }, [initialSection]);
@@ -114,27 +88,19 @@ export function PlatformDashboard({
     setView(section);
     router.push(`/${section}`, { scroll: false });
   }
-  async function loadReviews(
-    flags = flagsOnly,
-    before?: string,
-    projectId = selectedReviewProject,
-  ) {
-    if (!projectId) return;
-    const page = await api(
-      `/api/platform/reviews?projectId=${encodeURIComponent(projectId)}&flags=${flags ? "1" : "0"}${before ? `&before=${encodeURIComponent(before)}` : ""}`,
-    );
-    setReviews((old) => (before ? [...old, ...page.reviews] : page.reviews));
-    setReviewCursor(page.nextCursor);
-  }
   async function load() {
     try {
       const d = await api("/api/platform/dashboard");
       setData(d);
       if (d.user.role === "teacher") {
-        setReviewProjects(
-          (await api("/api/platform/reviews?group=projects")).projects,
+        const guidance = await api("/api/platform/guidance");
+        setGuidanceCount(
+          guidance.students.reduce(
+            (total: number, student: { guidance_count: number }) =>
+              total + student.guidance_count,
+            0,
+          ),
         );
-        if (selectedReviewProject) await loadReviews();
       }
     } catch (e) {
       setError((e as Error).message);
@@ -311,13 +277,8 @@ export function PlatformDashboard({
                         aria-hidden="true"
                       />
                       Prompts to check
-                      <strong>
-                        {reviewProjects.reduce(
-                          (total, p) => total + p.pending_count,
-                          0,
-                        )}
-                      </strong>
-                      Unreviewed safety flags
+                      <strong>{guidanceCount}</strong>
+                      Prompts with guidance suggestions
                     </div>
                   </>
                 </div>
@@ -426,11 +387,7 @@ export function PlatformDashboard({
                   </span>
                   <h3>Prompt reviews</h3>
                   <p className="df-muted">
-                    {reviewProjects.reduce(
-                      (total, p) => total + p.pending_count,
-                      0,
-                    )}{" "}
-                    safety flags awaiting review
+                    {guidanceCount} prompts with guidance suggestions
                   </p>
                   <footer>Review prompts →</footer>
                 </button>
@@ -487,209 +444,8 @@ export function PlatformDashboard({
               )}
             </section>
           )}
-          {teacher && view === "students" && (
-            <section
-              className="df-card"
-              style={{ marginTop: 24, overflowX: "auto" }}
-            >
-              <table className="df-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Tokens used</th>
-                    <th>Remaining</th>
-                    <th>Input / output</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.children.map((c) => (
-                    <tr key={c.id}>
-                      <td>
-                        <strong>{c.display_name}</strong>
-                        <br />@{c.username}
-                      </td>
-                      <td>{Number(c.used_tokens).toLocaleString()}</td>
-                      <td>
-                        {Math.max(
-                          0,
-                          Number(c.token_limit) -
-                            Number(c.used_tokens) -
-                            Number(c.reserved_tokens),
-                        ).toLocaleString()}
-                      </td>
-                      <td>
-                        {Number(c.input_tokens).toLocaleString()} /{" "}
-                        {Number(c.output_tokens).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
-          {teacher && view === "prompts" && (
-            <>
-              <div className="df-section-head">
-                <h2>
-                  {selectedReviewProject
-                    ? reviewProjects.find(
-                        (p) => p.vm_id === selectedReviewProject,
-                      )?.project_name || "Project prompts"
-                    : "Prompt reviews by project"}
-                </h2>
-                <label className="df-inline">
-                  <input
-                    type="checkbox"
-                    checked={flagsOnly}
-                    onChange={async (e) => {
-                      const next = e.target.checked;
-                      setFlagsOnly(next);
-                      try {
-                        await loadReviews(next);
-                      } catch (e) {
-                        setError((e as Error).message);
-                      }
-                    }}
-                  />
-                  Flagged prompts only
-                </label>
-              </div>
-              <p className="df-muted">
-                Local text checks flag patterns for review. Marking a prompt
-                reviewed does not override a blocked request. Image content is
-                not covered by these text checks.
-              </p>
-              {selectedReviewProject ? (
-                <>
-                  <div className="df-inline" style={{ marginBottom: 20 }}>
-                    <button
-                      disabled={busy}
-                      className="df-button secondary small"
-                      onClick={() => {
-                        setSelectedReviewProject(null);
-                        setReviews([]);
-                        setReviewCursor(null);
-                      }}
-                    >
-                      ← All projects
-                    </button>
-                    <span className="df-pill">
-                      Student:{" "}
-                      {
-                        reviewProjects.find(
-                          (p) => p.vm_id === selectedReviewProject,
-                        )?.child_name
-                      }
-                    </span>
-                  </div>
-                  {reviews.length ? (
-                    reviews.map((r) => (
-                      <article
-                        key={r.id}
-                        className={`df-card df-review ${r.decision === "allow" ? "safe" : "flagged"}`}
-                      >
-                        <div className="df-inline">
-                          <strong>{r.child_name}</strong>
-                          <span className="df-pill">
-                            {r.decision === "allow"
-                              ? "No text flags"
-                              : `${r.decision} · ${r.severity}`}
-                          </span>
-                          <Link
-                            className="df-purple"
-                            href={`/${r.vm_id}/${r.conversation_id}`}
-                          >
-                            {r.project_name} ↗
-                          </Link>
-                        </div>
-                        <p>{r.content}</p>
-                        <div className="df-inline">
-                          <small>
-                            {r.categories.join(", ") || "No categories flagged"}{" "}
-                            · {new Date(r.created_at).toLocaleString()}
-                          </small>
-                          {r.reviewed_at ? (
-                            <span className="df-pill">Reviewed</span>
-                          ) : (
-                            <button
-                              className="df-button secondary small"
-                              onClick={() =>
-                                action("/api/platform/reviews", { id: r.id })
-                              }
-                            >
-                              Mark reviewed
-                            </button>
-                          )}
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <div className="df-empty">
-                      {busy ? "Loading project prompts…" : "No prompts found."}
-                    </div>
-                  )}
-                  {reviewCursor && (
-                    <button
-                      className="df-button secondary"
-                      onClick={() =>
-                        loadReviews(flagsOnly, reviewCursor).catch((e) =>
-                          setError(e.message),
-                        )
-                      }
-                    >
-                      Load older prompts
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="df-projects">
-                  {reviewProjects
-                    .filter((p) => !flagsOnly || p.flagged_count > 0)
-                    .map((p) => (
-                      <button
-                        key={p.vm_id}
-                        className="df-card df-project"
-                        style={{ textAlign: "left", cursor: "pointer" }}
-                        disabled={busy}
-                        onClick={async () => {
-                          setBusy(true);
-                          setSelectedReviewProject(p.vm_id);
-                          setReviews([]);
-                          setReviewCursor(null);
-                          try {
-                            await loadReviews(flagsOnly, undefined, p.vm_id);
-                          } catch (e) {
-                            setError((e as Error).message);
-                          } finally {
-                            setBusy(false);
-                          }
-                        }}
-                      >
-                        <span className="df-project-icon">✧</span>
-                        <h3>{p.project_name}</h3>
-                        <p className="df-muted">Student: {p.child_name}</p>
-                        <div className="df-inline">
-                          <span className="df-pill">
-                            {p.prompt_count}{" "}
-                            {p.prompt_count === 1 ? "prompt" : "prompts"}
-                          </span>
-                          <span className="df-pill">
-                            {p.pending_count}{" "}
-                            {p.pending_count === 1 ? "flag" : "flags"} to review
-                          </span>
-                        </div>
-                        <footer style={{ marginTop: 18 }}>
-                          Review project prompts →
-                        </footer>
-                      </button>
-                    ))}
-                  {!reviewProjects.some(
-                    (p) => !flagsOnly || p.flagged_count > 0,
-                  ) && <div className="df-empty">No projects found.</div>}
-                </div>
-              )}
-            </>
-          )}
+          {teacher && view === "students" && <TeacherPromptGuidance />}
+          {teacher && view === "prompts" && <TeacherPromptGuidance />}
           {view === "classrooms" && (
             <>
               <div className="df-section-head">
