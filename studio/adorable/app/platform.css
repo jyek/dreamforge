@@ -2135,3 +2135,38 @@
     transform: none;
   }
 }
+
+/* The brand mark becomes a directional sidebar control on hover or focus. */
+.df-sidebar-collapse {
+  position: relative;
+}
+.df-sidebar-collapse img {
+  width: 30px;
+  height: 30px;
+  transition: opacity 140ms ease;
+}
+.df-sidebar-mark-action {
+  position: absolute;
+  opacity: 0;
+  transform: scaleX(-1);
+}
+.df-studio-sidebar[data-collapsed="true"] .df-sidebar-mark-action {
+  transform: none;
+}
+.df-sidebar-brand:hover .df-sidebar-collapse,
+.df-sidebar-brand:focus-within .df-sidebar-collapse {
+  background: #6b3ff7;
+}
+.df-sidebar-brand:hover .df-sidebar-mark-default,
+.df-sidebar-brand:focus-within .df-sidebar-mark-default {
+  opacity: 0;
+}
+.df-sidebar-brand:hover .df-sidebar-mark-action,
+.df-sidebar-brand:focus-within .df-sidebar-mark-action {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-sidebar-collapse img {
+    transition: none;
+  }
+}
