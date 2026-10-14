@@ -1,6 +1,6 @@
 import { MODELS } from "./model-catalog";
 export const DEFAULT_CODING_MODEL = MODELS.free.id;
-export const QUOTA_FALLBACK_MODEL = MODELS.qwen.id;
+export const QUOTA_FALLBACK_MODEL = MODELS.glm.id;
 export const EXTRA_MODELS = Object.entries(MODELS)
   .filter(([key]) => key !== "free")
   .map(([, model]) => ({ id: model.id, name: model.label, paid: true }));

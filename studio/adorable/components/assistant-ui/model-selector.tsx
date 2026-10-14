@@ -88,8 +88,8 @@ export function ModelSelector() {
   const autoProvider =
     routedModel === MODELS.free.id
       ? "Cohere"
-      : routedModel === MODELS.qwen.id
-        ? "Qwen"
+      : routedModel === MODELS.glm.id
+        ? "GLM"
         : null;
   const activeLabel =
     selected === "auto" && autoProvider
@@ -182,7 +182,7 @@ export function ModelSelector() {
                   }}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
                 >
-                  <span className="min-w-0 flex-1 whitespace-nowrap text-sm font-medium">
+                  <span className="min-w-0 flex-1 text-sm font-medium whitespace-nowrap">
                     {label(model)}
                   </span>
                   <span className="text-[11px] text-slate-400">

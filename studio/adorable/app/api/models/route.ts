@@ -6,7 +6,7 @@ export async function GET() {
   const autoModel = quota
     ? quota.remaining > 0
       ? MODELS.free.id
-      : MODELS.qwen.id
+      : MODELS.glm.id
     : null;
   const models = modelOptions();
   return Response.json(

@@ -11,12 +11,12 @@ export async function freeQuota(
   });
   if (!response.ok)
     throw new ModelRoutingError(
-      "Could not check free quota. Try again, or select Qwen explicitly.",
+      "Could not check free quota. Try again, or select GLM explicitly.",
     );
   const data = (await response.json()).data?.free_model_daily_requests;
   if (!data || !Number.isFinite(data.remaining))
     throw new ModelRoutingError(
-      "OpenRouter did not report the free quota. Try again, or select Qwen explicitly.",
+      "OpenRouter did not report the free quota. Try again, or select GLM explicitly.",
     );
   return data as { used: number; limit: number; remaining: number };
 }
@@ -47,9 +47,9 @@ export function createModelRouting(
       if (exhausted) {
         if (choice === "free")
           throw new ModelRoutingError(
-            "Your daily free quota is used up. Choose Auto or Qwen to continue with a paid model.",
+            "Your daily free quota is used up. Choose Auto or GLM to continue with a paid model.",
           );
-        target = MODELS.qwen;
+        target = MODELS.glm;
       }
     }
     const send = async (model: (typeof MODELS)[keyof typeof MODELS]) => {
@@ -73,7 +73,6 @@ export function createModelRouting(
         delete body.reasoning_effort;
         body.reasoning = { effort: "low", exclude: true };
       }
-      if (model === MODELS.qwen) delete body.reasoning_effort;
       const visual = /"type"\s*:\s*"image_url"/.test(
         JSON.stringify(body.messages),
       );
@@ -89,7 +88,7 @@ export function createModelRouting(
         );
       if (model !== MODELS.free) {
         body.provider = {
-          sort: "price",
+          sort: model === MODELS.glm ? "throughput" : "price",
           require_parameters: true,
           max_price: {
             prompt: model.input,
@@ -119,7 +118,7 @@ export function createModelRouting(
       if ((await deps.quota()).remaining <= 0) {
         exhausted = true;
         await response.body?.cancel();
-        return send(MODELS.qwen);
+        return send(MODELS.glm);
       }
     }
     return response;

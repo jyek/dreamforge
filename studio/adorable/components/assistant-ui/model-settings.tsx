@@ -23,8 +23,10 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("dreamforge:model-choice");
-      if (saved === "qwen-large") setValue("qwen");
-      else if (isModelChoice(saved)) setValue(saved);
+      if (saved === "qwen" || saved === "qwen-large") {
+        setValue("glm");
+        localStorage.setItem("dreamforge:model-choice", "glm");
+      } else if (isModelChoice(saved)) setValue(saved);
     } catch {}
     setReady(true);
   }, []);

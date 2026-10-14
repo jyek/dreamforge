@@ -47,7 +47,7 @@ export function demoChatInput(
     throw new ChatInputError("Enter a prompt or attach an image.");
   if (images.length && !supportsImages(choice))
     throw new ChatInputError(
-      "Choose DeepSeek V4.1 Flash or GLM 5.3 Flash to use image attachments. Auto, Cohere and Qwen support text only.",
+      "Choose DeepSeek V4.1 Flash or GLM 5.3 Flash to use image attachments. Cohere supports text only. Auto can use images once it switches to GLM.",
     );
   return {
     prompt: prompt.trim()

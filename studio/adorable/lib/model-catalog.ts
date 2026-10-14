@@ -1,7 +1,6 @@
 export const MODEL_CHOICES = [
   { id: "auto", label: "Auto" },
   { id: "free", label: "Cohere North Mini Code" },
-  { id: "qwen", label: "Qwen3 Coder 30B A3B Instruct" },
   { id: "glm", label: "GLM 5.3 Flash" },
   { id: "deepseek", label: "DeepSeek V4.1 Flash" },
 ] as const;
@@ -14,12 +13,6 @@ export const MODELS = {
     label: "Cohere North Mini Code",
     input: 0,
     output: 0,
-  },
-  qwen: {
-    id: "qwen/qwen3-coder-30b-a3b-instruct",
-    label: "Qwen3 Coder 30B A3B Instruct",
-    input: 0.07,
-    output: 0.28,
   },
   glm: {
     id: "z-ai/glm-5.3-flash",
@@ -36,7 +29,11 @@ export const MODELS = {
 } as const;
 export const modelLabel = (id: string) =>
   Object.values(MODELS).find((model) => model.id === id)?.label ||
-  (id === "qwen/qwen3-coder" ? "Qwen3 Coder 480B A35B" : id);
+  (id === "qwen/qwen3-coder-30b-a3b-instruct"
+    ? "Qwen3 Coder 30B A3B Instruct"
+    : id === "qwen/qwen3-coder"
+      ? "Qwen3 Coder 480B A35B"
+      : id);
 
 export const choiceForModel = (id: unknown): ModelChoice | undefined =>
   Object.entries(MODELS).find(([, model]) => model.id === id)?.[0] as

@@ -34,7 +34,7 @@ Proposed pilot packages in `lib/topup-packages.ts`:
 | S$10      | 2,500,000    |
 | S$20      | 6,000,000    |
 
-Review these prices before enabling real checkout. At OpenRouter's Qwen rate of US$0.07/M input and US$0.28/M output, a million tokens with a 75/25 split costs approximately US$0.1225 for the model. Runtime, Vercel, database, OpenRouter funding and payment fees are additional. Stripe Singapore advertises 3.4% + S$0.50 for domestic cards; tiny top-ups are inefficient. See [OpenRouter Qwen pricing](https://openrouter.ai/qwen/qwen3-coder-30b-a3b-instruct) and [Stripe Singapore pricing](https://stripe.com/en-sg/pricing).
+Review these prices before enabling real checkout. At DreamForge's GLM 5.3 Flash provider price ceilings of US$0.15/M input and US$0.50/M output, a million tokens with a 75/25 split costs approximately US$0.2375 for the model. Actual provider prices can be lower. Auto uses Cohere first and falls back to GLM only after confirmed free quota exhaustion; GLM routing favors throughput within those ceilings. Runtime, Vercel, database, OpenRouter funding and payment fees are additional. Stripe Singapore advertises 3.4% + S$0.50 for domestic cards; tiny top-ups are inefficient. See [OpenRouter GLM pricing](https://openrouter.ai/z-ai/glm-5.3-flash) and [Stripe Singapore pricing](https://stripe.com/en-sg/pricing).
 
 A child generates a private seven-day `/pay/<token>` link to share with a parent. The page does not grant access to projects or conversations. Checkout uses fixed server-defined SGD packages, with no subscription. Tokens are credited only by signature-verified paid Stripe events, atomically and once per checkout session. The success URL does not credit tokens.
 
