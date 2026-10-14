@@ -2823,3 +2823,9 @@
     padding-block: 8px;
   }
 }
+
+/* Dashboard divider follows the same inset as navigation and other content. */
+.df-teacher-dashboard > .df-studio-sidebar .df-sidebar-account::before {
+  left: 0;
+  right: 0;
+}
