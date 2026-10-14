@@ -8,7 +8,6 @@ import {
   FolderKanban,
   MessagesSquare,
   Settings,
-  Coins,
   Menu,
   X,
 } from "lucide-react";
@@ -56,7 +55,7 @@ export const BUILDER_SECTIONS = [
     id: "home",
     label: "Home",
     icon: Home,
-    description: "Your ideas, progress and next big creation.",
+    description: "Pick a project or bring a new idea to life.",
   },
   {
     id: "projects",
@@ -70,33 +69,37 @@ export const BUILDER_SECTIONS = [
     icon: School,
     description: "Your classes and invitation codes.",
   },
-  {
-    id: "tokens",
-    label: "Tokens",
-    icon: Coins,
-    description: "Keep track of your allowance and ask a parent for a top-up.",
-  },
 ] as const;
 export function PlatformDashboardLayout({
   teacher,
   name,
+  remainingTokens,
   section,
   onSectionChange,
   children,
 }: {
   teacher: boolean;
   name?: string;
+  remainingTokens?: number;
   section: string;
   onSectionChange: (section: string) => void;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
   const sections = teacher ? TEACHER_SECTIONS : BUILDER_SECTIONS;
-  const current = sections.find((s) => s.id === section) || sections[0];
+  const current =
+    (!teacher && section === "profile"
+      ? {
+          label: "Profile",
+          description: "Your token usage and parent top-ups.",
+        }
+      : sections.find((s) => s.id === section)) || sections[0];
   return (
     <div className="df-teacher-dashboard">
       <StudioSidebar
+        onProfileOpen={() => setNavOpen(false)}
         name={name}
+        remainingTokens={remainingTokens}
         role={teacher ? "teacher" : "child"}
         label={teacher ? "Teacher sidebar" : "Builder sidebar"}
         className={navOpen ? "is-open" : ""}

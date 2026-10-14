@@ -1174,3 +1174,102 @@
 .df-workspace-sidebar.without-caption > .df-studio-nav {
   margin-top: 32px;
 }
+
+.df-sidebar-footer {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.df-sidebar-footer .df-sidebar-account {
+  margin-top: 0;
+}
+.df-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 9px;
+  padding: 4px;
+  margin-left: -4px;
+}
+.df-profile-link:hover {
+  background: #f0e9ff;
+}
+.df-profile-link:focus-visible,
+.df-sidebar-balance:focus-visible {
+  outline: 3px solid #6b3ff7;
+  outline-offset: 4px;
+}
+.df-sidebar-balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #645976;
+  padding: 12px 4px 18px;
+  font-size: 11px;
+}
+.df-sidebar-balance strong {
+  color: #6b3ff7;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.df-profile-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.df-profile-summary h2 {
+  font-size: 25px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+.df-profile-summary p {
+  margin: 0;
+  font-size: 14px;
+}
+.df-profile-summary > div:last-child {
+  flex-shrink: 0;
+}
+.df-profile-summary span {
+  display: block;
+  font-size: 12px;
+  color: #645976;
+}
+.df-profile-summary strong {
+  display: block;
+  font-size: 32px;
+  font-weight: 800;
+  color: #6b3ff7;
+  font-variant-numeric: tabular-nums;
+}
+.df-profile-usage h3 {
+  font-size: 17px;
+  font-weight: 750;
+  margin: 0 0 16px;
+}
+.df-table-scroll {
+  overflow-x: auto;
+}
+.df-table-scroll td:not(:first-child) {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .df-studio-sidebar:not(.is-open):not(.df-workspace-sidebar)
+    .df-sidebar-footer {
+    display: none;
+  }
+}
+@media (max-width: 520px) {
+  .df-profile-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+  }
+}

@@ -9,11 +9,15 @@ export default async function Dashboard({
   if (!platformEnabled()) redirect("/");
   const user = await getProfile();
   if (!user) redirect("/login");
-  const { section } = await searchParams;
+  const { section: requestedSection } = await searchParams;
+  const section =
+    user.role === "child" && requestedSection === "tokens"
+      ? "profile"
+      : requestedSection;
   const allowed =
     user.role === "teacher"
       ? ["home", "classrooms", "builders", "projects", "prompts", "settings"]
-      : ["home", "projects", "classrooms", "tokens"];
+      : ["home", "projects", "classrooms", "profile"];
   return (
     <PlatformDashboard
       initialSection={section && allowed.includes(section) ? section : "home"}

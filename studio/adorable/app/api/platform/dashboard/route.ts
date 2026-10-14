@@ -40,7 +40,20 @@ export async function GET() {
           "select id,reserved_tokens from adorable.usage_runs where child_id=$1 and state='uncertain'",
           [user.id],
         );
+  const { rows: projectUsage } =
+    user.role === "child"
+      ? await db.query(
+          `select p.vm_id,p.metadata->>'name' as project_name,
+    coalesce(sum(case when r.state='settled' then coalesce(r.input_tokens,0)+coalesce(r.output_tokens,0) else 0 end),0)::text as used_tokens,
+    coalesce(sum(case when r.state='settled' then r.input_tokens else 0 end),0)::text as input_tokens,
+    coalesce(sum(case when r.state='settled' then r.output_tokens else 0 end),0)::text as output_tokens
+    from adorable.projects p left join adorable.usage_runs r on r.vm_id=p.vm_id and r.child_id=$1
+    where p.owner_id=$1 and not p.is_example group by p.vm_id,p.metadata,p.updated_at order by p.updated_at desc`,
+          [user.id],
+        )
+      : { rows: [] };
   return Response.json({
+    projectUsage,
     user,
     classes,
     projects,

@@ -8,8 +8,6 @@ import {
   School,
   FolderKanban,
   ShieldCheck,
-  Sparkles,
-  Coins,
   UsersRound,
   Link2,
   Clock3,
@@ -36,6 +34,13 @@ type Data = {
   wallet: Wallet | null;
   unconfirmed: { id: string; reserved_tokens: string; display_name?: string }[];
   paymentsEnabled: boolean;
+  projectUsage: {
+    vm_id: string;
+    project_name: string;
+    used_tokens: string;
+    input_tokens: string;
+    output_tokens: string;
+  }[];
 };
 type ReviewProject = {
   vm_id: string;
@@ -165,6 +170,7 @@ export function PlatformDashboard({
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
+      remainingTokens={!teacher && data?.wallet ? remaining : undefined}
       name={data?.user.display_name || initialUser?.display_name}
       section={view}
       onSectionChange={selectSection}
@@ -182,9 +188,10 @@ export function PlatformDashboard({
         </div>
       ) : (
         <>
-          {(view === "home" || (!teacher && view === "tokens")) && (
+          {((teacher && view === "home") ||
+            (!teacher && view === "profile")) && (
             <>
-              {view === "home" && (
+              {teacher && view === "home" && (
                 <section className="df-card df-hero">
                   <div className="df-hero-copy">
                     <span className="df-pill df-sticker">
@@ -224,8 +231,9 @@ export function PlatformDashboard({
                   <DreamForgeArt />
                 </section>
               )}
-              <div className="df-stats">
-                {teacher ? (
+              {teacher && (
+                <div className="df-stats">
+                  {" "}
                   <>
                     <div className="df-card df-stat">
                       <UsersRound
@@ -261,42 +269,8 @@ export function PlatformDashboard({
                       Unreviewed safety flags
                     </div>
                   </>
-                ) : (
-                  <>
-                    <div className="df-card df-stat">
-                      <Sparkles
-                        className="df-stat-icon"
-                        size={22}
-                        aria-hidden="true"
-                      />
-                      Tokens remaining
-                      <strong>{remaining.toLocaleString()}</strong>From your
-                      token allowance
-                    </div>
-                    <div className="df-card df-stat">
-                      <Coins
-                        className="df-stat-icon"
-                        size={22}
-                        aria-hidden="true"
-                      />
-                      Tokens used
-                      <strong>
-                        {Number(data.wallet?.used_tokens || 0).toLocaleString()}
-                      </strong>
-                      Includes prompts, replies & tools
-                    </div>
-                    <div className="df-card df-stat">
-                      <FolderKanban
-                        className="df-stat-icon"
-                        size={22}
-                        aria-hidden="true"
-                      />
-                      Your creations<strong>{data.projects.length}</strong>Every
-                      idea starts somewhere
-                    </div>
-                  </>
-                )}
-              </div>
+                </div>
+              )}
               {(data.unconfirmed || []).length > 0 && (
                 <section
                   className="df-notice df-token-hold"
@@ -424,7 +398,7 @@ export function PlatformDashboard({
                   <span className="df-pill">
                     {data.projects.length} projects
                   </span>
-                  {!teacher && view === "projects" && <CreateProjectDialog />}
+                  {!teacher && <CreateProjectDialog />}
                 </div>
               </div>
               {data.projects.length ? (
@@ -698,7 +672,68 @@ export function PlatformDashboard({
               </form>
             </>
           )}
-          {!teacher && view === "tokens" && (
+          {!teacher && view === "profile" && (
+            <section className="df-card df-profile-usage">
+              <div className="df-profile-summary">
+                <div>
+                  <h2>Your token usage</h2>
+                  <p className="df-muted">
+                    Confirmed usage from prompts, replies and tool steps.
+                  </p>
+                </div>
+                <div>
+                  <span>Total tokens used</span>
+                  <strong>
+                    {Number(data.wallet?.used_tokens || 0).toLocaleString()}
+                  </strong>
+                </div>
+              </div>
+              <h3>Usage by project</h3>
+              {(data.projectUsage || []).length ? (
+                <div className="df-table-scroll">
+                  <table className="df-table">
+                    <thead>
+                      <tr>
+                        <th>Project</th>
+                        <th>Tokens used</th>
+                        <th>Input</th>
+                        <th>Output</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.projectUsage.map((project) => (
+                        <tr key={project.vm_id}>
+                          <td>
+                            <Link
+                              className="df-purple"
+                              href={`/${project.vm_id}`}
+                            >
+                              {project.project_name}
+                            </Link>
+                          </td>
+                          <td>
+                            {Number(project.used_tokens).toLocaleString()}
+                          </td>
+                          <td>
+                            {Number(project.input_tokens).toLocaleString()}
+                          </td>
+                          <td>
+                            {Number(project.output_tokens).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="df-muted">
+                  Create a project to start building. Its token usage will
+                  appear here.
+                </p>
+              )}
+            </section>
+          )}
+          {!teacher && view === "profile" && (
             <section
               className="df-card df-topup-card"
               aria-labelledby="parent-topup-title"
@@ -751,7 +786,7 @@ export function PlatformDashboard({
               </button>
             </section>
           )}
-          {link && (teacher ? view === "settings" : view === "tokens") && (
+          {link && (teacher ? view === "settings" : view === "profile") && (
             <div className="df-notice" style={{ marginTop: 20 }}>
               <p style={{ marginTop: 0 }}>Share this link privately:</p>
               <div className="df-inline">
