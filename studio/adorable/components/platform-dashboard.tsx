@@ -11,6 +11,8 @@ import {
   Sparkles,
   Coins,
   UsersRound,
+  Link2,
+  Clock3,
 } from "lucide-react";
 import { DreamForgeArt, DreamForgeProjectArt } from "./dreamforge-brand";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
@@ -296,11 +298,30 @@ export function PlatformDashboard({
                 )}
               </div>
               {(data.unconfirmed || []).length > 0 && (
-                <section className="df-notice" style={{ marginBottom: 25 }}>
-                  <strong>Unconfirmed AI requests</strong>
+                <section
+                  className="df-notice df-token-hold"
+                  aria-label="Tokens awaiting confirmation"
+                >
+                  <div className="df-inline">
+                    <Clock3 size={18} aria-hidden="true" />
+                    <strong>Tokens waiting for confirmation</strong>
+                  </div>
                   <p>
-                    These requests did not return confirmed token usage. Their
-                    allowance is held separately from tokens used.
+                    {teacher
+                      ? "These AI requests ended without reporting their token usage."
+                      : "An earlier AI request ended without reporting how many tokens it used."}{" "}
+                    <strong>
+                      {data.unconfirmed
+                        .reduce(
+                          (total, request) =>
+                            total + Number(request.reserved_tokens),
+                          0,
+                        )
+                        .toLocaleString()}{" "}
+                      tokens
+                    </strong>{" "}
+                    are temporarily set aside. They aren’t counted as used
+                    tokens.
                   </p>
                   {teacher ? (
                     (data.unconfirmed || []).map((r) => (
@@ -327,8 +348,10 @@ export function PlatformDashboard({
                     ))
                   ) : (
                     <p>
-                      Ask your teacher to review and release the hold before
-                      trying again.
+                      You can keep building with your available tokens.{" "}
+                      {data.classes.length
+                        ? "Ask your teacher to review the hold if you need those tokens back."
+                        : "Join a teacher’s class so they can review and release the hold."}
                     </p>
                   )}
                 </section>
@@ -677,26 +700,35 @@ export function PlatformDashboard({
           )}
           {!teacher && view === "tokens" && (
             <section
-              className="df-card"
-              style={{ marginTop: 35, background: "#F4EEFF" }}
+              className="df-card df-topup-card"
+              aria-labelledby="parent-topup-title"
             >
-              <h2 style={{ marginTop: 0 }}>More room for big ideas</h2>
-              <p className="df-muted">
-                Ask a parent to add tokens. Copy a private top-up link and share
-                it with them yourself.
-              </p>
-              <button
-                className="df-button"
-                disabled={busy}
-                onClick={() => action("/api/platform/topups", {})}
-              >
-                Get a parent top-up link ⧉
-              </button>
-              {!data.paymentsEnabled && (
-                <p style={{ fontSize: 12 }} className="df-muted">
-                  Payment setup is in progress. No purchases can be made yet.
+              <div className="df-topup-copy">
+                <span className="df-pill">
+                  {data.paymentsEnabled ? "PARENT TOP-UPS" : "COMING SOON"}
+                </span>
+                <h2 id="parent-topup-title">More room for big ideas</h2>
+                <p className="df-muted">
+                  {data.paymentsEnabled
+                    ? "Ask a parent to add tokens. Create a private link, then copy it and share it with them."
+                    : "Parent top-ups aren’t available yet. You can keep building with any tokens you have left."}
                 </p>
-              )}
+              </div>
+              <div className="df-topup-action">
+                <button
+                  className="df-button"
+                  disabled={busy || !data.paymentsEnabled}
+                  onClick={() => action("/api/platform/topups", {})}
+                >
+                  <Link2 size={17} aria-hidden="true" />
+                  {busy ? "Creating your link…" : "Get a parent top-up link"}
+                </button>
+                <p className="df-muted">
+                  {data.paymentsEnabled
+                    ? "A parent completes the payment using your private link."
+                    : "Payments are not available yet."}
+                </p>
+              </div>
             </section>
           )}
           {teacher && view === "settings" && (
