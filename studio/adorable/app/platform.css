@@ -2002,3 +2002,149 @@
     transition: none;
   }
 }
+
+/* A student's classroom starts at the door. */
+.df-classroom-entrances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.df-class-entrance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 280px;
+  padding: 22px 18px 20px;
+  border: 2px solid #1a0f2e;
+  border-radius: 24px;
+  background: #f8f5ff;
+  box-shadow: 5px 6px 0 #1a0f2e;
+  cursor: pointer;
+  color: #1a0f2e;
+  text-align: center;
+  transition:
+    transform 180ms,
+    box-shadow 180ms;
+}
+.df-class-entrance:hover {
+  transform: translateY(-3px);
+  box-shadow: 5px 9px 0 #1a0f2e;
+}
+.df-class-entrance:focus-visible {
+  outline: 3px solid #6b3ff7;
+  outline-offset: 5px;
+}
+.df-class-door-sign {
+  width: 100%;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.4;
+  background: white;
+  border: 2px solid #1a0f2e;
+  padding: 12px 15px;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+.df-classroom-door {
+  width: 100%;
+  margin: 8px 0 12px;
+}
+.df-classroom-door-leaf {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform 250ms ease;
+}
+.df-class-entrance:hover .df-classroom-door-leaf,
+.df-class-entrance:focus-visible .df-classroom-door-leaf {
+  transform: perspective(300px) rotateY(-32deg);
+}
+.df-class-enter {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  background: #6b3ff7;
+  border: 2px solid #1a0f2e;
+  border-radius: 12px;
+  padding: 11px 15px;
+  width: 100%;
+  font-weight: 700;
+  font-size: 13px;
+}
+.df-class-teacher {
+  color: #645976;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 14px;
+  overflow-wrap: anywhere;
+}
+.df-class-welcome {
+  background: white;
+  color: #1a0f2e;
+  max-width: 540px;
+}
+.df-class-chalkboard {
+  position: relative;
+  background: #34234e;
+  color: white;
+  border: 4px solid #a98afc;
+  border-radius: 14px;
+  padding: 28px 24px;
+  margin: 8px 0 12px;
+}
+.df-class-chalkboard > span:first-child {
+  font-size: 12px;
+  color: #daccff;
+}
+.df-class-chalkboard h2 {
+  font-size: 27px;
+  line-height: 1.25;
+  font-weight: 800;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.df-class-chalkboard p {
+  font-size: 13px;
+  color: #daccff;
+  margin-top: 12px;
+}
+.df-chalk-stars {
+  display: block;
+  color: #b6f062;
+  margin-top: 16px;
+  font-size: 22px;
+  letter-spacing: 8px;
+}
+.df-class-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.df-class-welcome-actions a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+@media (max-width: 520px) {
+  .df-class-entrance {
+    width: 100%;
+    max-width: 320px;
+  }
+  .df-class-welcome-actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-class-entrance,
+  .df-classroom-door-leaf {
+    transition: none;
+  }
+  .df-class-entrance:hover .df-classroom-door-leaf,
+  .df-class-entrance:focus-visible .df-classroom-door-leaf {
+    transform: none;
+  }
+}

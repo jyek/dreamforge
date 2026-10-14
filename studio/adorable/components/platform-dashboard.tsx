@@ -32,7 +32,12 @@ type Wallet = {
 };
 type Data = {
   user: { display_name: string; role: "child" | "teacher" };
-  classes: { id: string; name: string; invite_code?: string }[];
+  classes: {
+    id: string;
+    name: string;
+    invite_code?: string;
+    teacher_name?: string;
+  }[];
   projects: Project[];
   children: ({ id: string; display_name: string; username: string } & Wallet)[];
   wallet: Wallet | null;
@@ -690,7 +695,7 @@ export function PlatformDashboard({
               <div className="df-section-head">
                 <h2>{teacher ? "Your classrooms" : "Your classes"}</h2>
               </div>
-              <div className="df-inline" style={{ marginBottom: 20 }}>
+              <div className="df-classroom-entrances">
                 {data.classes.map((c) => (
                   <PlatformClassCard
                     key={c.id}

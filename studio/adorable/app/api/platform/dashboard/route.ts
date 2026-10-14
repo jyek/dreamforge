@@ -9,7 +9,7 @@ export async function GET() {
   const { rows: classes } = await db.query(
     user.role === "teacher"
       ? "select id,name,invite_code from adorable.classes where teacher_id=$1 order by created_at"
-      : "select c.id,c.name from adorable.classes c join adorable.class_members m on m.class_id=c.id where m.child_id=$1 order by c.created_at",
+      : "select c.id,c.name,pr.display_name as teacher_name from adorable.classes c join adorable.profiles pr on pr.id=c.teacher_id join adorable.class_members m on m.class_id=c.id where m.child_id=$1 order by c.created_at",
     [user.id],
   );
   const { rows: projects } = await db.query(
