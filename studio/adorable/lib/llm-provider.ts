@@ -35,6 +35,7 @@ type StreamLlmResponseParams = {
     outputTokens?: number;
     modelId?: string;
   }) => Promise<void>;
+  onStreamError?: () => Promise<void>;
   apiKey?: string;
   providerOverride?: string;
   maxSteps?: number;
@@ -56,12 +57,15 @@ export const streamLlmResponse = async ({
   providerOverride,
   beforeStep,
   afterStep,
+  onStreamError,
   maxSteps = 5,
   modelChoice,
   modelOverride,
 }: StreamLlmResponseParams): Promise<StreamLlmResponseResult> => {
   const provider = getProviderName(providerOverride);
-  const modelMessages = normalizeModelHistory(await convertToModelMessages(messages));
+  const modelMessages = normalizeModelHistory(
+    await convertToModelMessages(messages),
+  );
   const stepLimit = Math.max(2, Math.min(20, Math.floor(maxSteps)));
   const prepareStep = async ({
     messages,
@@ -119,6 +123,9 @@ export const streamLlmResponse = async ({
       tools,
       prepareStep,
       maxRetries: routing ? 0 : 2,
+      onError: async () => {
+        await onStreamError?.();
+      },
       onStepFinish: async ({ usage, response }) => {
         await afterStep?.({ ...usage, modelId: response.modelId });
       },

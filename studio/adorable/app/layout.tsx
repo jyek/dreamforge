@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { WorkspaceFrame } from "./workspace-frame";
 import { StudentGate } from "@/components/student-gate";
 import "./globals.css";
+import "./platform.css";
+import { platformEnabled } from "@/lib/platform-auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,9 +18,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Adorable",
+  title: "DreamForge",
   description: "Build beautiful apps with AI",
 };
+
+function AccountGate({ children }: { children: React.ReactNode }) {
+  return platformEnabled() ? (
+    <>{children}</>
+  ) : (
+    <StudentGate>{children}</StudentGate>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -30,11 +40,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} h-full overflow-hidden overscroll-none antialiased`}
       >
-        <StudentGate>
+        <AccountGate>
           <ModelSettingsProvider>
             <WorkspaceFrame>{children}</WorkspaceFrame>
           </ModelSettingsProvider>
-        </StudentGate>
+        </AccountGate>
       </body>
     </html>
   );

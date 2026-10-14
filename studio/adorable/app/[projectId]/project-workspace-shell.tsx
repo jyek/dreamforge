@@ -89,13 +89,16 @@ export function ProjectWorkspaceShell({
   );
 
   const loadProjects = useCallback(async () => {
-    const response = await fetch("/api/projects", { cache: "no-store" });
+    const response = await fetch(
+      `/api/projects${projectId ? `?projectId=${projectId}` : ""}`,
+      { cache: "no-store" },
+    );
     if (response.ok) {
       const data = (await response.json()) as { projects?: ProjectItem[] };
       setProjects(data.projects ?? []);
     }
     setProjectsLoading(false);
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     loadProjects();
@@ -319,16 +322,21 @@ export function ProjectWorkspaceShell({
                 >
                   <MenuIcon className="size-4" />
                 </button>
-                {selectedProject && (
-                  <ProjectRename
-                    projectId={selectedProject.id}
-                    name={selectedProject.name}
-                    onRenamed={onProjectRenamed}
-                    className="group hidden max-w-40 items-center gap-1 rounded-lg px-1 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 lg:flex"
-                  >
-                    <span className="truncate">{selectedProject.name}</span>
-                  </ProjectRename>
-                )}
+                {selectedProject &&
+                  (selectedProject.readOnly ? (
+                    <span className="hidden max-w-40 truncate text-sm font-semibold lg:block">
+                      {selectedProject.name}
+                    </span>
+                  ) : (
+                    <ProjectRename
+                      projectId={selectedProject.id}
+                      name={selectedProject.name}
+                      onRenamed={onProjectRenamed}
+                      className="group hidden max-w-40 items-center gap-1 rounded-lg px-1 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 lg:flex"
+                    >
+                      <span className="truncate">{selectedProject.name}</span>
+                    </ProjectRename>
+                  ))}
                 {!isMobile && (
                   <button
                     aria-label={
@@ -381,7 +389,7 @@ export function ProjectWorkspaceShell({
                   className="w-72 gap-0 bg-[#f7f7f8] sm:max-w-72"
                 >
                   <SheetHeader className="border-b border-slate-200 pb-4">
-                    <SheetTitle>Adorable</SheetTitle>
+                    <SheetTitle>DreamForge</SheetTitle>
                     <SheetDescription className="truncate">
                       {selectedProject?.name || "Project workspace"}
                     </SheetDescription>
@@ -722,7 +730,7 @@ function AppPreview({
             ) : (
               <>
                 <span className="flex-1" />
-                <ShareDialog project={project} />
+                {!project.readOnly && <ShareDialog project={project} />}
               </>
             )}
           </div>,
@@ -920,9 +928,13 @@ function BrowserControls({
 
   const previewPathUrl = (path: string) => {
     const url = new URL(previewUrl);
-    const requested = new URL(path.startsWith("/") ? path : `/${path}`, url.origin);
+    const requested = new URL(
+      path.startsWith("/") ? path : `/${path}`,
+      url.origin,
+    );
     url.pathname = requested.pathname;
-    for (const [key, value] of requested.searchParams) url.searchParams.set(key, value);
+    for (const [key, value] of requested.searchParams)
+      url.searchParams.set(key, value);
     return url.toString();
   };
 
@@ -1003,7 +1015,7 @@ function BrowserControls({
         <ExternalLinkIcon className="size-4" />
       </a>
       <div className="ml-1.5 shrink-0">
-        <ShareDialog project={project} />
+        {!project.readOnly && <ShareDialog project={project} />}
       </div>
     </>
   );

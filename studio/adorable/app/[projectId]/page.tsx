@@ -23,6 +23,7 @@ export default async function RepoPage({
       selectedProjectId={projectId}
       selectedConversationId={null}
       welcome={<ProjectWelcome />}
+      readOnly={!(await authorizeProject(projectId))}
     />
   );
 }

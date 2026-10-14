@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { Assistant } from "../../assistant";
 import { ProjectWelcome } from "@/components/assistant-ui/project-welcome";
 import { authorizeProject } from "@/lib/project-access";
@@ -10,10 +11,13 @@ export default async function ConversationPage({
 }) {
   const { projectId, conversationId } = await params;
 
-  const initialMessages = (await authorizeProject(projectId, true))
-    ? await readConversationMessages(projectId, conversationId)
-    : [];
+  if (!(await authorizeProject(projectId, true))) notFound();
+  const initialMessages = await readConversationMessages(
+    projectId,
+    conversationId,
+  );
 
+  const readOnly = !(await authorizeProject(projectId));
   return (
     <Assistant
       key={`${projectId}:${conversationId}`}
@@ -21,6 +25,7 @@ export default async function ConversationPage({
       selectedProjectId={projectId}
       selectedConversationId={conversationId}
       welcome={<ProjectWelcome />}
+      readOnly={readOnly}
     />
   );
 }

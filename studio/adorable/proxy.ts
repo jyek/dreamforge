@@ -4,7 +4,7 @@ export function proxy(req: NextRequest) {
   const expected=process.env.SITES_PROXY_SECRET;
   const supplied=req.headers.get("x-sites-backend-token") || "";
   if(expected && (supplied.length!==expected.length || !timingSafeEqual(Buffer.from(supplied),Buffer.from(expected)))) return NextResponse.json({error:"Access through the application site."},{status:401});
-  if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+  if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && req.nextUrl.pathname!=="/api/platform/stripe") {
     const origin=req.headers.get("origin");
     const allowed=process.env.PUBLIC_APP_ORIGIN || req.nextUrl.origin;
     if(origin!==allowed && origin!==req.nextUrl.origin) return NextResponse.json({error:"Invalid request origin"},{status:403});

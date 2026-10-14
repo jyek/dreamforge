@@ -1,3 +1,4 @@
+import { getProfile, platformEnabled, checkOrigin } from "@/lib/platform-auth";
 import { safetyEnabled } from "@/lib/safety-mode";
 import { demoMode } from "@/lib/demo-mode";
 import { database } from "@/lib/database";
@@ -20,8 +21,10 @@ import {
 const toProjectItem = async (
   id: string,
   metadata: ProjectMetadata,
+  readOnly = false,
 ): Promise<ProjectItem> => ({
   id,
+  readOnly,
   name: metadata.name,
   previewUrl:
     (await runtimePreview(id).catch(() => null))?.url ||
@@ -37,7 +40,28 @@ const toProjectItem = async (
 
 export const maxDuration = 300;
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (platformEnabled()) {
+    const user = await getProfile();
+    const requested = new URL(req.url).searchParams.get("projectId");
+    const { rows } = await database().query(
+      `select p.vm_id,p.metadata,p.owner_id,p.is_example from adorable.projects p where (p.is_example and p.vm_id=$3) or p.owner_id=$1 or ($2='teacher' and exists(select 1 from adorable.class_members m join adorable.classes c on c.id=m.class_id where m.child_id=p.owner_id and c.teacher_id=$1)) order by p.updated_at desc`,
+      [user?.id || null, user?.role || null, requested],
+    );
+    return NextResponse.json({
+      projects: await Promise.all(
+        rows.map((row) =>
+          toProjectItem(
+            row.vm_id,
+            row.metadata,
+            user?.role !== "child" ||
+              row.is_example ||
+              row.owner_id !== user?.id,
+          ),
+        ),
+      ),
+    });
+  }
   if (demoMode()) {
     if (usesDatabaseStorage()) {
       const stored = await listStoredProjects();
@@ -73,7 +97,27 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  if (demoMode()) {
+  const platformUser = platformEnabled() ? await getProfile() : null;
+  if (platformEnabled()) {
+    if (!checkOrigin(req) || platformUser?.role !== "child")
+      return NextResponse.json(
+        { error: "Sign in to a child account to create a project." },
+        { status: 403 },
+      );
+    const { rows } = await database().query(
+      "select (select count(*) from adorable.projects where owner_id=$1)::int as count,exists(select 1 from adorable.class_members where child_id=$1) as enrolled",
+      [platformUser.id],
+    );
+    if (!rows[0].enrolled || rows[0].count >= 10)
+      return NextResponse.json(
+        {
+          error:
+            "Join a class first, or ask your teacher for help with the 10-project limit.",
+        },
+        { status: 403 },
+      );
+  }
+  if (demoMode() || platformEnabled()) {
     const payload = await req.json().catch(() => ({}));
     const repository =
       typeof payload.githubRepoName === "string"
@@ -115,6 +159,11 @@ export async function POST(req: Request) {
       releases: [],
       liveReleaseId: null,
     });
+    if (platformUser)
+      await database().query(
+        "update adorable.projects set owner_id=$2,is_example=false where vm_id=$1",
+        [projectId, platformUser.id],
+      );
     const conversationId = randomUUID();
     const next = await createConversation(
       projectId,

@@ -41,6 +41,7 @@ export const Assistant = ({
   onThreadStateChange,
   onActiveConversationChange,
   welcome,
+  readOnly=false,
 }: {
   initialMessages?: UIMessage[];
   selectedProjectId?: string | null;
@@ -51,6 +52,7 @@ export const Assistant = ({
     conversationId: string,
   ) => void;
   welcome?: ReactNode;
+  readOnly?: boolean;
 }) => {
   const [progress, setProgress] = useState("");
   const { choice: modelChoice } = useModelSettings();
@@ -404,7 +406,7 @@ export const Assistant = ({
   return (
     <AssistantRuntimeProvider key={runtimeKey} runtime={runtime}>
       <ThreadStateBridge onThreadStateChange={handleThreadStateChange} />
-      <Thread welcome={welcome} progress={progress} />
+      <Thread welcome={welcome} progress={progress} readOnly={readOnly}/>
     </AssistantRuntimeProvider>
   );
 };

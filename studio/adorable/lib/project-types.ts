@@ -42,6 +42,7 @@ export type ProjectMetadata = {
 };
 
 export type ProjectItem = {
+  readOnly?: boolean;
   id: string;
   name: string;
   previewUrl: string;

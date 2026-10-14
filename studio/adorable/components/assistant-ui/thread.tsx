@@ -55,8 +55,9 @@ import {
 } from "lucide-react";
 import type { FC, ReactNode } from "react";
 
-export const Thread: FC<{ welcome?: ReactNode; progress?: string }> = ({
+export const Thread: FC<{ welcome?: ReactNode; progress?: string; readOnly?: boolean }> = ({
   welcome,
+  readOnly=false,
   progress,
 }) => {
   return (
@@ -94,7 +95,7 @@ export const Thread: FC<{ welcome?: ReactNode; progress?: string }> = ({
             </div>
           </AssistantIf>
           <ThreadScrollToBottom />
-          <Composer />
+          {readOnly?<p className="text-center text-sm text-muted-foreground">Viewing project history · This workspace is read-only.</p>:<Composer />}
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Viewport>
     </ThreadPrimitive.Root>

@@ -13,7 +13,7 @@ export async function POST(
   const { projectId } = await params;
   if (!/^vm-[a-z0-9]+$/.test(projectId))
     return Response.json({ error: "Invalid project" }, { status: 400 });
-  if (!(await authorizeProject(projectId)))
+  if (!(await authorizeProject(projectId,true)))
     return Response.json({ error: "Project not found" }, { status: 404 });
   try {
     const activity = await touchRuntime(projectId);
