@@ -817,7 +817,7 @@ export function PlatformDashboard({
               </div>
             </section>
           )}
-          {teacher && view === "settings" && (
+          {teacher && view === "profile" && (
             <section className="df-card df-settings-card">
               <span className="df-pill">TEACHER INVITATIONS</span>
               <h2>Invite a teacher</h2>
@@ -837,7 +837,7 @@ export function PlatformDashboard({
               </button>
             </section>
           )}
-          {link && (teacher ? view === "settings" : view === "profile") && (
+          {link && view === "profile" && (
             <div className="df-notice" style={{ marginTop: 20 }}>
               <p style={{ marginTop: 0 }}>Share this link privately:</p>
               <div className="df-inline">

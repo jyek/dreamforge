@@ -6,7 +6,6 @@ import {
   UsersRound,
   FolderKanban,
   MessagesSquare,
-  Settings,
   Menu,
   X,
 } from "lucide-react";
@@ -42,12 +41,6 @@ export const TEACHER_SECTIONS = [
     label: "Prompts",
     icon: MessagesSquare,
     description: "Review prompts and safety flags by project.",
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    description: "Manage teacher invitations.",
   },
 ] as const;
 export const BUILDER_SECTIONS = [
