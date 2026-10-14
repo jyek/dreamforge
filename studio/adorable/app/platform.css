@@ -1563,7 +1563,8 @@
   background: #f0e9ff;
 }
 .df-teacher-profile {
-  max-width: 600px;
+  max-width: 650px;
+  margin-bottom: 28px;
 }
 .df-teacher-profile .df-form {
   margin-top: 24px;
