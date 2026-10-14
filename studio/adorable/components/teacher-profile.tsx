@@ -2,6 +2,7 @@
 import { InlineSpinner } from "./dream-loading";
 import { useState, type FormEvent } from "react";
 import { signOut } from "./studio-sidebar";
+import { ProfileModuleHeader } from "./profile-module-header";
 export function TeacherProfile({
   name,
   onSaved,
@@ -37,9 +38,11 @@ export function TeacherProfile({
     }
   }
   return (
-    <section className="df-card df-teacher-profile">
-      <h2>Your profile</h2>
-      <p className="df-muted">Update the name shown in your teacher studio.</p>
+    <section className="df-card df-teacher-profile df-profile-module">
+      <ProfileModuleHeader
+        title="Your profile"
+        description="Update the name shown in your teacher studio."
+      />
       <form className="df-form" onSubmit={save}>
         <label>
           Display name

@@ -1992,8 +1992,8 @@
 
 /* A student's classroom starts at the door. */
 .df-classroom-entrances {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
   margin-bottom: 32px;
 }
@@ -2001,7 +2001,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 280px;
+  width: 100%;
+  min-width: 0;
   padding: 22px 18px 20px;
   border: 2px solid #1a0f2e;
   border-radius: 24px;
@@ -2118,7 +2119,7 @@
 @media (max-width: 520px) {
   .df-class-entrance {
     width: 100%;
-    max-width: 320px;
+    max-width: none;
   }
   .df-class-welcome-actions > * {
     width: 100%;
@@ -2874,5 +2875,40 @@
   .df-studio-sidebar .df-profile-link {
     padding-left: 4px;
     padding-right: 4px;
+  }
+}
+
+/* Profile modules share the same hierarchy for teachers and students. */
+.df-profile-module {
+  margin-top: 0;
+  margin-bottom: 28px;
+  padding: 26px;
+}
+.df-profile-module-header > h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+.df-profile-module-header > .df-pill {
+  margin-bottom: 16px;
+}
+.df-profile-module-header > p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.df-settings-account.df-profile-module > .df-button {
+  margin-top: 20px;
+}
+@media (max-width: 1000px) {
+  .df-classroom-entrances {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .df-classroom-entrances {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

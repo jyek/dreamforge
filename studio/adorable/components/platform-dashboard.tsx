@@ -10,6 +10,7 @@ import { BuilderIdeaArt } from "./builder-idea-art";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { TeacherProfile } from "./teacher-profile";
+import { ProfileModuleHeader } from "./profile-module-header";
 import { CopyButton } from "./copy-button";
 import { signOut } from "./studio-sidebar";
 import { PlatformClassCard } from "./platform-class-card";
@@ -194,9 +195,11 @@ export function PlatformDashboard({
       ) : (
         <>
           {!teacher && view === "profile" && (
-            <section className="df-card df-settings-account">
-              <h2>Your account</h2>
-              <p className="df-muted">Signed in as {data.user.display_name}.</p>
+            <section className="df-card df-settings-account df-profile-module">
+              <ProfileModuleHeader
+                title="Your account"
+                description={`Signed in as ${data.user.display_name}.`}
+              />
               <button className="df-button secondary" onClick={signOut}>
                 Sign out
               </button>
@@ -487,13 +490,13 @@ export function PlatformDashboard({
             <TeacherProfile name={data.user.display_name} onSaved={load} />
           )}
           {!teacher && view === "profile" && (
-            <section className="df-card df-profile-usage">
+            <section className="df-card df-profile-usage df-profile-module">
               <div className="df-profile-summary">
                 <div>
-                  <h2>Your token usage</h2>
-                  <p className="df-muted">
-                    Confirmed usage from prompts, replies and tool steps.
-                  </p>
+                  <ProfileModuleHeader
+                    title="Your token usage"
+                    description="Confirmed usage from prompts, replies and tool steps."
+                  />
                 </div>
                 <div>
                   <span>Total tokens used</span>
@@ -549,19 +552,22 @@ export function PlatformDashboard({
           )}
           {!teacher && view === "profile" && (
             <section
-              className="df-card df-topup-card"
+              className="df-card df-topup-card df-profile-module"
               aria-labelledby="parent-topup-title"
             >
               <div className="df-topup-copy">
-                <span className="df-pill">
-                  {data.paymentsEnabled ? "PARENT TOP-UPS" : "COMING SOON"}
-                </span>
-                <h2 id="parent-topup-title">More room for big ideas</h2>
-                <p className="df-muted">
-                  {data.paymentsEnabled
-                    ? "Ask a parent to add tokens. Create a private link, then copy it and share it with them."
-                    : "Parent top-ups aren’t available yet. You can keep building with any tokens you have left."}
-                </p>
+                <ProfileModuleHeader
+                  eyebrow={
+                    data.paymentsEnabled ? "PARENT TOP-UPS" : "COMING SOON"
+                  }
+                  id="parent-topup-title"
+                  title="More room for big ideas"
+                  description={
+                    data.paymentsEnabled
+                      ? "Ask a parent to add tokens. Create a private link, then copy it and share it with them."
+                      : "Parent top-ups aren’t available yet. You can keep building with any tokens you have left."
+                  }
+                />
               </div>
               <div className="df-topup-action">
                 <button
@@ -581,13 +587,12 @@ export function PlatformDashboard({
             </section>
           )}
           {teacher && view === "profile" && (
-            <section className="df-card df-settings-card">
-              <span className="df-pill">TEACHER INVITATIONS</span>
-              <h2>Invite a teacher</h2>
-              <p className="df-muted">
-                Create a private invitation link for another teacher. Each link
-                can be used once and expires after seven days.
-              </p>
+            <section className="df-card df-settings-card df-profile-module">
+              <ProfileModuleHeader
+                eyebrow="TEACHER INVITATIONS"
+                title="Invite a teacher"
+                description="Create a private invitation link for another teacher. Each link can be used once and expires after seven days."
+              />
               <button
                 style={{ marginTop: 16 }}
                 className="df-button secondary"
