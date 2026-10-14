@@ -70,3 +70,27 @@ test("tool calls, errors, and truncation are never replayed", async () => {
     assert.equal(m.calls, 1);
   }
 });
+test("visible text streams before the provider finishes", async () => {
+  let controller!: ReadableStreamDefaultController<any>;
+  const model = {
+    doStream: async () => ({
+      stream: new ReadableStream({
+        start(c) {
+          controller = c;
+          c.enqueue({ type: "text-start", id: "t" });
+          c.enqueue({ type: "text-delta", id: "t", delta: "Working" });
+        },
+      }),
+    }),
+  } as any;
+  const result = await withEmptyResponseRetry(model).doStream({
+    prompt: [],
+  } as any);
+  const reader = result.stream.getReader();
+  assert.equal((await reader.read()).value?.type, "text-start");
+  assert.equal((await reader.read()).value?.type, "text-delta");
+  controller.enqueue(finish());
+  controller.close();
+  assert.equal((await reader.read()).value?.type, "finish");
+  assert.equal((await reader.read()).done, true);
+});
