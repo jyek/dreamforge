@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ClassroomDoor } from "./classroom-door";
-import { CreateProjectDialog } from "./create-project-dialog";
 import { CopyButton } from "./copy-button";
 import { Copy, MoreVertical, School } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -46,7 +45,6 @@ export function PlatformClassCard({
       document.removeEventListener("keydown", escape);
     };
   }, [menuOpen]);
-  const [entered, setEntered] = useState(false);
   const [editing, setEditing] = useState(false),
     [name, setName] = useState(classroom.name),
     [confirm, setConfirm] = useState(false),
@@ -79,55 +77,22 @@ export function PlatformClassCard({
   }
   if (!teacher)
     return (
-      <>
-        <button
-          className="df-class-entrance"
-          onClick={() => setEntered(true)}
-          aria-label={`Enter ${classroom.name}`}
-        >
-          <span className="df-class-door-sign">{classroom.name}</span>
-          <ClassroomDoor />
-          <span className="df-class-enter">
-            Enter classroom <ArrowRight size={18} aria-hidden="true" />
+      <Link
+        className="df-class-entrance"
+        href={`/classrooms/${classroom.id}`}
+        aria-label={`Enter ${classroom.name}`}
+      >
+        <span className="df-class-door-sign">{classroom.name}</span>
+        <ClassroomDoor />
+        <span className="df-class-enter">
+          Enter classroom <ArrowRight size={18} aria-hidden="true" />
+        </span>
+        {classroom.teacher_name && (
+          <span className="df-class-teacher">
+            With {classroom.teacher_name}
           </span>
-          {classroom.teacher_name && (
-            <span className="df-class-teacher">
-              With {classroom.teacher_name}
-            </span>
-          )}
-        </button>
-        <Dialog open={entered} onOpenChange={setEntered}>
-          <DialogContent className="df-card df-class-welcome">
-            <div className="df-class-chalkboard">
-              <span>Welcome to your classroom</span>
-              <DialogTitle>{classroom.name}</DialogTitle>
-              {classroom.teacher_name && (
-                <p>Your teacher: {classroom.teacher_name}</p>
-              )}
-              <span className="df-chalk-stars" aria-hidden="true">
-                ✧ ✦ ✧
-              </span>
-            </div>
-            <DialogDescription>
-              Bring an idea, try something new, and build something you’re proud
-              of. Your teacher can follow your projects and help you along the
-              way.
-            </DialogDescription>
-            <div className="df-class-welcome-actions">
-              <CreateProjectDialog
-                trigger={
-                  <button className="df-button">
-                    Create a project <ArrowRight size={17} aria-hidden="true" />
-                  </button>
-                }
-              />
-              <Link href="/home" className="df-button secondary">
-                My projects
-              </Link>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </>
+        )}
+      </Link>
     );
   return (
     <section className="df-card df-class-card">

@@ -1,4 +1,8 @@
 "use client";
+import {
+  ClassProjectAssignments,
+  type AssignableProject,
+} from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
 import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
@@ -17,19 +21,22 @@ type Project = {
   prompt_count: number;
 };
 type Data = {
-  classroom: { name: string };
+  classroom: { name: string; teacher_name?: string };
+  availableProjects: AssignableProject[];
   students: GuidanceStudent[];
   projects: Project[];
 };
 export function TeacherClassroomDetail({
   classId,
   teacherName,
+  initialData,
 }: {
   classId: string;
   teacherName: string;
+  initialData?: Data;
 }) {
   const router = useRouter();
-  const [data, setData] = useState<Data | null>(null),
+  const [data, setData] = useState<Data | null>(initialData || null),
     [error, setError] = useState(""),
     [search, setSearch] = useState(""),
     [selection, setSelection] = useState<{
@@ -37,6 +44,7 @@ export function TeacherClassroomDetail({
       project: Project;
     } | null>(null);
   useEffect(() => {
+    if (initialData) return;
     const controller = new AbortController();
     fetch(`/api/platform/classes/${classId}`, { signal: controller.signal })
       .then(async (r) => {
@@ -48,7 +56,13 @@ export function TeacherClassroomDetail({
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [classId]);
+  }, [classId, initialData]);
+  async function refresh() {
+    const r = await fetch(`/api/platform/classes/${classId}`);
+    const d = await r.json();
+    if (!r.ok) throw Error(d.error || "Could not load classroom.");
+    setData(d);
+  }
   const shown =
     data?.students.filter((s) =>
       `${s.display_name} ${s.username}`
@@ -60,6 +74,15 @@ export function TeacherClassroomDetail({
       teacher
       name={teacherName}
       section="classrooms"
+      headerAction={
+        data ? (
+          <ClassProjectAssignments
+            classId={classId}
+            projects={data.availableProjects || []}
+            onChanged={refresh}
+          />
+        ) : undefined
+      }
       onSectionChange={(s) => router.push(`/${s}`)}
     >
       <Link className="df-purple" href="/classrooms">
@@ -74,8 +97,9 @@ export function TeacherClassroomDetail({
         )}
       </div>
       <p className="df-muted">
-        Explore student projects and the prompts behind them. Student workspaces
-        are read-only for teachers.
+        Teacher: {data?.classroom.teacher_name || teacherName}. Explore the
+        projects assigned to this classroom. Student workspaces are read-only
+        for teachers.
       </p>
       {error ? (
         <p role="alert" className="df-error">
