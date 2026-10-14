@@ -10,7 +10,7 @@ export function safeProgressStream(source:ReadableStream<unknown>,screen:(text:s
    reader=source.getReader();let text='';let textId='';let completeText='';let bytes=0;
    try {
     while(true){const item=await reader.read();if(item.done)break;const chunk=item.value as any;bytes+=JSON.stringify(chunk).length;if(bytes>500000)throw new Error('Response too large');
-     if(chunk.type==='error')throw new Error('Agent stream interrupted');
+     if(chunk.type==='error'||chunk.type==='abort')throw new Error('Agent stream interrupted');
      if(chunk.type==='text-start'){text='';textId=chunk.id;continue;}
      if(chunk.type==='text-delta'){text+=chunk.delta;continue;}
      if(chunk.type==='text-end'){
