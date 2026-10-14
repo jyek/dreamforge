@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
-import { PanelLeftClose, PanelLeftOpen, Coins } from "lucide-react";
+import { PanelLeftClose, Coins } from "lucide-react";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -99,7 +99,13 @@ export function StudioSidebar({
           aria-expanded={!collapsed}
         >
           {collapsed ? (
-            <PanelLeftOpen size={17} />
+            <img
+              src="/brand/dreamforge-mark.svg"
+              width="30"
+              height="30"
+              alt=""
+              aria-hidden="true"
+            />
           ) : (
             <PanelLeftClose size={17} />
           )}
