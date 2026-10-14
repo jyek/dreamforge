@@ -1187,9 +1187,9 @@
   min-width: 0;
   text-decoration: none;
   color: inherit;
-  border-radius: 9px;
-  padding: 4px;
-  margin-left: -4px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-left: 0;
 }
 .df-profile-link:hover {
   background: #f0e9ff;
