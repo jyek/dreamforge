@@ -5,10 +5,19 @@ export async function StudioPage({ section }: { section: string }) {
   if (!platformEnabled()) redirect("/");
   const user = await getProfile();
   if (!user) redirect("/login");
+  if (user.role === "child" && section === "settings") redirect("/profile");
   const allowed =
     user.role === "teacher"
-      ? ["home", "projects", "classrooms", "builders", "prompts", "settings"]
-      : ["home", "classrooms", "profile", "settings"];
+      ? [
+          "home",
+          "projects",
+          "classrooms",
+          "builders",
+          "prompts",
+          "settings",
+          "profile",
+        ]
+      : ["home", "classrooms", "profile"];
   if (!allowed.includes(section)) redirect("/home");
   return (
     <PlatformDashboard

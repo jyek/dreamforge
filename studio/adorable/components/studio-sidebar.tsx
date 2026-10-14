@@ -102,7 +102,7 @@ export function StudioSidebar({
           </Link>
         )}
         <div className="df-sidebar-account">
-          {role === "child" ? (
+          {role ? (
             <Link
               href="/profile"
               onClick={onProfileOpen}

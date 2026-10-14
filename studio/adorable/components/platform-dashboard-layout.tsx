@@ -63,12 +63,6 @@ export const BUILDER_SECTIONS = [
     icon: School,
     description: "Your classes and invitation codes.",
   },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    description: "Manage your account.",
-  },
 ] as const;
 export function PlatformDashboardLayout({
   teacher,
@@ -88,10 +82,12 @@ export function PlatformDashboardLayout({
   const [navOpen, setNavOpen] = useState(false);
   const sections = teacher ? TEACHER_SECTIONS : BUILDER_SECTIONS;
   const current =
-    (!teacher && section === "profile"
+    (section === "profile"
       ? {
           label: "Profile",
-          description: "Your token usage and parent top-ups.",
+          description: teacher
+            ? "Your account."
+            : "Your token usage, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];
   return (

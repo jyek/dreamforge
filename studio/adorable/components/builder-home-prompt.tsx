@@ -9,7 +9,6 @@ export function BuilderHomePrompt({ empty }: { empty: boolean }) {
       className="df-home-prompt"
       aria-label="Start a project with an idea"
     >
-      {!empty && <h2>Make something new</h2>}
       <div className="df-prompt-box">
         <label htmlFor="new-project-idea" className="sr-only">
           What would you like to build?

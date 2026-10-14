@@ -36,7 +36,7 @@ export function PlatformAuthForm({
     }
   }
   return (
-    <main className="df-page">
+    <main className="df-page df-auth-page">
       <header className="df-header">
         <DreamForgeBrand />
         <nav className="df-nav">
