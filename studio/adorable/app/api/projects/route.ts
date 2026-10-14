@@ -105,14 +105,13 @@ export async function POST(req: Request) {
         { status: 403 },
       );
     const { rows } = await database().query(
-      "select (select count(*) from adorable.projects where owner_id=$1)::int as count,exists(select 1 from adorable.class_members where child_id=$1) as enrolled",
+      "select count(*)::int as count from adorable.projects where owner_id=$1",
       [platformUser.id],
     );
-    if (!rows[0].enrolled || rows[0].count >= 10)
+    if (rows[0].count >= 10)
       return NextResponse.json(
         {
-          error:
-            "Join a class first, or ask your teacher for help with the 10-project limit.",
+          error: "Your project limit is 10. Ask your teacher for help.",
         },
         { status: 403 },
       );

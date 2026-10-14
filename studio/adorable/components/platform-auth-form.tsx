@@ -78,7 +78,7 @@ export function PlatformAuthForm({
             {signup
               ? teacherInvite
                 ? "Create your account to start a class."
-                : "Have your class code ready. No email verification needed."
+                : "Start building today. You can join a class now or later."
               : "Your next big idea is waiting for you."}
           </p>
           <form className="df-form" onSubmit={submit}>
@@ -123,14 +123,13 @@ export function PlatformAuthForm({
                 </label>
                 {!teacherInvite && (
                   <label>
-                    Class invitation code
+                    Class invitation code (optional)
                     <input
                       className="df-input"
                       name="classCode"
-                      required
                       maxLength={30}
                       autoComplete="off"
-                      placeholder="Ask your teacher for your code"
+                      placeholder="Enter a code, or join a class later"
                     />
                   </label>
                 )}
@@ -179,7 +178,7 @@ export function PlatformAuthForm({
           >
             {signup ? "Already a builder? " : "New here? "}
             <Link className="df-purple" href={signup ? "/login" : "/signup"}>
-              {signup ? "Sign in" : "Join your class"}
+              {signup ? "Sign in" : "Create an account"}
             </Link>
           </p>
           {!signup && (

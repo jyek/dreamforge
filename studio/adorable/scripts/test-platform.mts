@@ -57,6 +57,45 @@ async function teacher(n: string) {
   return { user, cookie: result.cookie, token };
 }
 try {
+  const solo = await call("/api/platform/auth", {
+    action: "signup",
+    username: `test_${tag}_solo`,
+    name: "Independent Builder",
+    password,
+  });
+  assert.equal(solo.status, 200, JSON.stringify(solo.body));
+  const soloUser = (await call("/api/platform/auth", undefined, solo.cookie))
+    .body.user;
+  accounts.push(soloUser);
+  assert.equal(soloUser.role, "child");
+  assert.equal(
+    (
+      await db.query(
+        "select count(*)::int as n from adorable.class_members where child_id=$1",
+        [soloUser.id],
+      )
+    ).rows[0].n,
+    0,
+  );
+  assert.equal(
+    Number(
+      (
+        await db.query(
+          "select token_limit from adorable.token_accounts where child_id=$1",
+          [soloUser.id],
+        )
+      ).rows[0].token_limit,
+    ),
+    100000,
+  );
+  const invalid = await call("/api/platform/auth", {
+    action: "signup",
+    username: `test_${tag}_invalid`,
+    name: "Invalid",
+    classCode: "NOT_A_REAL_CODE",
+    password,
+  });
+  assert.equal(invalid.status, 400);
   const a = await teacher("ta"),
     b = await teacher("tb");
   const again = await call("/api/platform/auth", {

@@ -16,7 +16,7 @@ npx tsx scripts/setup-platform.mts --invite
 
 It stores the one-use token in `.deployment/initial-teacher-invite.json`. Use `/signup?teacherInvite=<token>` within seven days. Teachers can then create classes and copy class codes. They can invite other teachers, who receive access only to their own classes.
 
-Children sign up with a class code and a username; an email is optional. Existing child accounts can join additional classes. Login accepts username or email. Supabase Admin creates confirmed accounts directly, so DreamForge does not send verification emails or change the Supabase project's global email-confirmation setting. Sessions currently expire after one hour; sign in again to continue.
+Children sign up with a username; email and class code are optional. They can create projects before joining a class. Existing child accounts can join additional classes. Login accepts username or email. Supabase Admin creates confirmed accounts directly, so DreamForge does not send verification emails or change the Supabase project's global email-confirmation setting. Sessions currently expire after one hour; sign in again to continue.
 
 Children edit only their own projects. Teachers can view all projects and prompt histories belonging to children in their classes, without editing. Existing demo projects are marked `is_example` and remain separate, read-only examples. Server authorization applies to APIs as well as the UI. Classroom tables live in the `adorable` schema and deny direct access by browser Supabase keys. The older public LMS tables are preserved and are not used by the new platform.
 

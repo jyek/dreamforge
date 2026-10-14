@@ -78,11 +78,13 @@ export async function POST(req: Request) {
             "select token_hash from adorable.teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
             [tokenHash(body.teacherInvite)],
           )
-        : await db.query(
-            "select id from adorable.classes where invite_code=$1 for share",
-            [code],
-          );
-      if (!invitation.rows[0]) {
+        : code
+          ? await db.query(
+              "select id from adorable.classes where invite_code=$1 for share",
+              [code],
+            )
+          : { rows: [] };
+      if ((teacher || code) && !invitation.rows[0]) {
         await db.query("rollback");
         return fail("This invitation code is invalid or expired.");
       }
@@ -119,10 +121,11 @@ export async function POST(req: Request) {
           [tokenHash(body.teacherInvite), authId],
         );
       else {
-        await db.query(
-          "insert into adorable.class_members(class_id,child_id) values($1,$2)",
-          [invitation.rows[0].id, authId],
-        );
+        if (code)
+          await db.query(
+            "insert into adorable.class_members(class_id,child_id) values($1,$2)",
+            [invitation.rows[0].id, authId],
+          );
         await db.query(
           "insert into adorable.token_accounts(child_id) values($1)",
           [authId],
