@@ -1,8 +1,9 @@
 "use client";
 import { DreamLoading } from "./dream-loading";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CreateClassDialog } from "./create-class-dialog";
 import { JoinClassDialog } from "./join-class-dialog";
 import { BuilderGreeting } from "./builder-greeting";
 import { BuilderIdeaArt } from "./builder-idea-art";
@@ -126,16 +127,6 @@ export function PlatformDashboard({
       setBusy(false);
     }
   }
-  async function classForm(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    await action(
-      "/api/platform/classes",
-      data?.user.role === "teacher"
-        ? { name: form.get("code") }
-        : { code: form.get("code") },
-    );
-  }
   const teacher = (data?.user || initialUser)?.role === "teacher";
   const remaining = data?.wallet
     ? Math.max(
@@ -153,8 +144,12 @@ export function PlatformDashboard({
       section={view}
       onSectionChange={selectSection}
       headerAction={
-        !teacher && view === "classrooms" ? (
-          <JoinClassDialog onJoined={load} />
+        view === "classrooms" ? (
+          teacher ? (
+            <CreateClassDialog onCreated={load} />
+          ) : (
+            <JoinClassDialog onJoined={load} />
+          )
         ) : undefined
       }
     >
@@ -440,10 +435,11 @@ export function PlatformDashboard({
           {teacher && view === "prompts" && <TeacherPromptGuidance />}
           {view === "classrooms" && (
             <>
-              <div className="df-section-head">
-                <h2>{teacher ? "Your classrooms" : "Your classes"}</h2>
-              </div>
-              <div className="df-classroom-entrances">
+              <div
+                className={
+                  teacher ? "df-teacher-class-grid" : "df-classroom-entrances"
+                }
+              >
                 {data.classes.map((c) => (
                   <PlatformClassCard
                     key={c.id}
@@ -453,20 +449,12 @@ export function PlatformDashboard({
                   />
                 ))}
               </div>
-              {teacher && (
-                <form className="df-inline" onSubmit={classForm}>
-                  <input
-                    aria-label="New class name"
-                    className="df-input"
-                    name="code"
-                    required
-                    maxLength={80}
-                    placeholder="Name a new class"
-                  />
-                  <button className="df-button" disabled={busy}>
-                    + Create class
-                  </button>
-                </form>
+              {!data.classes.length && (
+                <div className="df-empty">
+                  {teacher
+                    ? "Create your first class to invite students."
+                    : "Join a class with the Class Number from your teacher."}
+                </div>
               )}
             </>
           )}

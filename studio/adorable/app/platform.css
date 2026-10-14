@@ -2699,3 +2699,111 @@
     animation: none;
   }
 }
+
+.df-teacher-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+.df-class-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 22px;
+  min-width: 0;
+  border: 1px solid var(--df-divider);
+  border-radius: 16px;
+  box-shadow: 0 2px 5px #1a0f2e08;
+}
+.df-class-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.df-class-card-head .df-project-icon {
+  margin: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: #f0e9ff;
+  border-radius: 12px;
+}
+.df-class-card-title {
+  font-size: 19px;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 750;
+}
+.df-class-card-title a:hover {
+  color: #6b3ff7;
+}
+.df-class-card .df-copy-wrap {
+  display: block;
+}
+.df-class-card .df-class-number {
+  width: 100%;
+  margin: 0;
+  gap: 8px;
+}
+.df-class-card .df-class-number-label {
+  flex-basis: 100%;
+}
+.df-class-card .df-class-number svg {
+  margin-left: auto;
+}
+.df-class-card-link {
+  color: #6b3ff7;
+  font-size: 13px;
+  font-weight: 650;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--df-divider);
+}
+.df-class-menu-wrap {
+  position: relative;
+}
+.df-class-menu-trigger {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #82758f;
+  cursor: pointer;
+}
+.df-class-menu-trigger:hover {
+  background: #f0e9ff;
+}
+.df-class-menu {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: 140px;
+  padding: 5px;
+  border: 1px solid var(--df-divider);
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px #1a0f2e15;
+  z-index: 20;
+}
+.df-class-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+.df-class-menu button:hover,
+.df-class-menu button:focus-visible {
+  background: #f5f0ff;
+  outline: none;
+}
+.df-class-menu-delete {
+  color: #c43e48;
+}

@@ -4,8 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { ClassroomDoor } from "./classroom-door";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { CopyButton } from "./copy-button";
-import { Copy, School } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { Copy, MoreVertical, School } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,26 @@ export function PlatformClassCard({
   teacher: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    function outside(e: PointerEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function escape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        menuRef.current?.querySelector("button")?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [menuOpen]);
   const [entered, setEntered] = useState(false);
   const [editing, setEditing] = useState(false),
     [name, setName] = useState(classroom.name),
@@ -111,9 +131,74 @@ export function PlatformClassCard({
     );
   return (
     <section className="df-card df-class-card">
-      <span className="df-project-icon">
-        <School size={23} aria-hidden="true" />
-      </span>
+      <div className="df-class-card-head">
+        <span className="df-project-icon">
+          <School size={23} aria-hidden="true" />
+        </span>
+        <div ref={menuRef} className="df-class-menu-wrap">
+          <button
+            className="df-class-menu-trigger"
+            aria-label={`Options for ${classroom.name}`}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            <MoreVertical size={20} aria-hidden="true" />
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              aria-label="Class options"
+              className="df-class-menu"
+              onKeyDown={(e) => {
+                if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key))
+                  return;
+                e.preventDefault();
+                const items = Array.from(
+                  e.currentTarget.querySelectorAll("button"),
+                );
+                const current = items.indexOf(
+                  document.activeElement as HTMLButtonElement,
+                );
+                const next =
+                  e.key === "Home"
+                    ? 0
+                    : e.key === "End"
+                      ? items.length - 1
+                      : (current +
+                          (e.key === "ArrowDown" ? 1 : -1) +
+                          items.length) %
+                        items.length;
+                items[next]?.focus();
+              }}
+            >
+              <button
+                role="menuitem"
+                autoFocus
+                onClick={() => {
+                  setMenuOpen(false);
+                  setName(classroom.name);
+                  setEditing(true);
+                  setError("");
+                }}
+              >
+                Rename
+              </button>
+              <button
+                role="menuitem"
+                className="df-class-menu-delete"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setConfirm(true);
+                  setError("");
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
       {editing ? (
         <form className="df-form" onSubmit={rename}>
           <label>
@@ -146,9 +231,9 @@ export function PlatformClassCard({
           </div>
         </form>
       ) : (
-        <Link className="df-purple" href={`/classrooms/${classroom.id}`}>
-          <strong>{classroom.name}</strong>
-        </Link>
+        <h3 className="df-class-card-title">
+          <Link href={`/classrooms/${classroom.id}`}>{classroom.name}</Link>
+        </h3>
       )}
       {classroom.invite_code && (
         <CopyButton value={classroom.invite_code} className="df-class-number">
@@ -159,37 +244,11 @@ export function PlatformClassCard({
       )}
       {!editing && (
         <Link
-          className="df-button secondary small"
-          style={{ marginTop: 18 }}
+          className="df-class-card-link"
           href={`/classrooms/${classroom.id}`}
         >
           View students & projects →
         </Link>
-      )}
-      {teacher && !editing && (
-        <div className="df-inline" style={{ marginTop: 18 }}>
-          <button
-            className="df-button secondary small"
-            aria-label={`Rename ${classroom.name}`}
-            onClick={() => {
-              setName(classroom.name);
-              setEditing(true);
-              setError("");
-            }}
-          >
-            Rename
-          </button>
-          <button
-            className="df-button secondary small"
-            aria-label={`Delete ${classroom.name}`}
-            onClick={() => {
-              setConfirm(true);
-              setError("");
-            }}
-          >
-            Delete
-          </button>
-        </div>
       )}
       {error && !confirm && (
         <p role="alert" className="df-error" style={{ marginTop: 15 }}>
