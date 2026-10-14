@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowUp, Sparkles } from "lucide-react";
+import { ArrowUp, Sparkles, Gamepad2, PawPrint, Brain } from "lucide-react";
 import { CreateProjectDialog } from "./create-project-dialog";
 export function BuilderHomePrompt({ empty }: { empty: boolean }) {
   const [prompt, setPrompt] = useState("");
@@ -18,7 +18,7 @@ export function BuilderHomePrompt({ empty }: { empty: boolean }) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           maxLength={32000}
-          placeholder="Describe a game, app or website you’d love to build…"
+          placeholder="What if I made a game where… Tell us your idea!"
           rows={4}
         />
         <div className="df-prompt-actions">
@@ -36,19 +36,42 @@ export function BuilderHomePrompt({ empty }: { empty: boolean }) {
           />
         </div>
       </div>
-      {empty && (
-        <div className="df-idea-starters" aria-label="Ideas to try">
+      <div className="df-idea-starters" aria-label="Ideas to try">
+        <p>
+          {empty ? "Try a little spark to get started" : "Need a little spark?"}
+        </p>
+        <div className="df-idea-starter-options">
           {[
-            "A game where you catch falling stars",
-            "A website about my favourite animal",
-            "A quiz to challenge my friends",
-          ].map((idea) => (
-            <button key={idea} onClick={() => setPrompt(idea)}>
-              {idea}
+            {
+              title: "Make a game",
+              idea: "A game where you catch falling stars",
+              icon: Gamepad2,
+            },
+            {
+              title: "My animal world",
+              idea: "A website about my favourite animal",
+              icon: PawPrint,
+            },
+            {
+              title: "Challenge my friends",
+              idea: "A quiz to challenge my friends",
+              icon: Brain,
+            },
+          ].map(({ title, idea, icon: Icon }) => (
+            <button
+              key={title}
+              type="button"
+              onClick={() => {
+                setPrompt(idea);
+                document.getElementById("new-project-idea")?.focus();
+              }}
+            >
+              <Icon size={18} aria-hidden="true" />
+              {title}
             </button>
           ))}
         </div>
-      )}
+      </div>
     </section>
   );
 }

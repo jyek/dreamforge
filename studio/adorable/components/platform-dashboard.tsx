@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BuilderIdeaArt } from "./builder-idea-art";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherProfile } from "./teacher-profile";
 import { CopyButton } from "./copy-button";
@@ -202,16 +203,19 @@ export function PlatformDashboard({
           )}
           {!teacher && view === "home" && (
             <section className="df-builder-start" aria-label="Start a project">
+              <BuilderIdeaArt />
               <div className="df-builder-start-content">
+                <span className="df-idea-eyebrow">
+                  A little imagination goes a long way
+                </span>
                 <h1>
-                  {data.projects.length
-                    ? `What should we build, ${data.user.display_name}?`
-                    : "What will you build first?"}
+                  What’s your next <span>big idea</span>,{" "}
+                  {data.user.display_name}?
                 </h1>
                 <p>
                   {data.projects.length
-                    ? "Turn an idea into a game, app, or website."
-                    : "Describe your first idea. Let’s make something you’ll love."}
+                    ? "Dream up a game, an app, or a world of your own. Let’s build it!"
+                    : "Your first creation starts with a “what if…” Let’s bring it to life."}
                 </p>
                 <BuilderHomePrompt empty={!data.projects.length} />
                 <Link
