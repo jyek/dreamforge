@@ -354,8 +354,12 @@ export function ProjectWorkspaceShell({
         </nav>
       }
     >
+      {profile?.role === "child" && (
+        <div className="df-sidebar-create">
+          <CreateProjectDialog />
+        </div>
+      )}
       <div className="df-workspace-projects">
-        {profile?.role === "child" && <CreateProjectDialog />}
         <h2 className="df-sidebar-caption">YOUR PROJECTS</h2>
         <label className="df-project-search">
           <SearchIcon size={16} aria-hidden="true" />

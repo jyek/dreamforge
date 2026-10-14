@@ -91,7 +91,7 @@ export function StudioSidebar({
       data-collapsed={hideCollapseControl ? false : collapsed}
     >
       <div className="df-sidebar-brand">
-        <DreamForgeBrand />
+        {!hideCollapseControl && <DreamForgeBrand />}
         {!hideCollapseControl && (
           <button
             className="df-sidebar-collapse"

@@ -1169,7 +1169,7 @@
   }
 }
 .df-workspace-sidebar.without-caption > .df-studio-nav {
-  margin-top: 32px;
+  margin-top: 36px;
 }
 
 .df-sidebar-footer {
@@ -2413,7 +2413,7 @@
     padding-top: 28px;
     padding-bottom: 20px;
   }
-  .df-teacher-dashboard > .df-studio-sidebar > .df-sidebar-caption {
+  .df-studio-sidebar > .df-sidebar-caption {
     height: 15px;
     line-height: 15px;
     white-space: nowrap;
@@ -2808,14 +2808,12 @@
   color: #c43e48;
 }
 
-/* Expanded dashboard rows use the collapsed rail's compact 42px height. */
+/* Expanded sidebar rows use the collapsed rail's compact 42px height. */
 @media (min-width: 768px) {
-  .df-teacher-dashboard
-    > .df-studio-sidebar:not([data-collapsed="true"])
+  .df-studio-sidebar:not([data-collapsed="true"])
     > .df-studio-nav
     > :is(a, button),
-  .df-teacher-dashboard
-    > .df-studio-sidebar:not([data-collapsed="true"])
+  .df-studio-sidebar:not([data-collapsed="true"])
     > .df-sidebar-create
     .df-button {
     height: 42px;
@@ -2824,55 +2822,56 @@
   }
 }
 
-/* Dashboard divider follows the same inset as navigation and other content. */
-.df-teacher-dashboard > .df-studio-sidebar .df-sidebar-account::before {
+/* Sidebar divider follows the same inset as navigation and other content. */
+.df-studio-sidebar .df-sidebar-account::before,
+.df-studio-sidebar[data-collapsed="true"] .df-sidebar-account::before {
   left: 0;
   right: 0;
 }
 
-/* Match the collapsed profile row so the dashboard footer divider never moves. */
+/* Match the collapsed profile row so the sidebar footer divider never moves. */
 @media (min-width: 768px) {
-  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link {
+  .df-studio-sidebar .df-profile-link {
     height: 44px;
     min-height: 44px;
     padding-top: 4px;
     padding-bottom: 4px;
   }
-  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link strong {
+  .df-studio-sidebar .df-profile-link strong {
     line-height: 16px;
   }
-  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link small {
+  .df-studio-sidebar .df-profile-link small {
     line-height: 13px;
   }
 }
 
 /* Keep the account labels close without changing the sidebar footer height. */
-.df-teacher-dashboard > .df-studio-sidebar:not([data-collapsed="true"]) .df-account-details {
+.df-studio-sidebar:not([data-collapsed="true"]) .df-account-details {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
-.df-teacher-dashboard > .df-studio-sidebar .df-account-details > small {
+.df-studio-sidebar .df-account-details > small {
   display: block;
   line-height: 13px;
 }
-.df-teacher-dashboard > .df-studio-sidebar .df-account-details > .df-account-tokens {
+.df-studio-sidebar .df-account-details > .df-account-tokens {
   display: flex;
   gap: 4px;
   margin-top: 0;
 }
 
-/* Expanded dashboards keep the same horizontal inset as the collapsed rail. */
+/* Expanded sidebars keep the same horizontal inset as the collapsed rail. */
 @media (min-width: 768px) {
-  .df-teacher-dashboard > .df-studio-sidebar:not([data-collapsed="true"]) {
+  .df-studio-sidebar:not([data-collapsed="true"]) {
     padding-left: 8px;
     padding-right: 8px;
   }
 }
 
-/* Both dashboard profile links use the compact rail's internal padding. */
+/* All sidebar profile links use the compact rail's internal padding. */
 @media (min-width: 768px) {
-  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link {
+  .df-studio-sidebar .df-profile-link {
     padding-left: 4px;
     padding-right: 4px;
   }
