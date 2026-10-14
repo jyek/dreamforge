@@ -2584,3 +2584,26 @@
     opacity: 0.65;
   }
 }
+
+@media (min-width: 768px) {
+  .df-studio-sidebar[data-collapsed="true"] .df-studio-nav > :is(a, button),
+  .df-teacher-dashboard
+    > .df-studio-sidebar[data-collapsed="true"]
+    > .df-studio-nav
+    > :is(a, button),
+  .df-studio-sidebar[data-collapsed="true"] .df-sidebar-create .df-button,
+  .df-teacher-dashboard
+    > .df-studio-sidebar[data-collapsed="true"]
+    > .df-sidebar-create
+    .df-button {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    flex-shrink: 0;
+    padding: 0;
+    margin-inline: auto;
+    border-radius: 10px;
+    justify-content: center;
+  }
+}
