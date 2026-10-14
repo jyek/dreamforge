@@ -5,7 +5,12 @@ export default async function Dashboard({
   searchParams: Promise<{ section?: string }>;
 }) {
   const { section } = await searchParams;
-  const target = section === "tokens" ? "profile" : section || "home";
+  const target =
+    section === "tokens"
+      ? "profile"
+      : section === "prompts"
+        ? "safety"
+        : section || "home";
   redirect(
     [
       "home",
@@ -14,7 +19,8 @@ export default async function Dashboard({
       "profile",
       "settings",
       "builders",
-      "prompts",
+      "safety",
+      "students",
     ].includes(target)
       ? `/${target}`
       : "/home",

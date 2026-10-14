@@ -29,9 +29,14 @@ async function get(url: string, signal: AbortSignal) {
   return data;
 }
 export function TeacherPromptGuidance({
+  overviewTitle = "Safety overview",
   initialStudent,
   initialProjectId = "",
-}: { initialStudent?: GuidanceStudent; initialProjectId?: string } = {}) {
+}: {
+  overviewTitle?: string;
+  initialStudent?: GuidanceStudent;
+  initialProjectId?: string;
+} = {}) {
   const [students, setStudents] = useState<GuidanceStudent[]>([]),
     [selected, setSelected] = useState<GuidanceStudent | null>(
       initialStudent || null,
@@ -101,9 +106,7 @@ export function TeacherPromptGuidance({
     <section className="df-guidance">
       <div className="df-section-head">
         <h2>
-          {selected
-            ? `${selected.display_name} · Prompt guidance`
-            : "Student prompt overview"}
+          {selected ? `${selected.display_name} · Safety` : overviewTitle}
         </h2>
         {selected && !initialStudent && (
           <button
@@ -200,7 +203,10 @@ export function TeacherPromptGuidance({
           {error}
         </div>
       ) : (
-        <div className="df-card df-guidance-table" aria-busy={loading}>
+        <div
+          className={`df-card df-guidance-table ${!selected ? "df-student-overview-table" : ""}`}
+          aria-busy={loading}
+        >
           <table className="df-table">
             <thead>
               <tr>
@@ -302,7 +308,7 @@ export function TeacherPromptGuidance({
                           disabled={loading}
                           onClick={() => open(s)}
                         >
-                          View prompts →
+                          View safety →
                         </button>
                       </td>
                     </tr>
