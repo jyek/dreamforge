@@ -40,6 +40,7 @@ import {
   ErrorPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useAuiState,
 } from "@assistant-ui/react";
 import {
   ArrowDownIcon,
@@ -53,13 +54,13 @@ import {
   RefreshCwIcon,
   SquareIcon,
 } from "lucide-react";
-import type { FC, ReactNode } from "react";
+import { useEffect, useState, type FC, type ReactNode } from "react";
 
-export const Thread: FC<{ welcome?: ReactNode; progress?: string; readOnly?: boolean }> = ({
-  welcome,
-  readOnly=false,
-  progress,
-}) => {
+export const Thread: FC<{
+  welcome?: ReactNode;
+  progress?: string;
+  readOnly?: boolean;
+}> = ({ welcome, readOnly = false, progress }) => {
   return (
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
@@ -95,7 +96,13 @@ export const Thread: FC<{ welcome?: ReactNode; progress?: string; readOnly?: boo
             </div>
           </AssistantIf>
           <ThreadScrollToBottom />
-          {readOnly?<p className="text-center text-sm text-muted-foreground">Viewing project history · This workspace is read-only.</p>:<Composer />}
+          {readOnly ? (
+            <p className="text-center text-sm text-muted-foreground">
+              Viewing project history · This workspace is read-only.
+            </p>
+          ) : (
+            <Composer />
+          )}
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Viewport>
     </ThreadPrimitive.Root>
@@ -120,15 +127,45 @@ const Composer: FC = () => {
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
       <ComposerPrimitive.AttachmentDropzone className="aui-composer-attachment-dropzone flex w-full flex-col rounded-2xl border border-input bg-background px-1 pt-2 transition-shadow outline-none has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-2 has-[textarea:focus-visible]:ring-ring/20 data-[dragging=true]:border-dashed data-[dragging=true]:border-ring data-[dragging=true]:bg-accent/50">
         <ComposerAttachments />
-        <ComposerPrimitive.Input
-          placeholder="Ask Adorable…"
-          className="aui-composer-input mb-1 max-h-32 min-h-14 w-full resize-none bg-transparent px-4 pt-2 pb-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0"
-          rows={1}
-          aria-label="Message input"
-        />
+        <BuilderComposerInput />
         <ComposerAction />
       </ComposerPrimitive.AttachmentDropzone>
     </ComposerPrimitive.Root>
+  );
+};
+
+const BUILDER_PROMPTS = [
+  "What would you like to build?",
+  "Tell me your next big idea…",
+  "Let’s make a game, app, or something fun!",
+  "What should we add to your creation?",
+];
+const BuilderComposerInput: FC = () => {
+  const [prompt, setPrompt] = useState(0);
+  const [focused, setFocused] = useState(false);
+  const paused = useAuiState((s) => s.thread.isRunning || !!s.composer.text);
+  useEffect(() => {
+    if (
+      paused ||
+      focused ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden)
+        setPrompt((current) => (current + 1) % BUILDER_PROMPTS.length);
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [paused, focused]);
+  return (
+    <ComposerPrimitive.Input
+      placeholder={BUILDER_PROMPTS[prompt]}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className="aui-composer-input mb-1 max-h-32 min-h-14 w-full resize-none bg-transparent px-4 pt-2 pb-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-0"
+      rows={1}
+      aria-label="Message input"
+    />
   );
 };
 

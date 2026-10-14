@@ -937,3 +937,29 @@
   font-weight: 800;
   letter-spacing: -0.6px;
 }
+
+.df-project-dialog {
+  background: #fff6e6;
+  color: #1a0f2e;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+.df-dialog-title {
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  padding-right: 16px;
+}
+.df-project-dialog .df-muted {
+  font-size: 14px;
+}
+.df-project-dialog .df-project-icon {
+  background: #ffd23f;
+  box-shadow: 3px 3px 0 #1a0f2e;
+}
+.df-project-dialog .df-form {
+  gap: 12px;
+}
+.df-project-dialog .df-inline {
+  margin-top: 8px;
+}

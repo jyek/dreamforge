@@ -118,6 +118,16 @@ export async function POST(req: Request) {
   }
   if (demoMode() || platformEnabled()) {
     const payload = await req.json().catch(() => ({}));
+    if (
+      platformEnabled() &&
+      (typeof payload.name !== "string" ||
+        !payload.name.trim() ||
+        payload.name.trim().length > 80)
+    )
+      return NextResponse.json(
+        { error: "Give your project a name using 1–80 characters." },
+        { status: 400 },
+      );
     const repository =
       typeof payload.githubRepoName === "string"
         ? payload.githubRepoName

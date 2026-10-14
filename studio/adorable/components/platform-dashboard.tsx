@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { CreateProjectDialog } from "./create-project-dialog";
 import { PlatformClassCard } from "./platform-class-card";
 import {
   School,
@@ -139,11 +140,6 @@ export function PlatformDashboard({
         : { code: form.get("code") },
     );
   }
-  async function createProject() {
-    const result = await action("/api/projects", { name: "My new idea" });
-    if (result?.id)
-      window.location.assign(`/${result.id}/${result.conversationId}`);
-  }
   const teacher = (data?.user || initialUser)?.role === "teacher";
   const HeroHeading = teacher ? "h2" : "h1";
   const remaining = data?.wallet
@@ -210,17 +206,7 @@ export function PlatformDashboard({
                       Explore your builders’ projects ↗
                     </button>
                   )}
-                  {!teacher && (
-                    <button
-                      className="df-button"
-                      disabled={busy}
-                      onClick={createProject}
-                    >
-                      {busy
-                        ? "Preparing your workspace…"
-                        : "+ Create a project"}
-                    </button>
-                  )}
+                  {!teacher && <CreateProjectDialog />}
                 </div>
                 <DreamForgeArt />
               </section>
