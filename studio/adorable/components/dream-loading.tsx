@@ -63,6 +63,21 @@ export function DreamLoader({
         r="2.4"
         fill="#c4b5fd"
       />
+      <circle className="df-dream-dot" cx="32" cy="73" r="2" fill="#a78bfa" />
+      <circle
+        className="df-dream-dot df-dream-dot-two"
+        cx="40"
+        cy="73"
+        r="2"
+        fill="#a78bfa"
+      />
+      <circle
+        className="df-dream-dot df-dream-dot-three"
+        cx="48"
+        cy="73"
+        r="2"
+        fill="#a78bfa"
+      />
     </svg>
   );
 }
@@ -85,7 +100,7 @@ export function DreamLoading({
         className,
       )}
     >
-      <DreamLoader size={inline ? 24 : 64} />
+      <DreamLoader size={inline ? 24 : 80} />
       <span>{label}</span>
     </div>
   );

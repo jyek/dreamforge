@@ -2472,15 +2472,15 @@
   overflow: visible;
 }
 .df-dream-cloud {
-  animation: df-dream-float 3.6s ease-in-out infinite;
+  animation: df-dream-float 2.2s ease-in-out infinite;
   transform-origin: 40px 48px;
 }
 .df-dream-moon {
-  animation: df-dream-moon-sway 5s ease-in-out infinite;
+  animation: df-dream-moon-sway 2.8s ease-in-out infinite;
   transform-origin: 49px 30px;
 }
 .df-dream-star {
-  animation: df-dream-twinkle 3.2s ease-in-out infinite;
+  animation: df-dream-twinkle 1.8s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -2496,16 +2496,16 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translate(3px, -7px) rotate(-3deg);
   }
 }
 @keyframes df-dream-moon-sway {
   0%,
   100% {
-    transform: rotate(-4deg);
+    transform: translateY(2px) rotate(-12deg);
   }
   50% {
-    transform: rotate(4deg);
+    transform: translateY(-4px) rotate(12deg);
   }
 }
 @keyframes df-dream-twinkle {
@@ -2553,4 +2553,34 @@
 .df-class-number:focus-visible {
   outline: 2px solid #8b5cf6;
   outline-offset: 3px;
+}
+
+.df-dream-dot {
+  animation: df-dream-dot-hop 1.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.df-dream-dot-two {
+  animation-delay: 0.16s;
+}
+.df-dream-dot-three {
+  animation-delay: 0.32s;
+}
+@keyframes df-dream-dot-hop {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-dream-dot {
+    animation: none;
+    opacity: 0.65;
+  }
 }
