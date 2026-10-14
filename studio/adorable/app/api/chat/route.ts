@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     try {
       const payload = await req.json();
       const modelChoice: ModelChoice =
-        payload.modelChoice ?? choiceForModel(payload.model) ?? "auto";
+        payload.modelChoice ?? choiceForModel(payload.model) ?? "glm";
       if (!isModelChoice(modelChoice))
         return Response.json(
           { error: "Choose a supported model." },

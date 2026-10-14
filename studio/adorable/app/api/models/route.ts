@@ -19,7 +19,7 @@ export async function GET() {
         paid: choice.id !== "auto" && choice.id !== "free",
       })),
       defaultModel: models[0].id,
-      defaultChoice: "auto",
+      defaultChoice: "glm",
       quotaFallbackModel: QUOTA_FALLBACK_MODEL,
     },
     { headers: { "Cache-Control": "no-store" } },

@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
 import { database } from "@/lib/database";
 import {
-  SESSION_COOKIE,
+  saveLoginSession,
+  clearLoginSession,
   supabaseKey,
   supabaseUrl,
 } from "@/lib/student-session";
@@ -23,7 +23,7 @@ export async function GET() {
 }
 export async function DELETE(req: Request) {
   if (!checkOrigin(req)) return fail("Invalid request", 403);
-  (await cookies()).delete(SESSION_COOKIE);
+  await clearLoginSession();
   return Response.json({ ok: true });
 }
 export async function PATCH(req: Request) {
@@ -191,13 +191,7 @@ export async function POST(req: Request) {
         "Sign-in failed. Check your username/email and password.",
         401,
       );
-    (await cookies()).set(SESSION_COOKIE, session.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: Math.min(session.expires_in || 3600, 3600),
-    });
+    await saveLoginSession(session);
     return Response.json({ ok: true });
   } catch {
     return fail("Sign-in is temporarily unavailable.", 503);

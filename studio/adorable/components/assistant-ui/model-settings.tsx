@@ -16,17 +16,23 @@ const Context = createContext<{
   ready: boolean;
   choice: ModelChoice;
   setChoice: (choice: ModelChoice) => void;
-}>({ ready: false, choice: "auto", setChoice: () => {} });
+}>({ ready: false, choice: "glm", setChoice: () => {} });
 export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [choice, setValue] = useState<ModelChoice>("auto");
+  const [choice, setValue] = useState<ModelChoice>("glm");
   useEffect(() => {
     try {
       const saved = localStorage.getItem("dreamforge:model-choice");
-      if (saved === "qwen" || saved === "qwen-large") {
+      if (
+        saved === "qwen" ||
+        saved === "qwen-large" ||
+        (saved === "auto" &&
+          localStorage.getItem("dreamforge:model-default-version") !== "glm-v1")
+      ) {
         setValue("glm");
         localStorage.setItem("dreamforge:model-choice", "glm");
       } else if (isModelChoice(saved)) setValue(saved);
+      localStorage.setItem("dreamforge:model-default-version", "glm-v1");
     } catch {}
     setReady(true);
   }, []);

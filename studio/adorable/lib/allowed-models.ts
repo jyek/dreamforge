@@ -1,14 +1,15 @@
 import { MODELS } from "./model-catalog";
-export const DEFAULT_CODING_MODEL = MODELS.free.id;
+export const DEFAULT_CODING_MODEL = MODELS.glm.id;
 export const QUOTA_FALLBACK_MODEL = MODELS.glm.id;
 export const EXTRA_MODELS = Object.entries(MODELS)
   .filter(([key]) => key !== "free")
   .map(([, model]) => ({ id: model.id, name: model.label, paid: true }));
 export function modelOptions() {
-  return [
-    { id: DEFAULT_CODING_MODEL, name: "North Mini Code (free)", paid: false },
-    ...EXTRA_MODELS,
-  ];
+  return [MODELS.glm, MODELS.free, MODELS.deepseek].map((model) => ({
+    id: model.id,
+    name: model.label,
+    paid: model !== MODELS.free,
+  }));
 }
 export function resolveModel(requested: unknown) {
   if (requested === undefined || requested === null)

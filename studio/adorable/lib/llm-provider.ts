@@ -111,7 +111,7 @@ export const streamLlmResponse = async ({
       ? openaiProvider.chat(modelName)
       : openaiProvider.responses(modelName);
     const routedModel =
-      !routing && baseURL && modelName === DEFAULT_CODING_MODEL
+      !routing && baseURL && modelName === "cohere/north-mini-code:free"
         ? withQuotaFallback(
             openaiProvider.chat(modelName),
             openaiProvider.chat(QUOTA_FALLBACK_MODEL),
