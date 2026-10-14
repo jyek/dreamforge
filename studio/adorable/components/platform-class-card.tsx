@@ -151,7 +151,7 @@ export function PlatformClassCard({
       {classroom.invite_code && (
         <>
           <p className="df-muted" style={{ fontSize: 12 }}>
-            Class invitation code
+            Class Number
           </p>
           <CopyButton value={classroom.invite_code}>
             {classroom.invite_code} ⧉

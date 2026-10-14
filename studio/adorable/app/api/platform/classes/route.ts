@@ -41,7 +41,10 @@ export async function POST(req: Request) {
     [code],
   );
   if (!rows[0])
-    return Response.json({ error: "Class code not found." }, { status: 400 });
+    return Response.json(
+      { error: "Class Number not found. Check it with your teacher." },
+      { status: 400 },
+    );
   await database().query(
     "insert into adorable.class_members(class_id,child_id) values($1,$2) on conflict do nothing",
     [rows[0].id, user.id],

@@ -123,13 +123,13 @@ export function PlatformAuthForm({
                 </label>
                 {!teacherInvite && (
                   <label>
-                    Class invitation code (optional)
+                    Class Number (optional)
                     <input
                       className="df-input"
                       name="classCode"
                       maxLength={30}
                       autoComplete="off"
-                      placeholder="Enter a code, or join a class later"
+                      placeholder="Enter a Class Number, or join later"
                     />
                   </label>
                 )}

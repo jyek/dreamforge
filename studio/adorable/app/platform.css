@@ -2338,3 +2338,14 @@
   justify-content: flex-end;
   margin-top: 16px;
 }
+
+.df-join-class-dialog h2 {
+  font-size: 25px;
+  font-weight: 750;
+}
+.df-join-class-dialog .df-form {
+  margin-top: 8px;
+}
+.df-join-class-dialog .df-inline {
+  margin-top: 8px;
+}

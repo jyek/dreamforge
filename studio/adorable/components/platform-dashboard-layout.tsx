@@ -54,7 +54,7 @@ export const BUILDER_SECTIONS = [
     id: "classrooms",
     label: "Classrooms",
     icon: School,
-    description: "Your classes and invitation codes.",
+    description: "Your classrooms and Class Numbers.",
   },
 ] as const;
 export function PlatformDashboardLayout({
@@ -64,6 +64,7 @@ export function PlatformDashboardLayout({
   section,
   onSectionChange,
   children,
+  headerAction,
 }: {
   teacher: boolean;
   name?: string;
@@ -71,6 +72,7 @@ export function PlatformDashboardLayout({
   section: string;
   onSectionChange: (section: string) => void;
   children: ReactNode;
+  headerAction?: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
   const sections = teacher ? TEACHER_SECTIONS : BUILDER_SECTIONS;
@@ -142,6 +144,7 @@ export function PlatformDashboardLayout({
               <h1>{current.label}</h1>
               <p className="df-muted">{current.description}</p>
             </div>
+            {headerAction}
           </header>
         )}
         <div className="df-container">{children}</div>

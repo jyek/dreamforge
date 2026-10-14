@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { JoinClassDialog } from "./join-class-dialog";
 import { BuilderIdeaArt } from "./builder-idea-art";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
@@ -149,6 +150,11 @@ export function PlatformDashboard({
       name={data?.user.display_name || initialUser?.display_name}
       section={view}
       onSectionChange={selectSection}
+      headerAction={
+        !teacher && view === "classrooms" ? (
+          <JoinClassDialog onJoined={load} />
+        ) : undefined
+      }
     >
       {error && (
         <p className="df-error" role="alert">
@@ -449,28 +455,21 @@ export function PlatformDashboard({
                   />
                 ))}
               </div>
-              <form className="df-inline" onSubmit={classForm}>
-                <input
-                  aria-label={
-                    teacher ? "New class name" : "Class invitation code"
-                  }
-                  className="df-input"
-                  name="code"
-                  required
-                  maxLength={80}
-                  placeholder={
-                    teacher
-                      ? "Name a new class"
-                      : "Enter a class invitation code"
-                  }
-                />
-                <button
-                  className={teacher ? "df-button" : "df-button secondary"}
-                  disabled={busy}
-                >
-                  {teacher ? "+ Create class" : "Join another class"}
-                </button>
-              </form>
+              {teacher && (
+                <form className="df-inline" onSubmit={classForm}>
+                  <input
+                    aria-label="New class name"
+                    className="df-input"
+                    name="code"
+                    required
+                    maxLength={80}
+                    placeholder="Name a new class"
+                  />
+                  <button className="df-button" disabled={busy}>
+                    + Create class
+                  </button>
+                </form>
+              )}
             </>
           )}
           {teacher && view === "profile" && (
