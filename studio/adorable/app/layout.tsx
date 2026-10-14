@@ -20,6 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DreamForge",
   description: "Build beautiful apps with AI",
+  icons: { icon: "/brand/dreamforge-mark.svg" },
 };
 
 function AccountGate({ children }: { children: React.ReactNode }) {

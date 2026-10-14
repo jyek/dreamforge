@@ -3,9 +3,7 @@ export function DreamForgeBrand() {
   return (
     <Link href="/home" className="df-brand" aria-label="DreamForge home">
       <img src="/brand/dreamforge-mark.svg" width="48" height="48" alt="" />
-      <span>
-        dream<span className="df-purple">forge</span>
-      </span>
+      <span className="df-brand-wordmark">dreamforge</span>
     </Link>
   );
 }

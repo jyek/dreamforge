@@ -2,10 +2,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
+import { PanelLeftClose, PanelLeftOpen, Coins } from "lucide-react";
+import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
   window.location.assign("/login");
 }
+/** Shared studio navigation: desktop icon rail, mobile drawer, and one
+ * persisted collapse preference across dashboard and project routes. */
 export function StudioSidebar({
   name,
   remainingTokens,
@@ -29,6 +33,7 @@ export function StudioSidebar({
   className?: string;
   label?: string;
 }) {
+  const { collapsed, toggle: toggleCollapsed } = useSidebarState();
   const [fetchedBalance, setFetchedBalance] = useState<number | null>(null);
   useEffect(() => {
     if (role !== "child" || remainingTokens !== undefined) return;
@@ -81,9 +86,24 @@ export function StudioSidebar({
     <aside
       className={`df-studio-sidebar ${sidebarCaption ? "" : "without-caption"} ${className}`}
       aria-label={label}
+      data-collapsed={collapsed}
     >
       <div className="df-sidebar-brand">
         <DreamForgeBrand />
+        <button
+          className="df-sidebar-collapse"
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? (
+            <PanelLeftOpen size={17} />
+          ) : (
+            <PanelLeftClose size={17} />
+          )}
+        </button>
         {toggle}
       </div>
       {sidebarCaption && <p className="df-sidebar-caption">{sidebarCaption}</p>}
@@ -96,7 +116,13 @@ export function StudioSidebar({
             onClick={onProfileOpen}
             className="df-sidebar-balance"
             aria-label="View token balance and profile"
+            title={
+              balance === null
+                ? "Tokens remaining"
+                : `${balance.toLocaleString()} tokens remaining`
+            }
           >
+            <Coins className="df-balance-icon" size={18} aria-hidden="true" />
             <span>Tokens remaining</span>
             <strong>{balance === null ? "—" : balance.toLocaleString()}</strong>
           </Link>
@@ -108,6 +134,7 @@ export function StudioSidebar({
               onClick={onProfileOpen}
               className="df-profile-link"
               aria-label="Open profile"
+              title={`${name || "Your account"} · Profile`}
             >
               {account}
             </Link>

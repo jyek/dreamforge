@@ -340,6 +340,8 @@ export function ProjectWorkspaceShell({
             <Link
               key={section.id}
               href={`/${section.id}`}
+              aria-label={section.label}
+              title={section.label}
               aria-current={
                 section.id ===
                 (profile?.role === "teacher" ? "projects" : "home")
@@ -349,7 +351,7 @@ export function ProjectWorkspaceShell({
               onClick={() => setSidebarOpen(false)}
             >
               <section.icon size={20} aria-hidden="true" />
-              {section.label}
+              <span>{section.label}</span>
             </Link>
           ))}
         </nav>
@@ -403,7 +405,7 @@ export function ProjectWorkspaceShell({
     <ProjectsProvider value={projectsContextValue}>
       <ProjectConversationsProvider value={conversationsContextValue}>
         <div className="df-workspace-frame">
-          {projectId && !isMobile && sidebarOpen && workspaceSidebar}
+          {projectId && !isMobile && !chatHidden && workspaceSidebar}
           <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {projectId && (
               <header
@@ -418,7 +420,7 @@ export function ProjectWorkspaceShell({
                     title={sidebarOpen ? "Close navigation" : "Open navigation"}
                     aria-expanded={sidebarOpen}
                     onClick={() => setSidebarOpen((open) => !open)}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200 md:hidden"
                   >
                     <MenuIcon className="size-4" />
                   </button>

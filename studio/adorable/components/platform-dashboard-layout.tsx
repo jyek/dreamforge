@@ -112,6 +112,8 @@ export function PlatformDashboardLayout({
             {sections.map((s) => (
               <button
                 key={s.id}
+                aria-label={s.label}
+                title={s.label}
                 aria-current={section === s.id ? "page" : undefined}
                 onClick={() => {
                   onSectionChange(s.id);

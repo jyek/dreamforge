@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
-import { Sparkles } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -64,7 +64,16 @@ export function CreateProjectDialog({
       }}
     >
       <DialogTrigger asChild>
-        {trigger || <button className="df-button">+ Create a project</button>}
+        {trigger || (
+          <button
+            className="df-button"
+            aria-label="Create a project"
+            title="Create a project"
+          >
+            <Plus size={16} aria-hidden="true" />
+            <span>Create a project</span>
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent
         className="df-card df-project-dialog"
