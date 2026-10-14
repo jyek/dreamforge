@@ -2,7 +2,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
-import { Coins } from "lucide-react";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -70,13 +69,14 @@ export function StudioSidebar({
       </span>
       <div>
         <strong>{name || "DreamForge"}</strong>
-        <small>
-          {role === "teacher"
-            ? "Teacher"
-            : role === "child"
-              ? "Builder"
-              : "Project explorer"}
-        </small>
+        {role === "child" ? (
+          <small className="df-account-tokens">
+            Tokens{" "}
+            <span>{balance === null ? "—" : balance.toLocaleString()}</span>
+          </small>
+        ) : (
+          <small>{role === "teacher" ? "Teacher" : "Project explorer"}</small>
+        )}
       </div>
     </>
   );
@@ -121,23 +121,6 @@ export function StudioSidebar({
       {navigation}
       {children}
       <div className="df-sidebar-footer">
-        {role === "child" && (
-          <Link
-            href="/profile"
-            onClick={onProfileOpen}
-            className="df-sidebar-balance"
-            aria-label="View token balance and profile"
-            title={
-              balance === null
-                ? "Tokens remaining"
-                : `${balance.toLocaleString()} tokens remaining`
-            }
-          >
-            <Coins className="df-balance-icon" size={18} aria-hidden="true" />
-            <span>Tokens remaining</span>
-            <strong>{balance === null ? "—" : balance.toLocaleString()}</strong>
-          </Link>
-        )}
         <div className="df-sidebar-account">
           {role ? (
             <Link
@@ -145,7 +128,11 @@ export function StudioSidebar({
               onClick={onProfileOpen}
               className="df-profile-link"
               aria-label="Open profile"
-              title={`${name || "Your account"} · Profile`}
+              title={
+                role === "child"
+                  ? `${name || "Your account"} · Tokens ${balance === null ? "—" : balance.toLocaleString()} · Profile`
+                  : `${name || "Your account"} · Profile`
+              }
             >
               {account}
             </Link>

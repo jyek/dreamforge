@@ -2251,3 +2251,15 @@
     animation: none;
   }
 }
+
+.df-sidebar-account .df-account-tokens {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+.df-account-tokens > span {
+  color: #6b3ff7;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
