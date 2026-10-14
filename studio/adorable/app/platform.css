@@ -2845,3 +2845,11 @@
     line-height: 14px;
   }
 }
+
+/* Expanded dashboards keep the same horizontal inset as the collapsed rail. */
+@media (min-width: 768px) {
+  .df-teacher-dashboard > .df-studio-sidebar:not([data-collapsed="true"]) {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
