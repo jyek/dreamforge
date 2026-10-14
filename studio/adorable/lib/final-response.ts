@@ -1,17 +1,17 @@
 import type {UIMessage} from 'ai';
 /** A visible harness status, not a fabricated model answer or proof of completion. */
-export function ensureFinalResponse(messages:UIMessage[]){
+export function ensureFinalResponse(messages:UIMessage[], interrupted=false){
  const last=messages.at(-1);
  if(!last || last.role!=='assistant')return {messages,text:null};
  // Preliminary narration is not a final answer. Only text in the final step
  // after its tool results counts as a written summary.
  const boundary=Math.max(last.parts.findLastIndex(part=>part.type==='step-start'),last.parts.findLastIndex(part=>part.type.startsWith('tool-')));
- if(last.parts.slice(boundary+1).some(part=>part.type==='text'&&part.text.trim()))return {messages,text:null};
+ if(!interrupted && last.parts.slice(boundary+1).some(part=>part.type==='text'&&part.text.trim()))return {messages,text:null};
  const tools=last.parts.filter(part=>part.type.startsWith('tool-')) as unknown as {type:string;state?:string;input?:{file?:string};output?:{ok?:boolean;file?:string;statusCode?:string|number}}[];
  const written=tools.filter(part=>part.type==='tool-writeFileTool'&&part.state==='output-available'&&part.output?.ok===true).map(part=>part.output?.file||part.input?.file).filter((file):file is string=>Boolean(file));
  const healthy=tools.some(part=>part.type==='tool-checkAppTool'&&part.state==='output-available'&&part.output?.ok===true);
  const failed=tools.some(part=>part.state==='output-error'||part.output?.ok===false);
- let text='**Harness status:** The agent ended without a written summary.';
+ let text=interrupted?'**Harness status:** This run was interrupted before a final summary. The request may be incomplete.':'**Harness status:** The agent ended without a written summary.';
  if(written.length)text+=' Updated '+[...new Set(written)].slice(0,4).map(file=>'`'+file.replace(/[`\n\r]/g,'')+'`').join(', ')+'.';
  if(healthy)text+=' The app passed a basic availability check; gameplay and appearance still need checking.';
  if(failed)text+=' Some tool steps failed, so the request may be incomplete.';

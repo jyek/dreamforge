@@ -16,3 +16,7 @@ test('preliminary narration followed by empty final step gets an incomplete stat
  assert.match(result.text!,/Completion was not confirmed/);
  assert.equal(ensureFinalResponse(result.messages).text,null);
 });
+test('interrupted run preserves completed writes even with preliminary narration',()=>{
+ const result=ensureFinalResponse([{id:'a',role:'assistant',parts:[{type:'text',text:'I will build it.'},{type:'tool-writeFileTool',state:'output-available',output:{ok:true,file:'app/page.tsx'}}]}] as any,true);
+ assert.match(result.text!,/interrupted/);assert.match(result.text!,/app\/page.tsx/);assert.match(result.text!,/may be incomplete/);assert.equal(result.messages.at(-1)!.parts.length,3);
+});
