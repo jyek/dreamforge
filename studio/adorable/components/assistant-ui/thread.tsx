@@ -54,7 +54,16 @@ import {
   RefreshCwIcon,
   SquareIcon,
 } from "lucide-react";
-import { useEffect, useState, type FC, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type FC,
+  type ReactNode,
+} from "react";
+
+const ReadOnlyContext = createContext(false);
 
 export const Thread: FC<{
   welcome?: ReactNode;
@@ -62,50 +71,52 @@ export const Thread: FC<{
   readOnly?: boolean;
 }> = ({ welcome, readOnly = false, progress }) => {
   return (
-    <ThreadPrimitive.Root
-      className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
-      style={{
-        ["--thread-max-width" as string]: "44rem",
-      }}
-    >
-      <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex flex-1 flex-col overflow-x-hidden overflow-y-scroll px-4 pt-4">
-        {welcome && (
-          <AssistantIf condition={({ thread }) => thread.isEmpty}>
-            {welcome}
-          </AssistantIf>
-        )}
-
-        <ThreadPrimitive.Messages
-          components={{
-            UserMessage,
-            AssistantMessage,
-          }}
-        />
-
-        <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
-          <AssistantIf condition={({ thread }) => thread.isRunning}>
-            <div
-              role="status"
-              className="flex items-center gap-2 px-3 text-xs text-slate-400"
-            >
-              <Loader2Icon
-                aria-hidden="true"
-                className="size-3.5 animate-spin"
-              />
-              {progress || "Thinking about your request…"}
-            </div>
-          </AssistantIf>
-          <ThreadScrollToBottom />
-          {readOnly ? (
-            <p className="text-center text-sm text-muted-foreground">
-              Viewing project history · This workspace is read-only.
-            </p>
-          ) : (
-            <Composer />
+    <ReadOnlyContext.Provider value={readOnly}>
+      <ThreadPrimitive.Root
+        className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
+        style={{
+          ["--thread-max-width" as string]: "44rem",
+        }}
+      >
+        <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex flex-1 flex-col overflow-x-hidden overflow-y-scroll px-4 pt-4">
+          {welcome && (
+            <AssistantIf condition={({ thread }) => thread.isEmpty}>
+              {welcome}
+            </AssistantIf>
           )}
-        </ThreadPrimitive.ViewportFooter>
-      </ThreadPrimitive.Viewport>
-    </ThreadPrimitive.Root>
+
+          <ThreadPrimitive.Messages
+            components={{
+              UserMessage,
+              AssistantMessage,
+            }}
+          />
+
+          <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
+            <AssistantIf condition={({ thread }) => thread.isRunning}>
+              <div
+                role="status"
+                className="flex items-center gap-2 px-3 text-xs text-slate-400"
+              >
+                <Loader2Icon
+                  aria-hidden="true"
+                  className="size-3.5 animate-spin"
+                />
+                {progress || "Thinking about your request…"}
+              </div>
+            </AssistantIf>
+            <ThreadScrollToBottom />
+            {readOnly ? (
+              <p className="text-center text-sm text-muted-foreground">
+                Viewing project history · This workspace is read-only.
+              </p>
+            ) : (
+              <Composer />
+            )}
+          </ThreadPrimitive.ViewportFooter>
+        </ThreadPrimitive.Viewport>
+      </ThreadPrimitive.Root>
+    </ReadOnlyContext.Provider>
   );
 };
 
@@ -264,6 +275,7 @@ const AssistantMessage: FC = () => {
 };
 
 const AssistantActionBar: FC = () => {
+  const readOnly = useContext(ReadOnlyContext);
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -281,11 +293,13 @@ const AssistantActionBar: FC = () => {
           </AssistantIf>
         </TooltipIconButton>
       </ActionBarPrimitive.Copy>
-      <ActionBarPrimitive.Reload asChild>
-        <TooltipIconButton tooltip="Refresh">
-          <RefreshCwIcon />
-        </TooltipIconButton>
-      </ActionBarPrimitive.Reload>
+      {!readOnly && (
+        <ActionBarPrimitive.Reload asChild>
+          <TooltipIconButton tooltip="Refresh">
+            <RefreshCwIcon />
+          </TooltipIconButton>
+        </ActionBarPrimitive.Reload>
+      )}
       <ActionBarMorePrimitive.Root>
         <ActionBarMorePrimitive.Trigger asChild>
           <TooltipIconButton
