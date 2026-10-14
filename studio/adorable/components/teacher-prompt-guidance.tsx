@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { guidanceCategories, guidanceLabel } from "@/lib/prompt-guidance";
-type Student = {
+export type GuidanceStudent = {
   id: string;
   display_name: string;
   username: string;
@@ -27,13 +27,18 @@ async function get(url: string, signal: AbortSignal) {
   if (!r.ok) throw Error(data.error || "Unable to load prompts.");
   return data;
 }
-export function TeacherPromptGuidance() {
-  const [students, setStudents] = useState<Student[]>([]),
-    [selected, setSelected] = useState<Student | null>(null),
+export function TeacherPromptGuidance({
+  initialStudent,
+  initialProjectId = "",
+}: { initialStudent?: GuidanceStudent; initialProjectId?: string } = {}) {
+  const [students, setStudents] = useState<GuidanceStudent[]>([]),
+    [selected, setSelected] = useState<GuidanceStudent | null>(
+      initialStudent || null,
+    ),
     [prompts, setPrompts] = useState<Prompt[]>([]),
     [projects, setProjects] = useState<{ vm_id: string; name: string }[]>([]);
   const [category, setCategory] = useState(""),
-    [project, setProject] = useState(""),
+    [project, setProject] = useState(initialProjectId),
     [search, setSearch] = useState(""),
     [studentSearch, setStudentSearch] = useState(""),
     [offset, setOffset] = useState(0),
@@ -75,7 +80,7 @@ export function TeacherPromptGuidance() {
       controller.abort();
     };
   }, [selected, category, project, search, offset]);
-  function open(student: Student) {
+  function open(student: GuidanceStudent) {
     setPrompts([]);
     setSelected(student);
     setCategory("");
@@ -99,7 +104,7 @@ export function TeacherPromptGuidance() {
             ? `${selected.display_name} · Prompt guidance`
             : "Student prompt overview"}
         </h2>
-        {selected && (
+        {selected && !initialStudent && (
           <button
             className="df-button secondary small"
             onClick={() => {

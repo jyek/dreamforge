@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { StudioSidebar } from "@/components/studio-sidebar";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
-import { BUILDER_SECTIONS, TEACHER_SECTIONS } from "@/components/platform-dashboard-layout";
+import {
+  BUILDER_SECTIONS,
+  TEACHER_SECTIONS,
+} from "@/components/platform-dashboard-layout";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -724,27 +727,29 @@ function AppPreview({
                   { id: "code", label: "Code", Icon: CodeIcon },
                   { id: "terminal", label: "Terminal", Icon: TerminalIcon },
                 ] as const
-              ).map(({ id, label, Icon }) => (
-                <button
-                  key={id}
-                  disabled={!activity.ready && id !== "preview"}
-                  role="tab"
-                  aria-selected={view === id}
-                  aria-controls={`workspace-${id}`}
-                  title={label}
-                  onClick={() => setView(id)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
-                    view === id
-                      ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
-                      : "text-slate-500 hover:text-slate-800",
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sr-only sm:hidden">{label}</span>
-                </button>
-              ))}
+              )
+                .filter(({ id }) => !project.readOnly || id !== "terminal")
+                .map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    disabled={!activity.ready && id !== "preview"}
+                    role="tab"
+                    aria-selected={view === id}
+                    aria-controls={`workspace-${id}`}
+                    title={label}
+                    onClick={() => setView(id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
+                      view === id
+                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
+                        : "text-slate-500 hover:text-slate-800",
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sr-only sm:hidden">{label}</span>
+                  </button>
+                ))}
             </div>
             {view === "preview" ? (
               <BrowserControls

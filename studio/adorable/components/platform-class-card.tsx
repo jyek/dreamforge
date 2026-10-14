@@ -146,7 +146,9 @@ export function PlatformClassCard({
           </div>
         </form>
       ) : (
-        <strong>{classroom.name}</strong>
+        <Link className="df-purple" href={`/classrooms/${classroom.id}`}>
+          <strong>{classroom.name}</strong>
+        </Link>
       )}
       {classroom.invite_code && (
         <>
@@ -157,6 +159,15 @@ export function PlatformClassCard({
             {classroom.invite_code} ⧉
           </CopyButton>
         </>
+      )}
+      {!editing && (
+        <Link
+          className="df-button secondary small"
+          style={{ marginTop: 18 }}
+          href={`/classrooms/${classroom.id}`}
+        >
+          View students & projects →
+        </Link>
       )}
       {teacher && !editing && (
         <div className="df-inline" style={{ marginTop: 18 }}>
