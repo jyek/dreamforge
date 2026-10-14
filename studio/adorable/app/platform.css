@@ -399,3 +399,253 @@
     padding: 10px 5px;
   }
 }
+
+/* Teacher studio: a persistent navigation rail and a separate workspace. */
+.df-teacher-dashboard {
+  display: grid;
+  grid-template-columns: 246px minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
+  color: #1a0f2e;
+  background: #fff6e6;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+.df-teacher-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 28px 20px 20px;
+  border-right: 2px solid #1a0f2e;
+  background: #fffcf7;
+  overflow-y: auto;
+}
+.df-sidebar-brand .df-brand {
+  font-size: 24px;
+  letter-spacing: -0.8px;
+}
+.df-sidebar-brand .df-brand img {
+  width: 42px;
+  height: 42px;
+}
+.df-sidebar-brand .df-brand small {
+  font-size: 8px;
+}
+.df-sidebar-caption {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #81758f;
+  margin: 42px 14px 14px;
+}
+.df-teacher-nav {
+  display: grid;
+  gap: 8px;
+}
+.df-teacher-nav button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-align: left;
+  padding: 13px 15px;
+  border: 2px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  font-weight: 650;
+  font-size: 14px;
+  cursor: pointer;
+  color: #645976;
+}
+.df-teacher-nav button:hover {
+  background: #f4eeff;
+  color: #1a0f2e;
+}
+.df-teacher-nav button[aria-current="page"] {
+  background: #e5d6ff;
+  border-color: #1a0f2e;
+  box-shadow: 3px 3px 0 #1a0f2e;
+  color: #1a0f2e;
+  font-weight: 800;
+}
+.df-sidebar-account {
+  margin-top: auto;
+  padding-top: 28px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.df-teacher-avatar {
+  height: 36px;
+  width: 36px;
+  flex-shrink: 0;
+  border: 2px solid #1a0f2e;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #ffd23f;
+  font-weight: 800;
+}
+.df-sidebar-account div {
+  flex: 1;
+  min-width: 0;
+}
+.df-sidebar-account strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.df-sidebar-account small {
+  font-size: 11px;
+  color: #81758f;
+}
+.df-sidebar-account button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 9px;
+}
+.df-sidebar-account button:hover {
+  background: #e5d6ff;
+}
+.df-teacher-content {
+  min-width: 0;
+  padding: 36px 40px 50px;
+}
+.df-teacher-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 30px;
+}
+.df-teacher-header h1 {
+  font-size: 34px;
+  letter-spacing: -1px;
+  font-weight: 850;
+  line-height: 1.15;
+  margin: 0 0 8px;
+}
+.df-teacher-header .df-eyebrow {
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.df-teacher-header .df-muted {
+  font-size: 13px;
+  margin: 0;
+}
+.df-teacher-content .df-hero h1 {
+  font-size: 32px;
+}
+.df-teacher-content .df-hero .df-art {
+  width: 210px;
+}
+.df-teacher-content .df-stats {
+  margin: 26px 0;
+}
+.df-teacher-content .df-section-head:first-child {
+  margin-top: 0;
+}
+.df-home-shortcuts button {
+  text-align: left;
+  cursor: pointer;
+}
+.df-settings-card {
+  max-width: 650px;
+}
+.df-settings-card h2 {
+  font-size: 25px;
+  font-weight: 750;
+  margin: 20px 0 12px;
+}
+.df-mobile-menu {
+  display: none;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+@media (max-width: 1100px) {
+  .df-teacher-dashboard {
+    grid-template-columns: 218px minmax(0, 1fr);
+  }
+  .df-teacher-content {
+    padding: 28px;
+  }
+  .df-teacher-content .df-projects {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .df-teacher-content .df-hero .df-art {
+    display: none;
+  }
+  .df-sidebar-brand .df-brand {
+    font-size: 20px;
+  }
+  .df-teacher-content .df-stats {
+    gap: 16px;
+  }
+  .df-teacher-content .df-stat {
+    padding: 18px;
+  }
+}
+@media (max-width: 760px) {
+  .df-teacher-dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .df-teacher-sidebar {
+    padding: 14px 22px;
+    border-right: 0;
+    border-bottom: 2px solid #1a0f2e;
+    overflow: visible;
+  }
+  .df-sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .df-mobile-menu {
+    display: block;
+  }
+  .df-sidebar-caption,
+  .df-teacher-nav,
+  .df-sidebar-account {
+    display: none;
+  }
+  .df-teacher-sidebar.is-open .df-teacher-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    margin-top: 20px;
+  }
+  .df-teacher-sidebar.is-open .df-sidebar-account {
+    display: flex;
+    padding-top: 18px;
+  }
+  .df-teacher-content {
+    padding: 25px 22px;
+  }
+  .df-teacher-header {
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .df-teacher-header h1 {
+    font-size: 28px;
+  }
+  .df-teacher-header .df-button {
+    font-size: 10px;
+    padding: 7px 8px;
+  }
+  .df-teacher-nav button {
+    padding: 10px;
+    font-size: 13px;
+  }
+  .df-teacher-content .df-stats {
+    grid-template-columns: 1fr;
+  }
+  .df-teacher-content .df-projects {
+    grid-template-columns: 1fr;
+  }
+}
