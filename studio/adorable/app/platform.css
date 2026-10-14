@@ -2406,3 +2406,44 @@
 .df-project-sidebar-toggle[data-collapsed="true"] .df-sidebar-mark-action {
   transform: none;
 }
+
+/* Dashboard collapse changes width only, preserving both roles' row positions. */
+@media (min-width: 768px) {
+  .df-teacher-dashboard > .df-studio-sidebar[data-collapsed="true"] {
+    padding-top: 28px;
+    padding-bottom: 20px;
+  }
+  .df-teacher-dashboard > .df-studio-sidebar > .df-sidebar-caption {
+    height: 15px;
+    line-height: 15px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .df-teacher-dashboard
+    > .df-studio-sidebar[data-collapsed="true"]
+    > .df-sidebar-caption {
+    display: block;
+    visibility: hidden;
+    overflow: hidden;
+  }
+  .df-teacher-dashboard
+    > .df-studio-sidebar[data-collapsed="true"]
+    > .df-studio-nav {
+    margin-top: 0;
+    margin-bottom: 32px;
+  }
+  .df-teacher-dashboard
+    > .df-studio-sidebar.without-caption[data-collapsed="true"]
+    > .df-studio-nav {
+    margin-top: 36px;
+  }
+  .df-teacher-dashboard > .df-studio-sidebar > .df-studio-nav > button,
+  .df-teacher-dashboard > .df-studio-sidebar > .df-studio-nav > a {
+    height: 52px;
+  }
+  .df-teacher-dashboard > .df-studio-sidebar > .df-sidebar-create .df-button {
+    height: 46px;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
