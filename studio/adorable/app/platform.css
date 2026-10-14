@@ -2853,3 +2853,11 @@
     padding-right: 8px;
   }
 }
+
+/* Both dashboard profile links use the compact rail's internal padding. */
+@media (min-width: 768px) {
+  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
