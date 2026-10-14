@@ -2607,3 +2607,33 @@
     justify-content: center;
   }
 }
+
+@media (min-width: 768px) {
+  .df-teacher-dashboard {
+    grid-template-columns: 226px minmax(0, 1fr);
+  }
+  .df-studio-sidebar:not([data-collapsed="true"]) {
+    width: 226px;
+    min-width: 226px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .df-teacher-dashboard:has(> .df-studio-sidebar[data-collapsed="true"]) {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+  .df-studio-sidebar[data-collapsed="true"] {
+    width: 60px;
+    min-width: 60px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .df-teacher-dashboard {
+    grid-template-columns: 202px minmax(0, 1fr);
+  }
+  .df-studio-sidebar:not([data-collapsed="true"]) {
+    width: 202px;
+    min-width: 202px;
+  }
+}
