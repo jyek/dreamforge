@@ -1,7 +1,7 @@
 import Link from "next/link";
 export function DreamForgeBrand() {
   return (
-    <Link href="/dashboard" className="df-brand" aria-label="DreamForge home">
+    <Link href="/home" className="df-brand" aria-label="DreamForge home">
       <img src="/brand/dreamforge-mark.svg" width="48" height="48" alt="" />
       <span>
         dream<span className="df-purple">forge</span>
@@ -32,7 +32,7 @@ export function DreamForgeArt() {
           width="287"
           height="214"
           rx="18"
-          fill="#FFF6E6"
+          fill="#FFFFFF"
           stroke="#1A0F2E"
           strokeWidth="3"
         />
@@ -53,7 +53,7 @@ export function DreamForgeArt() {
         />
         <path
           d="m123 169-22 22 22 22m63-44 22 22-22 22m-22-51-14 58"
-          stroke="#FFF6E6"
+          stroke="#FFFFFF"
           strokeWidth="7"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -136,7 +136,7 @@ export function DreamForgeProjectArt({ variant = 0 }: { variant?: number }) {
             width="127"
             height="85"
             rx="9"
-            fill="#FFF6E6"
+            fill="#FFFFFF"
             stroke="#1A0F2E"
             strokeWidth="2"
           />

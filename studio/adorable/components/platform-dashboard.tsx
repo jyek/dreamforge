@@ -2,7 +2,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CreateProjectDialog } from "./create-project-dialog";
+import { BuilderHomePrompt } from "./builder-home-prompt";
+import { signOut } from "./studio-sidebar";
 import { PlatformClassCard } from "./platform-class-card";
 import {
   School,
@@ -103,7 +104,7 @@ export function PlatformDashboard({
   }, [initialSection]);
   function selectSection(section: string) {
     setView(section);
-    router.replace(`/dashboard?section=${section}`, { scroll: false });
+    router.push(`/${section}`, { scroll: false });
   }
   async function loadReviews(
     flags = flagsOnly,
@@ -226,7 +227,11 @@ export function PlatformDashboard({
                         Explore your builders’ projects ↗
                       </button>
                     )}
-                    {!teacher && <CreateProjectDialog />}
+                    {!teacher && (
+                      <Link href="/examples" className="df-examples-link">
+                        Explore examples ↗
+                      </Link>
+                    )}
                   </div>
                   <DreamForgeArt />
                 </section>
@@ -389,16 +394,19 @@ export function PlatformDashboard({
           {(view === "projects" || (!teacher && view === "home")) && (
             <>
               <div className="df-section-head">
-                <h2>
-                  {teacher
-                    ? "Your builders’ projects"
-                    : "Your little masterpieces"}
-                </h2>
+                <h2>{teacher ? "Your builders’ projects" : "Your projects"}</h2>
                 <div className="df-inline">
-                  <span className="df-pill">
-                    {data.projects.length} projects
-                  </span>
-                  {!teacher && <CreateProjectDialog />}
+                  {data.projects.length > 0 && (
+                    <span className="df-project-count">
+                      {data.projects.length}{" "}
+                      {data.projects.length === 1 ? "project" : "projects"}
+                    </span>
+                  )}
+                  {!teacher && (
+                    <Link href="/examples" className="df-examples-link">
+                      Explore examples ↗
+                    </Link>
+                  )}
                 </div>
               </div>
               {data.projects.length ? (
@@ -424,14 +432,26 @@ export function PlatformDashboard({
                     </Link>
                   ))}
                 </div>
-              ) : (
+              ) : teacher ? (
                 <div className="df-empty">
-                  {teacher
-                    ? "Once your builders create projects, you’ll see them here."
-                    : "Your first creation is waiting. Start with an idea!"}
+                  Once your builders create projects, you’ll see them here.
                 </div>
+              ) : (
+                <section className="df-first-project">
+                  <div className="df-first-project-icon" aria-hidden="true">
+                    ✦
+                  </div>
+                  <h1>What will you build first?</h1>
+                  <p>
+                    Describe your idea below. A game, a website, or something
+                    nobody has imagined yet.
+                  </p>
+                </section>
               )}
             </>
+          )}
+          {!teacher && view === "home" && (
+            <BuilderHomePrompt empty={!data.projects.length} />
           )}
           {teacher && view === "builders" && (
             <section
@@ -783,6 +803,15 @@ export function PlatformDashboard({
                 }
               >
                 Invite a teacher
+              </button>
+            </section>
+          )}
+          {view === "settings" && (
+            <section className="df-card df-settings-account">
+              <h2>Your account</h2>
+              <p className="df-muted">Signed in as {data.user.display_name}.</p>
+              <button className="df-button secondary" onClick={signOut}>
+                Sign out
               </button>
             </section>
           )}

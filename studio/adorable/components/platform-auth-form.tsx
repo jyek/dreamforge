@@ -28,7 +28,7 @@ export function PlatformAuthForm({
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
-      window.location.assign("/dashboard");
+      window.location.assign("/home");
     } catch (e) {
       setError((e as Error).message);
     } finally {

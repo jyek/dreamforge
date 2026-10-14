@@ -41,7 +41,7 @@ export const Assistant = ({
   onThreadStateChange,
   onActiveConversationChange,
   welcome,
-  readOnly=false,
+  readOnly = false,
 }: {
   initialMessages?: UIMessage[];
   selectedProjectId?: string | null;
@@ -55,7 +55,7 @@ export const Assistant = ({
   readOnly?: boolean;
 }) => {
   const [progress, setProgress] = useState("");
-  const { choice: modelChoice } = useModelSettings();
+  const { choice: modelChoice, ready: modelReady } = useModelSettings();
   const modelChoiceRef = useRef(modelChoice);
   modelChoiceRef.current = modelChoice;
   const resolvedInitialMessages = initialMessages ?? EMPTY_MESSAGES;
@@ -401,12 +401,37 @@ export const Assistant = ({
     onFinish: handleChatFinish,
   });
 
+  const startedInitialPrompt = useRef(false);
+  useEffect(() => {
+    if (
+      !modelReady ||
+      readOnly ||
+      !selectedProjectId ||
+      !selectedConversationId ||
+      resolvedInitialMessages.length ||
+      startedInitialPrompt.current
+    )
+      return;
+    const key = `dreamforge:initial-prompt:${selectedProjectId}:${selectedConversationId}`;
+    const prompt = sessionStorage.getItem(key);
+    if (!prompt) return;
+    startedInitialPrompt.current = true;
+    sessionStorage.removeItem(key);
+    void chat.sendMessage({ text: prompt });
+  }, [
+    modelReady,
+    readOnly,
+    selectedProjectId,
+    selectedConversationId,
+    resolvedInitialMessages,
+    chat.sendMessage,
+  ]);
   const runtime = useAISDKRuntime(chat);
 
   return (
     <AssistantRuntimeProvider key={runtimeKey} runtime={runtime}>
       <ThreadStateBridge onThreadStateChange={handleThreadStateChange} />
-      <Thread welcome={welcome} progress={progress} readOnly={readOnly}/>
+      <Thread welcome={welcome} progress={progress} readOnly={readOnly} />
     </AssistantRuntimeProvider>
   );
 };

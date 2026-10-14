@@ -20,6 +20,13 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
     "login",
     "signup",
     "dashboard",
+    "home",
+    "projects",
+    "classrooms",
+    "profile",
+    "settings",
+    "builders",
+    "prompts",
     "examples",
     "pay",
   ].includes(pathParts[0] || "");

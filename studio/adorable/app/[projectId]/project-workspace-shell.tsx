@@ -24,6 +24,7 @@ import {
   Loader2Icon,
   MonitorIcon,
   HomeIcon,
+  SettingsIcon,
   PlusIcon,
   RotateCwIcon,
   XIcon,
@@ -332,13 +333,19 @@ export function ProjectWorkspaceShell({
             ? [
                 { id: "home", label: "Home", icon: HomeIcon },
                 { id: "projects", label: "Projects", icon: FolderIcon },
+                { id: "settings", label: "Settings", icon: SettingsIcon },
               ]
             : BUILDER_SECTIONS
           ).map((section) => (
             <Link
               key={section.id}
-              href={`/dashboard?section=${section.id}`}
-              aria-current={section.id === "projects" ? "page" : undefined}
+              href={`/${section.id}`}
+              aria-current={
+                section.id ===
+                (profile?.role === "teacher" ? "projects" : "home")
+                  ? "page"
+                  : undefined
+              }
               onClick={() => setSidebarOpen(false)}
             >
               <section.icon size={20} aria-hidden="true" />

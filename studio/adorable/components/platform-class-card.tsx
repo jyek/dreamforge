@@ -138,7 +138,7 @@ export function PlatformClassCard({
       >
         <DialogContent
           className="df-card"
-          style={{ background: "#FFF6E6", color: "#1A0F2E" }}
+          style={{ background: "#FFFFFF", color: "#1A0F2E" }}
         >
           <DialogTitle>Delete {classroom.name}?</DialogTitle>
           <DialogDescription>

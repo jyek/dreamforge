@@ -9,7 +9,13 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 
-export function CreateProjectDialog() {
+export function CreateProjectDialog({
+  initialPrompt = "",
+  trigger,
+}: {
+  initialPrompt?: string;
+  trigger?: React.ReactElement;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,6 +39,11 @@ export function CreateProjectDialog() {
         throw Error(
           result.error || "We couldn’t create your project. Try again.",
         );
+      if (initialPrompt.trim())
+        sessionStorage.setItem(
+          `dreamforge:initial-prompt:${result.id}:${result.conversationId}`,
+          initialPrompt.trim(),
+        );
       window.location.assign(`/${result.id}/${result.conversationId}`);
     } catch (e) {
       setError((e as Error).message);
@@ -53,7 +64,7 @@ export function CreateProjectDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <button className="df-button">+ Create a project</button>
+        {trigger || <button className="df-button">+ Create a project</button>}
       </DialogTrigger>
       <DialogContent
         className="df-card df-project-dialog"

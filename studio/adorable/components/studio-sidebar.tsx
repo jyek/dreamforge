@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
 import { DreamForgeBrand } from "./dreamforge-brand";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -93,7 +92,7 @@ export function StudioSidebar({
       <div className="df-sidebar-footer">
         {role === "child" && (
           <Link
-            href="/dashboard?section=profile"
+            href="/profile"
             onClick={onProfileOpen}
             className="df-sidebar-balance"
             aria-label="View token balance and profile"
@@ -105,7 +104,7 @@ export function StudioSidebar({
         <div className="df-sidebar-account">
           {role === "child" ? (
             <Link
-              href="/dashboard?section=profile"
+              href="/profile"
               onClick={onProfileOpen}
               className="df-profile-link"
               aria-label="Open profile"
@@ -115,11 +114,7 @@ export function StudioSidebar({
           ) : (
             account
           )}
-          {role ? (
-            <button aria-label="Sign out" title="Sign out" onClick={signOut}>
-              <LogOut size={18} />
-            </button>
-          ) : (
+          {!role && (
             <Link href="/login" className="df-purple">
               Sign in
             </Link>

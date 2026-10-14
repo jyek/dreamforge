@@ -5,7 +5,6 @@ import { platformEnabled, getProfile } from "@/lib/platform-auth";
 import { redirect } from "next/navigation";
 
 export default async function Home() {
-  if (platformEnabled())
-    redirect((await getProfile()) ? "/dashboard" : "/login");
+  if (platformEnabled()) redirect((await getProfile()) ? "/home" : "/login");
   return <Assistant welcome={<HomeWelcome />} />;
 }

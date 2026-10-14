@@ -1,6 +1,5 @@
 "use client";
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
 import {
   Home,
   School,
@@ -11,6 +10,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { CreateProjectDialog } from "./create-project-dialog";
 import { StudioSidebar } from "./studio-sidebar";
 export const TEACHER_SECTIONS = [
   {
@@ -58,16 +58,16 @@ export const BUILDER_SECTIONS = [
     description: "Pick a project or bring a new idea to life.",
   },
   {
-    id: "projects",
-    label: "Projects",
-    icon: FolderKanban,
-    description: "Pick up a creation or start something new.",
-  },
-  {
     id: "classrooms",
     label: "Classrooms",
     icon: School,
     description: "Your classes and invitation codes.",
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    description: "Manage your account.",
   },
 ] as const;
 export function PlatformDashboardLayout({
@@ -135,18 +135,22 @@ export function PlatformDashboardLayout({
             ))}
           </nav>
         }
-      />
-      <main className="df-page df-teacher-content">
-        <header className="df-teacher-header">
-          <div>
-            <p className="df-eyebrow">YOUR DREAMFORGE STUDIO</p>
-            <h1>{current.label}</h1>
-            <p className="df-muted">{current.description}</p>
+      >
+        {!teacher && (
+          <div className="df-sidebar-create">
+            <CreateProjectDialog />
           </div>
-          <Link href="/examples" className="df-button secondary small">
-            Explore examples ↗
-          </Link>
-        </header>
+        )}
+      </StudioSidebar>
+      <main className="df-page df-teacher-content">
+        {(teacher || section !== "home") && (
+          <header className="df-teacher-header">
+            <div>
+              <h1>{current.label}</h1>
+              <p className="df-muted">{current.description}</p>
+            </div>
+          </header>
+        )}
         <div className="df-container">{children}</div>
       </main>
     </div>

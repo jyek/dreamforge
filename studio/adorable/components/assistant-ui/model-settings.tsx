@@ -13,10 +13,12 @@ import {
   type ModelChoice,
 } from "@/lib/model-catalog";
 const Context = createContext<{
+  ready: boolean;
   choice: ModelChoice;
   setChoice: (choice: ModelChoice) => void;
-}>({ choice: "auto", setChoice: () => {} });
+}>({ ready: false, choice: "auto", setChoice: () => {} });
 export function ModelSettingsProvider({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
   const [choice, setValue] = useState<ModelChoice>("auto");
   useEffect(() => {
     try {
@@ -24,6 +26,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       if (saved === "qwen-large") setValue("qwen");
       else if (isModelChoice(saved)) setValue(saved);
     } catch {}
+    setReady(true);
   }, []);
   const setChoice = (value: ModelChoice) => {
     setValue(value);
@@ -32,7 +35,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
     } catch {}
   };
   return (
-    <Context.Provider value={{ choice, setChoice }}>
+    <Context.Provider value={{ ready, choice, setChoice }}>
       {children}
     </Context.Provider>
   );
