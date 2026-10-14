@@ -2349,3 +2349,38 @@
 .df-join-class-dialog .df-inline {
   margin-top: 8px;
 }
+
+/* One brand size and baseline for entry pages, dashboards and workspaces. */
+.df-brand,
+.df-header .df-brand,
+.df-sidebar-brand .df-brand,
+.df-workspace-sidebar .df-sidebar-brand .df-brand {
+  height: 36px;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+}
+.df-brand img,
+.df-header .df-brand img,
+.df-sidebar-brand .df-brand img,
+.df-sidebar-collapse img {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+.df-sidebar-brand {
+  height: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+.df-sidebar-brand > .df-sidebar-collapse {
+  width: 36px;
+  height: 36px;
+}
+.df-brand-wordmark {
+  line-height: 24px;
+}
