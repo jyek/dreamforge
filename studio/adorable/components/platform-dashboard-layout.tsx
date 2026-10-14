@@ -34,7 +34,8 @@ export const TEACHER_SECTIONS = [
     id: "projects",
     label: "Projects",
     icon: FolderKanban,
-    description: "Explore the projects your students are creating.",
+    description:
+      "Create your own projects and share them with your classrooms.",
   },
   {
     id: "safety",

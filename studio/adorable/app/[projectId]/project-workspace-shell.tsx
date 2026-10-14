@@ -354,7 +354,7 @@ export function ProjectWorkspaceShell({
         </nav>
       }
     >
-      {profile?.role === "child" && (
+      {profile && (
         <div className="df-sidebar-create">
           <CreateProjectDialog />
         </div>

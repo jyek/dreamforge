@@ -114,6 +114,12 @@ export function PlatformClassCard({
               way.
             </DialogDescription>
             <div className="df-class-welcome-actions">
+              <Link
+                href={`/classrooms/${classroom.id}`}
+                className="df-button secondary"
+              >
+                View class projects
+              </Link>
               <CreateProjectDialog
                 trigger={
                   <button className="df-button">

@@ -89,9 +89,9 @@ export async function POST(req: Request) {
   if (demoMode() || platformEnabled()) {
     let platformReservation: string | null = null;
     const learner = platformEnabled() ? await getProfile() : null;
-    if (platformEnabled() && (learner?.role !== "child" || !checkOrigin(req)))
+    if (platformEnabled() && (!learner || !checkOrigin(req)))
       return Response.json(
-        { error: "Sign in to your own child project." },
+        { error: "Sign in to your own project." },
         { status: 403 },
       );
     try {
@@ -296,7 +296,10 @@ export async function POST(req: Request) {
                 await settleUsage(platformReservation);
                 platformReservation = null;
               }
-              const completion = ensureFinalResponse(final, streamError || isAborted);
+              const completion = ensureFinalResponse(
+                final,
+                streamError || isAborted,
+              );
               completionText = completion.text;
               const safe = redactPayload(completion.messages) as UIMessage[];
               await screenContent(
@@ -539,7 +542,10 @@ export async function POST(req: Request) {
           return "Your request could not finish. Please ask your teacher.";
         },
         onFinish: async ({ messages: final, isAborted }) => {
-          const completion = ensureFinalResponse(final, streamError || isAborted);
+          const completion = ensureFinalResponse(
+            final,
+            streamError || isAborted,
+          );
           completionText = completion.text;
           final = completion.messages;
           await screenContent(

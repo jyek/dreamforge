@@ -3,6 +3,8 @@ import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CreateProjectDialog } from "./create-project-dialog";
+import { ProjectClassroomSharing } from "./project-classroom-sharing";
 import { CreateClassDialog } from "./create-class-dialog";
 import { JoinClassDialog } from "./join-class-dialog";
 import { BuilderGreeting } from "./builder-greeting";
@@ -345,7 +347,7 @@ export function PlatformDashboard({
                   </span>
                   <h3>Projects</h3>
                   <p className="df-muted">
-                    Explore what your students are making.
+                    Create projects and share them with your classrooms.
                   </p>
                   <footer>Browse projects →</footer>
                 </button>
@@ -371,8 +373,9 @@ export function PlatformDashboard({
               className={!teacher ? "df-home-project-section" : undefined}
             >
               <div className="df-section-head">
-                <h2>{teacher ? "Your students’ projects" : "Your projects"}</h2>
+                <h2>{"Your projects"}</h2>
                 <div className="df-inline">
+                  {teacher && <CreateProjectDialog />}
                   {data.projects.length > 0 && (
                     <span className="df-project-count">
                       {data.projects.length}{" "}
@@ -384,29 +387,34 @@ export function PlatformDashboard({
               {data.projects.length ? (
                 <div className="df-projects">
                   {data.projects.map((p, index) => (
-                    <Link
-                      key={p.vm_id}
-                      className="df-card df-project"
-                      href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
-                    >
-                      <DreamForgeProjectArt variant={index} />
-                      <h3>{p.metadata.name}</h3>
-                      <p className="df-muted">
-                        {teacher
-                          ? `By ${p.child_name}`
-                          : "Built with your imagination"}
-                      </p>
-                      <footer>
-                        {teacher
-                          ? "Explore project & history ↗"
-                          : "Keep building ↗"}
-                      </footer>
-                    </Link>
+                    <article key={p.vm_id} className="df-card df-project">
+                      <Link
+                        className="df-project-main"
+                        href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
+                      >
+                        <DreamForgeProjectArt variant={index} />
+                        <h3>{p.metadata.name}</h3>
+                        <p className="df-muted">
+                          {teacher
+                            ? "Your teaching project"
+                            : "Built with your imagination"}
+                        </p>
+                        <footer>
+                          {teacher ? "Open project" : "Keep building ↗"}
+                        </footer>
+                      </Link>
+                      {teacher && (
+                        <ProjectClassroomSharing
+                          projectId={p.vm_id}
+                          name={p.metadata.name}
+                        />
+                      )}
+                    </article>
                   ))}
                 </div>
               ) : teacher ? (
                 <div className="df-empty">
-                  Once your students create projects, you’ll see them here.
+                  Create your first project, then share it with a classroom.
                 </div>
               ) : (
                 <div className="df-empty">

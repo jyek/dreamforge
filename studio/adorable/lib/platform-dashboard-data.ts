@@ -29,8 +29,8 @@ export async function loadDashboardData(user: Profile, section?: string) {
     };
   }
   const { rows: projects } = await db.query(
-    `select p.vm_id,p.metadata,pr.display_name as child_name from adorable.projects p join adorable.profiles pr on pr.id=p.owner_id where not p.is_example and (p.owner_id=$1 or ($2='teacher' and exists(select 1 from adorable.teacher_builders b where b.child_id=p.owner_id and b.teacher_id=$1))) order by p.updated_at desc`,
-    [user.id, user.role],
+    `select p.vm_id,p.metadata,pr.display_name as child_name from adorable.projects p join adorable.profiles pr on pr.id=p.owner_id where not p.is_example and (p.owner_id=$1) order by p.updated_at desc`,
+    [user.id],
   );
   const { rows: children } =
     user.role === "teacher"

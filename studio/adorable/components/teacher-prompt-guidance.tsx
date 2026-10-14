@@ -313,13 +313,23 @@ export function TeacherPromptGuidance({
                         )}
                       </td>
                       <td>
-                        <button
-                          className="df-button secondary small"
-                          disabled={loading}
-                          onClick={() => open(s)}
-                        >
-                          View safety →
-                        </button>
+                        <div className="df-inline">
+                          {overviewTitle === "Students" && (
+                            <Link
+                              className="df-button secondary small"
+                              href={`/students/${s.id}/projects`}
+                            >
+                              View projects
+                            </Link>
+                          )}
+                          <button
+                            className="df-button secondary small"
+                            disabled={loading}
+                            onClick={() => open(s)}
+                          >
+                            View safety
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

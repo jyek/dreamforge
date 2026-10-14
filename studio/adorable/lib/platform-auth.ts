@@ -42,8 +42,14 @@ export async function platformProjectAccess(
   if (!row) return null;
   if (readOnly && row.is_example) return row.metadata;
   if (!profile || row.is_example) return null;
-  if (profile.role === "child" && row.owner_id === profile.id)
-    return row.metadata;
+  if (row.owner_id === profile.id) return row.metadata;
+  if (readOnly && profile.role === "child") {
+    const { rowCount } = await database().query(
+      `select 1 from adorable.project_classrooms pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and c.teacher_id=$3`,
+      [projectId, profile.id, row.owner_id],
+    );
+    if (rowCount) return row.metadata;
+  }
   if (
     readOnly &&
     profile.role === "teacher" &&
