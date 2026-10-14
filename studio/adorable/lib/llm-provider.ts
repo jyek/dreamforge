@@ -63,6 +63,7 @@ export const streamLlmResponse = async ({
   modelChoice,
   modelOverride,
 }: StreamLlmResponseParams): Promise<StreamLlmResponseResult> => {
+  system += "\nWhen the user asks you to build or change the app, carry out the changes with the tools in this turn. A plan, file inspection, or promise to implement later is not completion. Continue from successful tool results without asking the user to say continue. Before ending, either summarize the implemented result and checks, or explicitly explain the blocker and what remains incomplete. For questions, answer directly without unnecessary edits.";
   const provider = getProviderName(providerOverride);
   const modelMessages = normalizeModelHistory(
     await convertToModelMessages(messages),
