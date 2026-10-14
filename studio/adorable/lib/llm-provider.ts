@@ -125,6 +125,8 @@ export const streamLlmResponse = async ({
       tools,
       prepareStep,
       maxRetries: routing ? 0 : 2,
+      timeout: { stepMs: 90000, totalMs: 240000 },
+      onAbort: async () => { await onStreamError?.(); },
       onError: async () => {
         await onStreamError?.();
       },
@@ -155,6 +157,8 @@ export const streamLlmResponse = async ({
     messages: modelMessages,
     tools,
     prepareStep,
+    timeout: { stepMs: 90000, totalMs: 240000 },
+    onAbort: async () => { await onStreamError?.(); },
     onStepFinish: async ({ usage, response }) => {
       await afterStep?.({ ...usage, modelId: response.modelId });
     },

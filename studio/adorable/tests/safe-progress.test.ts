@@ -12,3 +12,10 @@ test('unsafe text, raw tool arguments and reasoning never reach the user',async(
  const source=new ReadableStream({start(c){for(const part of [{type:'reasoning-delta',delta:'private'},{type:'tool-input-delta',inputTextDelta:'secret'},{type:'text-start',id:'a'},{type:'text-delta',id:'a',delta:'blocked'},{type:'text-end',id:'a'}])c.enqueue(part);c.close();}});
  const reader=safeProgressStream(source,async()=>{throw Error('blocked');},v=>v).getReader();const chunks=[];while(true){const item=await reader.read();if(item.done)break;chunks.push(item.value);}assert.ok(chunks.some((c:any)=>c.type==='error'));assert.ok(!JSON.stringify(chunks).includes('private'));assert.ok(!chunks.some((c:any)=>c.type==='text-delta'));
 });
+test('provider timeout abort clears progress and ends with a visible error',async()=>{
+ const source=new ReadableStream({start(c){c.enqueue({type:'abort'});c.close();}});
+ const reader=safeProgressStream(source,async()=>{},v=>v).getReader();const chunks:any[]=[];
+ while(true){const item=await reader.read();if(item.done)break;chunks.push(item.value);}
+ assert.ok(chunks.some(c=>c.type==='data-progress'&&c.data.message===''));
+ assert.equal(chunks.at(-1).type,'error');
+});
