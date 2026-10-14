@@ -1642,3 +1642,4 @@
 }
 @media (max-width: 767px) { .df-sidebar-collapse { display: none; } }
 @media (prefers-reduced-motion: reduce) { .df-studio-sidebar { transition: none; } }
+.df-sidebar-brand .df-brand-wordmark { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

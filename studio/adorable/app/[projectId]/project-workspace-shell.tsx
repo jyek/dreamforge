@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { StudioSidebar } from "@/components/studio-sidebar";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
-import { BUILDER_SECTIONS } from "@/components/platform-dashboard-layout";
+import { BUILDER_SECTIONS, TEACHER_SECTIONS } from "@/components/platform-dashboard-layout";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,8 +23,6 @@ import {
   CodeIcon,
   Loader2Icon,
   MonitorIcon,
-  HomeIcon,
-  SettingsIcon,
   PlusIcon,
   RotateCwIcon,
   XIcon,
@@ -330,11 +328,7 @@ export function ProjectWorkspaceShell({
       navigation={
         <nav className="df-studio-nav" aria-label="Workspace navigation">
           {(profile?.role === "teacher"
-            ? [
-                { id: "home", label: "Home", icon: HomeIcon },
-                { id: "projects", label: "Projects", icon: FolderIcon },
-                { id: "settings", label: "Settings", icon: SettingsIcon },
-              ]
+            ? TEACHER_SECTIONS
             : BUILDER_SECTIONS
           ).map((section) => (
             <Link
