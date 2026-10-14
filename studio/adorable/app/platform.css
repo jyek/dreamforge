@@ -1,3 +1,7 @@
+:root {
+  --df-divider: #e2e8f0;
+}
+
 .df-page {
   height: 100%;
   overflow-y: auto;
@@ -329,7 +333,7 @@
 .df-table td {
   text-align: left;
   padding: 14px 10px;
-  border-bottom: 1px solid #e8dfc9;
+  border-bottom: 1px solid var(--df-divider);
 }
 .df-footer {
   margin-top: 40px;
@@ -425,7 +429,7 @@
   flex-direction: column;
   min-height: 0;
   padding: 28px 20px 20px;
-  border-right: 2px solid #1a0f2e;
+  border-right: 2px solid var(--df-divider);
   background: #fff6e6;
   overflow-y: auto;
 }
@@ -612,7 +616,7 @@
   .df-studio-sidebar {
     padding: 14px 22px;
     border-right: 0;
-    border-bottom: 2px solid #1a0f2e;
+    border-bottom: 2px solid var(--df-divider);
     overflow: visible;
   }
   .df-sidebar-brand {
@@ -805,7 +809,7 @@
   font-weight: 800;
 }
 .df-project footer {
-  border-top: 1.5px solid #1a0f2e;
+  border-top: 1.5px solid var(--df-divider);
   padding-top: 13px;
   width: 100%;
   display: block;
@@ -839,10 +843,10 @@
 }
 .df-teacher-header {
   padding-bottom: 22px;
-  border-bottom: 1.5px solid #1a0f2e;
+  border-bottom: 1.5px solid var(--df-divider);
 }
 .df-sidebar-account {
-  border-top: 1.5px solid #1a0f2e;
+  border-top: 1.5px solid var(--df-divider);
   padding-top: 20px;
   margin-top: auto;
 }
@@ -998,7 +1002,8 @@
   padding-bottom: 24px;
 }
 .df-workspace-projects > .df-button {
-  width: 100%;
+  width: calc(100% - 6px);
+  margin: 2px 5px 6px 1px;
   font-size: 12px;
   padding: 10px;
 }
@@ -1050,11 +1055,14 @@
 }
 .df-workspace-toolbar {
   background: #fff;
-  border-bottom: 1.5px solid #1a0f2e;
+  border-bottom: 1.5px solid var(--df-divider);
+}
+.df-workspace-panel {
+  border-left: 1px solid var(--df-divider);
 }
 .df-workspace-sheet {
   background: #fff;
-  border-right: 2px solid #1a0f2e;
+  border-right: 2px solid var(--df-divider);
 }
 .df-workspace-sheet .df-workspace-sidebar {
   width: 100%;

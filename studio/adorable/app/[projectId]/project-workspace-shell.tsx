@@ -576,7 +576,7 @@ export function ProjectWorkspaceShell({
                 )}
                 <div
                   className={cn(
-                    "min-w-0 overflow-hidden pr-2 pb-2",
+                    "df-workspace-panel min-h-0 min-w-0 overflow-hidden",
 
                     !isMobile && "transition-opacity duration-500",
                     showWorkspacePanel &&
@@ -610,7 +610,7 @@ export function ProjectWorkspaceShell({
 
 function PreviewPlaceholder() {
   return (
-    <div className="flex h-full items-center justify-center rounded-2xl border bg-white text-sm text-slate-400">
+    <div className="flex h-full items-center justify-center bg-white text-sm text-slate-400">
       <Loader2Icon className="mr-2 size-4 animate-spin" />
       Opening workspace…
     </div>
@@ -763,7 +763,7 @@ function AppPreview({
         role="tabpanel"
         aria-label="Preview"
         className={cn(
-          "relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm",
+          "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white",
           view !== "preview" && "hidden",
         )}
       >
@@ -848,7 +848,7 @@ function AppPreview({
           id="workspace-code"
           role="tabpanel"
           aria-label="Code"
-          className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="min-h-0 flex-1 overflow-hidden bg-white"
         >
           <ProjectCode projectId={project.id} />
         </div>
@@ -858,7 +858,7 @@ function AppPreview({
           id="workspace-terminal"
           role="tabpanel"
           aria-label="Terminal"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
         >
           <div className="flex shrink-0 items-center gap-0 border-y bg-slate-100 px-1">
             {allTabs.map((tab) => (
