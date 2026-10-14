@@ -19,7 +19,7 @@ export async function GET(
   if (!rowCount)
     return Response.json({ error: "Project not found." }, { status: 404 });
   const { rows } = await db.query(
-    "select c.id,c.name,exists(select 1 from adorable.project_classrooms pc where pc.class_id=c.id and pc.vm_id=$2) as attached from adorable.classes c where c.teacher_id=$1 order by c.created_at",
+    "select c.id,c.name,exists(select 1 from adorable.class_projects pc where pc.class_id=c.id and pc.vm_id=$2) as attached from adorable.classes c where c.teacher_id=$1 order by c.created_at",
     [user.id, projectId],
   );
   return Response.json({ classes: rows });
@@ -69,12 +69,12 @@ export async function PUT(
         { status: 403 },
       );
     }
-    await db.query("delete from adorable.project_classrooms where vm_id=$1", [
+    await db.query("delete from adorable.class_projects where vm_id=$1", [
       projectId,
     ]);
     await db.query(
-      "insert into adorable.project_classrooms(vm_id,class_id) select $1,unnest($2::uuid[])",
-      [projectId, unique],
+      "insert into adorable.class_projects(vm_id,class_id,assigned_by) select $1,unnest($2::uuid[]),$3",
+      [projectId, unique, user.id],
     );
     await db.query("commit");
     return Response.json({ ok: true });

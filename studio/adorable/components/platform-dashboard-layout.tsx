@@ -130,7 +130,7 @@ export function PlatformDashboardLayout({
           </nav>
         }
       >
-        {!teacher && (
+        {!teacher && section !== "classrooms" && (
           <div className="df-sidebar-create">
             <CreateProjectDialog />
           </div>

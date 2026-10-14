@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DreamLoading } from "./dream-loading";
+import { ClassProjectAssignments, type AssignableProject } from './class-project-assignments';
 import { TableEmptyState } from "./table-empty-state";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import {
@@ -17,8 +18,9 @@ type Project = {
   prompt_count: number;
   guidance_count: number;
 };
-type Data = {
-  classroom?: { name: string };
+export type StudentProjectsData = {
+  classroom?: { name: string; teacher_name?: string };
+  availableProjects?: AssignableProject[];
   students: GuidanceStudent[];
   projects: Project[];
 };
@@ -26,13 +28,15 @@ export function TeacherStudentProjects({
   teacherName,
   classId,
   studentId,
+  initialData,
 }: {
   teacherName: string;
   classId?: string;
   studentId?: string;
+  initialData?: StudentProjectsData;
 }) {
   const router = useRouter();
-  const [data, setData] = useState<Data | null>(null),
+  const [data, setData] = useState<StudentProjectsData | null>(initialData || null),
     [error, setError] = useState(""),
     [search, setSearch] = useState(""),
     [selection, setSelection] = useState<{
@@ -40,6 +44,7 @@ export function TeacherStudentProjects({
       project: Project;
     } | null>(null);
   useEffect(() => {
+    if(initialData)return;
     const controller = new AbortController();
     fetch(
       classId
@@ -56,7 +61,7 @@ export function TeacherStudentProjects({
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [classId, studentId]);
+  }, [classId, studentId, initialData]);
   const shown =
     data?.students.filter((s) =>
       `${s.display_name} ${s.username}`
@@ -68,6 +73,7 @@ export function TeacherStudentProjects({
       teacher
       name={teacherName}
       section={classId ? "classrooms" : "students"}
+      headerAction={classId && data?.availableProjects ? <ClassProjectAssignments classId={classId} projects={data.availableProjects} onChanged={async()=>{const r=await fetch(`/api/platform/classes/${classId}`);const d=await r.json();if(!r.ok)throw Error(d.error);setData(d);}}/> : undefined}
       onSectionChange={(s) => router.push(`/${s}`)}
     >
       <Link className="df-purple" href={classId ? "/classrooms" : "/students"}>

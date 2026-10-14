@@ -45,7 +45,7 @@ export async function platformProjectAccess(
   if (row.owner_id === profile.id) return row.metadata;
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
-      `select 1 from adorable.project_classrooms pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and c.teacher_id=$3`,
+      `select 1 from adorable.class_projects pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and c.teacher_id=$3`,
       [projectId, profile.id, row.owner_id],
     );
     if (rowCount) return row.metadata;
