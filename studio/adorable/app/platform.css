@@ -2524,3 +2524,33 @@
     animation: none !important;
   }
 }
+
+.df-class-number {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--df-divider);
+  border-radius: 9px;
+  background: #faf8ff;
+  color: #403354;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.df-class-number-label {
+  color: #82758f;
+  font-size: 12px;
+}
+.df-class-number strong {
+  overflow-wrap: anywhere;
+}
+.df-class-number:hover {
+  background: #f0eaff;
+}
+.df-class-number:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 3px;
+}

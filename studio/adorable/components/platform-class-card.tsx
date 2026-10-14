@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { ClassroomDoor } from "./classroom-door";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { CopyButton } from "./copy-button";
-import { School } from "lucide-react";
+import { Copy, School } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   Dialog,
@@ -151,14 +151,11 @@ export function PlatformClassCard({
         </Link>
       )}
       {classroom.invite_code && (
-        <>
-          <p className="df-muted" style={{ fontSize: 12 }}>
-            Class Number
-          </p>
-          <CopyButton value={classroom.invite_code}>
-            {classroom.invite_code} ⧉
-          </CopyButton>
-        </>
+        <CopyButton value={classroom.invite_code} className="df-class-number">
+          <span className="df-class-number-label">Class Number</span>
+          <strong>{classroom.invite_code}</strong>
+          <Copy size={14} aria-hidden="true" />
+        </CopyButton>
       )}
       {!editing && (
         <Link
