@@ -17,7 +17,7 @@ export const TEACHER_SECTIONS = [
     id: "home",
     label: "Home",
     icon: Home,
-    description: "An overview of your builders and their progress.",
+    description: "An overview of your students and their progress.",
   },
   {
     id: "classrooms",
@@ -26,16 +26,16 @@ export const TEACHER_SECTIONS = [
     description: "Manage your classes and invitation codes.",
   },
   {
-    id: "builders",
-    label: "Builders",
+    id: "students",
+    label: "Students",
     icon: UsersRound,
-    description: "See your roster and each builder’s token usage.",
+    description: "See your roster and each student’s token usage.",
   },
   {
     id: "projects",
     label: "Projects",
     icon: FolderKanban,
-    description: "Explore the projects your builders are creating.",
+    description: "Explore the projects your students are creating.",
   },
   {
     id: "prompts",
@@ -86,7 +86,7 @@ export function PlatformDashboardLayout({
       ? {
           label: "Profile",
           description: teacher
-            ? "Your account."
+            ? "Manage your teacher profile and account."
             : "Your token usage, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];

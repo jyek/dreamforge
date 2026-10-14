@@ -1,4 +1,5 @@
 "use client";
+import { CopyButton } from "./copy-button";
 import { School } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
@@ -90,14 +91,7 @@ export function PlatformClassCard({
           <p className="df-muted" style={{ fontSize: 12 }}>
             Class invitation code
           </p>
-          <button
-            className="df-button secondary small"
-            onClick={() =>
-              navigator.clipboard.writeText(classroom.invite_code!)
-            }
-          >
-            {classroom.invite_code} ⧉
-          </button>
+          <CopyButton value={classroom.invite_code}>{classroom.invite_code} ⧉</CopyButton>
         </>
       )}
       {teacher && !editing && (
@@ -142,7 +136,7 @@ export function PlatformClassCard({
         >
           <DialogTitle>Delete {classroom.name}?</DialogTitle>
           <DialogDescription>
-            This removes the class and its invitation code. Builders stay in
+            This removes the class and its invitation code. Students stay in
             your roster, and their accounts, projects, tokens and prompt history
             are kept.
           </DialogDescription>

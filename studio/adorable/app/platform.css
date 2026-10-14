@@ -1535,3 +1535,71 @@
     padding-top: 28px;
   }
 }
+.df-account-menu {
+  position: relative;
+  width: 100%;
+}
+.df-account-menu summary {
+  cursor: pointer;
+  list-style: none;
+}
+.df-account-menu summary::-webkit-details-marker {
+  display: none;
+}
+.df-account-menu-content {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 6px;
+  background: white;
+  border: 1px solid var(--df-divider);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #1a0f2e14;
+}
+.df-account-menu-content a,
+.df-account-menu-content button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  text-align: left;
+  font-size: 13px;
+  color: #1a0f2e;
+  text-decoration: none;
+  cursor: pointer;
+}
+.df-account-menu-content a:hover,
+.df-account-menu-content button:hover {
+  background: #f0e9ff;
+}
+.df-teacher-profile {
+  max-width: 600px;
+}
+.df-teacher-profile .df-form {
+  margin-top: 24px;
+}
+.df-copy-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.df-copy-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border: 1px solid var(--df-divider);
+  border-radius: 8px;
+  background: white;
+  color: #645976;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 3px 12px #1a0f2e0c;
+  pointer-events: none;
+}

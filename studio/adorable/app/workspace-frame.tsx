@@ -26,6 +26,7 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
     "profile",
     "settings",
     "builders",
+    "students",
     "prompts",
     "examples",
     "pay",

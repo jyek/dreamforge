@@ -12,7 +12,7 @@ export async function StudioPage({ section }: { section: string }) {
           "home",
           "projects",
           "classrooms",
-          "builders",
+          "students",
           "prompts",
           "settings",
           "profile",

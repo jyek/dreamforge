@@ -26,6 +26,21 @@ export async function DELETE(req: Request) {
   (await cookies()).delete(SESSION_COOKIE);
   return Response.json({ ok: true });
 }
+export async function PATCH(req: Request) {
+  if (!platformEnabled()) return fail("Account setup is not enabled yet.", 503);
+  if (!checkOrigin(req)) return fail("Invalid request", 403);
+  const user = await getProfile();
+  if (!user) return fail("Sign in first.", 401);
+  const body = await req.json().catch(() => ({}));
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name))
+    return fail("Use a display name with 1–60 characters.");
+  await database().query(
+    "update adorable.profiles set display_name=$2 where id=$1",
+    [user.id, name],
+  );
+  return Response.json({ ok: true, name });
+}
 export async function POST(req: Request) {
   if (!platformEnabled()) return fail("Account setup is not enabled yet.", 503);
   if (!checkOrigin(req)) return fail("Invalid request", 403);

@@ -1,4 +1,2 @@
-import { StudioPage } from "@/components/studio-page";
-export default async function Page() {
-  return StudioPage({ section: "builders" });
-}
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/students"); }

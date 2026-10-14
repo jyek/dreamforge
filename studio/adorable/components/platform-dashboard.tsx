@@ -3,6 +3,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BuilderHomePrompt } from "./builder-home-prompt";
+import { TeacherProfile } from "./teacher-profile";
+import { CopyButton } from "./copy-button";
 import { signOut } from "./studio-sidebar";
 import { PlatformClassCard } from "./platform-class-card";
 import {
@@ -189,7 +191,7 @@ export function PlatformDashboard({
         </div>
       ) : (
         <>
-          {view === "profile" && (
+          {!teacher && view === "profile" && (
             <section className="df-card df-settings-account">
               <h2>Your account</h2>
               <p className="df-muted">Signed in as {data.user.display_name}.</p>
@@ -251,7 +253,7 @@ export function PlatformDashboard({
                     </h2>
                     <p style={{ margin: "0 0 24px" }}>
                       {teacher
-                        ? "Follow your builders’ projects, progress and prompts."
+                        ? "Follow your students’ projects, progress and prompts."
                         : "What will your imagination build today?"}
                     </p>
                     {teacher && (
@@ -259,7 +261,7 @@ export function PlatformDashboard({
                         className="df-button"
                         onClick={() => selectSection("projects")}
                       >
-                        Explore your builders’ projects ↗
+                        Explore your students’ projects ↗
                       </button>
                     )}
                     {!teacher && (
@@ -281,7 +283,7 @@ export function PlatformDashboard({
                         size={22}
                         aria-hidden="true"
                       />
-                      Builders<strong>{data.children.length}</strong>In your
+                      Students<strong>{data.children.length}</strong>In your
                       roster
                     </div>
                     <div className="df-card df-stat">
@@ -402,7 +404,7 @@ export function PlatformDashboard({
                   </span>
                   <h3>Projects</h3>
                   <p className="df-muted">
-                    Explore what your builders are making.
+                    Explore what your students are making.
                   </p>
                   <footer>Browse projects →</footer>
                 </button>
@@ -432,7 +434,7 @@ export function PlatformDashboard({
               className={!teacher ? "df-home-project-section" : undefined}
             >
               <div className="df-section-head">
-                <h2>{teacher ? "Your builders’ projects" : "Your projects"}</h2>
+                <h2>{teacher ? "Your students’ projects" : "Your projects"}</h2>
                 <div className="df-inline">
                   {data.projects.length > 0 && (
                     <span className="df-project-count">
@@ -467,7 +469,7 @@ export function PlatformDashboard({
                 </div>
               ) : teacher ? (
                 <div className="df-empty">
-                  Once your builders create projects, you’ll see them here.
+                  Once your students create projects, you’ll see them here.
                 </div>
               ) : (
                 <div className="df-empty">
@@ -476,7 +478,7 @@ export function PlatformDashboard({
               )}
             </section>
           )}
-          {teacher && view === "builders" && (
+          {teacher && view === "students" && (
             <section
               className="df-card"
               style={{ marginTop: 24, overflowX: "auto" }}
@@ -484,7 +486,7 @@ export function PlatformDashboard({
               <table className="df-table">
                 <thead>
                   <tr>
-                    <th>Builder</th>
+                    <th>Student</th>
                     <th>Tokens used</th>
                     <th>Remaining</th>
                     <th>Input / output</th>
@@ -563,7 +565,7 @@ export function PlatformDashboard({
                       ← All projects
                     </button>
                     <span className="df-pill">
-                      Builder:{" "}
+                      Student:{" "}
                       {
                         reviewProjects.find(
                           (p) => p.vm_id === selectedReviewProject,
@@ -656,7 +658,7 @@ export function PlatformDashboard({
                       >
                         <span className="df-project-icon">✧</span>
                         <h3>{p.project_name}</h3>
-                        <p className="df-muted">Builder: {p.child_name}</p>
+                        <p className="df-muted">Student: {p.child_name}</p>
                         <div className="df-inline">
                           <span className="df-pill">
                             {p.prompt_count}{" "}
@@ -709,11 +711,17 @@ export function PlatformDashboard({
                       : "Enter a class invitation code"
                   }
                 />
-                <button className="df-button secondary" disabled={busy}>
+                <button
+                  className={teacher ? "df-button" : "df-button secondary"}
+                  disabled={busy}
+                >
                   {teacher ? "+ Create class" : "Join another class"}
                 </button>
               </form>
             </>
+          )}
+          {teacher && view === "profile" && (
+            <TeacherProfile name={data.user.display_name} onSaved={load} />
           )}
           {!teacher && view === "profile" && (
             <section className="df-card df-profile-usage">
@@ -840,12 +848,9 @@ export function PlatformDashboard({
                   readOnly
                   value={link}
                 />
-                <button
-                  className="df-button small"
-                  onClick={() => navigator.clipboard.writeText(link)}
-                >
+                <CopyButton value={link} className="df-button small">
                   Copy link
-                </button>
+                </CopyButton>
               </div>
             </div>
           )}
