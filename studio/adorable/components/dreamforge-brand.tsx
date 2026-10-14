@@ -5,7 +5,6 @@ export function DreamForgeBrand() {
       <img src="/brand/dreamforge-mark.svg" width="48" height="48" alt="" />
       <span>
         dream<span className="df-purple">forge</span>
-        <small>Little ideas. Big possibilities.</small>
       </span>
     </Link>
   );
