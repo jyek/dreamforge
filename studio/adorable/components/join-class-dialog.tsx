@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoader } from "./dream-loading";
 import { useState, type FormEvent } from "react";
 import {
   Dialog,
@@ -90,6 +91,7 @@ export function JoinClassDialog({
               className="df-button"
               disabled={busy || !classNumber.trim()}
             >
+              {busy && <DreamLoader className="size-4" />}
               {busy ? "Joining…" : "Join Class"}
             </button>
             <button

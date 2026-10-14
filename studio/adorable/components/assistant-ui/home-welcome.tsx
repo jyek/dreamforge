@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { DreamLoading } from "@/components/dream-loading";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/lib/projects-context";
 import { type FC } from "react";
@@ -56,20 +56,7 @@ export const HomeWelcome: FC = () => {
           )}
         >
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="overflow-hidden rounded-xl border border-border/50 bg-card/50"
-                >
-                  <Skeleton className="aspect-16/10 w-full" />
-                  <div className="px-3 py-2.5">
-                    <Skeleton className="mb-1.5 h-3.5 w-3/4 rounded" />
-                    <Skeleton className="h-2.5 w-1/2 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DreamLoading label="Loading your projects…" />
           ) : hasProjects ? (
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

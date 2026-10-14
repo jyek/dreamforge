@@ -1,7 +1,8 @@
 "use client";
+import { DreamLoader } from "@/components/dream-loading";
 
 import { useState, type ReactNode } from "react";
-import { PencilIcon, Loader2Icon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -124,8 +125,7 @@ export function ProjectRename({
               Cancel
             </Button>
             <Button type="submit" disabled={saving || !draft.trim()}>
-              {saving && <Loader2Icon className="size-4 animate-spin" />}Save
-              name
+              {saving && <DreamLoader className="size-4" />}Save name
             </Button>
           </div>
         </form>

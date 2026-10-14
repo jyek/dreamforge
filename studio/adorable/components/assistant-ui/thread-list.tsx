@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DreamLoading } from "@/components/dream-loading";
 import {
   AssistantIf,
   ThreadListItemMorePrimitive,
@@ -22,22 +22,13 @@ export const ThreadList: FC = () => {
   );
 };
 
-const ThreadListSkeleton: FC = () => {
-  return (
-    <div className="flex flex-col gap-0.5">
-      {Array.from({ length: 5 }, (_, i) => (
-        <div
-          key={i}
-          role="status"
-          aria-label="Loading threads"
-          className="aui-thread-list-skeleton-wrapper flex h-8 items-center px-2.5"
-        >
-          <Skeleton className="aui-thread-list-skeleton h-3.5 w-full" />
-        </div>
-      ))}
-    </div>
-  );
-};
+const ThreadListSkeleton: FC = () => (
+  <DreamLoading
+    inline
+    label="Loading conversations…"
+    className="px-2 py-4 text-xs"
+  />
+);
 
 const ThreadListItem: FC = () => {
   return (

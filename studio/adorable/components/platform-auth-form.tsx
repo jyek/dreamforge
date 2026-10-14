@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoader } from "./dream-loading";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { DreamForgeBrand, DreamForgeArt } from "./dreamforge-brand";
@@ -165,6 +166,7 @@ export function PlatformAuthForm({
               </p>
             )}
             <button className="df-button" disabled={busy}>
+              {busy && <DreamLoader className="size-4" />}
               {busy
                 ? "Opening your creative corner…"
                 : signup

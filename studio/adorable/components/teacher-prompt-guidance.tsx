@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { guidanceCategories, guidanceLabel } from "@/lib/prompt-guidance";
@@ -191,9 +192,7 @@ export function TeacherPromptGuidance({
           {error}
         </div>
       ) : loading ? (
-        <div role="status" className="df-empty">
-          Loading {selected ? "prompts" : "students"}…
-        </div>
+        <DreamLoading label={`Loading ${selected ? "prompts" : "students"}…`} />
       ) : (
         <div className="df-card df-guidance-table">
           <table className="df-table">

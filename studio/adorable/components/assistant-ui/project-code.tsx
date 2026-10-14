@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import {highlightSource} from "@/lib/source-highlight";
 import {WorkspaceLoading} from "./workspace-loading";
 import "highlight.js/styles/github.css";
-import { FileCode2Icon, Loader2Icon, RefreshCwIcon, SearchIcon } from "lucide-react";
+import { FileCode2Icon, RefreshCwIcon, SearchIcon } from "lucide-react";
 
 export function ProjectCode({projectId}: {projectId:string}) {
   const [files,setFiles]=useState<string[]>([]),[selected,setSelected]=useState(""),[content,setContent]=useState(""),[query,setQuery]=useState(""),[error,setError]=useState(""),[loading,setLoading]=useState(false),[revision,setRevision]=useState(0);
