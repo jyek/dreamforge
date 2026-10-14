@@ -2,7 +2,11 @@ import type {UIMessage} from 'ai';
 /** A visible harness status, not a fabricated model answer or proof of completion. */
 export function ensureFinalResponse(messages:UIMessage[]){
  const last=messages.at(-1);
- if(!last || last.role!=='assistant' || last.parts.some(part=>part.type==='text'&&part.text.trim()))return {messages,text:null};
+ if(!last || last.role!=='assistant')return {messages,text:null};
+ // Preliminary narration is not a final answer. Only text in the final step
+ // after its tool results counts as a written summary.
+ const boundary=Math.max(last.parts.findLastIndex(part=>part.type==='step-start'),last.parts.findLastIndex(part=>part.type.startsWith('tool-')));
+ if(last.parts.slice(boundary+1).some(part=>part.type==='text'&&part.text.trim()))return {messages,text:null};
  const tools=last.parts.filter(part=>part.type.startsWith('tool-')) as unknown as {type:string;state?:string;input?:{file?:string};output?:{ok?:boolean;file?:string;statusCode?:string|number}}[];
  const written=tools.filter(part=>part.type==='tool-writeFileTool'&&part.state==='output-available'&&part.output?.ok===true).map(part=>part.output?.file||part.input?.file).filter((file):file is string=>Boolean(file));
  const healthy=tools.some(part=>part.type==='tool-checkAppTool'&&part.state==='output-available'&&part.output?.ok===true);

@@ -1,3 +1,4 @@
+import { withEmptyResponseRetry } from "./empty-response-retry";
 import { withQuotaFallback } from "./quota-fallback";
 import { DEFAULT_CODING_MODEL, QUOTA_FALLBACK_MODEL } from "./allowed-models";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -62,6 +63,7 @@ export const streamLlmResponse = async ({
   modelChoice,
   modelOverride,
 }: StreamLlmResponseParams): Promise<StreamLlmResponseResult> => {
+  system += "\nWhen the user asks you to build or change the app, carry out the changes with the tools in this turn. A plan, file inspection, or promise to implement later is not completion. Continue from successful tool results without asking the user to say continue. Before ending, either summarize the implemented result and checks, or explicitly explain the blocker and what remains incomplete. For questions, answer directly without unnecessary edits.";
   const provider = getProviderName(providerOverride);
   const modelMessages = normalizeModelHistory(
     await convertToModelMessages(messages),
@@ -117,7 +119,7 @@ export const streamLlmResponse = async ({
         : model;
     const result = streamText({
       system,
-      model: routedModel,
+      model: withEmptyResponseRetry(routedModel),
       messages: modelMessages,
       maxOutputTokens: Number(process.env["LLM_MAX_OUTPUT_TOKENS"] || 4096),
       tools,
