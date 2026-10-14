@@ -19,3 +19,8 @@ test('provider timeout abort clears progress and ends with a visible error',asyn
  assert.ok(chunks.some(c=>c.type==='data-progress'&&c.data.message===''));
  assert.equal(chunks.at(-1).type,'error');
 });
+test('quota explanation survives screening instead of becoming a generic failure',async()=>{
+ const message='You need more tokens for this request. Ask a parent to top up or try a smaller change.';
+ const source=new ReadableStream({start(c){c.enqueue({type:'error',errorText:message});c.close();}});
+ const reader=safeProgressStream(source,async()=>{},v=>v).getReader();const parts:any[]=[];while(true){const p=await reader.read();if(p.done)break;parts.push(p.value);}assert.equal(parts.at(-1).errorText,message);
+});
