@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { JoinClassDialog } from "./join-class-dialog";
+import { BuilderGreeting } from "./builder-greeting";
 import { BuilderIdeaArt } from "./builder-idea-art";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
@@ -182,13 +183,7 @@ export function PlatformDashboard({
             <section className="df-builder-start" aria-label="Start a project">
               <BuilderIdeaArt />
               <div className="df-builder-start-content">
-                <span className="df-idea-eyebrow">
-                  A little imagination goes a long way
-                </span>
-                <h1>
-                  What’s your next <span>big idea</span>,{" "}
-                  {data.user.display_name}?
-                </h1>
+                <BuilderGreeting name={data.user.display_name} />
                 <p>
                   {data.projects.length
                     ? "Dream up a game, an app, or a world of your own. Let’s build it!"
