@@ -26,15 +26,18 @@ export function StudioSidebar({
   className?: string;
   label?: string;
 }) {
+  const sidebarCaption =
+    caption || (role === "teacher" ? "TEACHER STUDIO" : "");
   return (
-    <aside className={`df-studio-sidebar ${className}`} aria-label={label}>
+    <aside
+      className={`df-studio-sidebar ${sidebarCaption ? "" : "without-caption"} ${className}`}
+      aria-label={label}
+    >
       <div className="df-sidebar-brand">
         <DreamForgeBrand />
         {toggle}
       </div>
-      <p className="df-sidebar-caption">
-        {caption || (role === "teacher" ? "TEACHER STUDIO" : "BUILDER STUDIO")}
-      </p>
+      {sidebarCaption && <p className="df-sidebar-caption">{sidebarCaption}</p>}
       {navigation}
       {children}
       <div className="df-sidebar-account">

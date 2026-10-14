@@ -1164,3 +1164,12 @@
     justify-items: stretch;
   }
 }
+
+@media (min-width: 761px) {
+  .df-studio-sidebar.without-caption > .df-studio-nav {
+    margin-top: 36px;
+  }
+}
+.df-workspace-sidebar.without-caption > .df-studio-nav {
+  margin-top: 32px;
+}
