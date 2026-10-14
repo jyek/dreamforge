@@ -20,7 +20,6 @@ import { ShareDialog } from "@/components/assistant-ui/share-dialog";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  MenuIcon,
   FolderIcon,
   SearchIcon,
   CodeIcon,
@@ -324,6 +323,7 @@ export function ProjectWorkspaceShell({
 
   const workspaceSidebar = (
     <StudioSidebar
+      hideCollapseControl
       label="Project sidebar"
       name={profile?.display_name}
       role={profile?.role}
@@ -402,7 +402,11 @@ export function ProjectWorkspaceShell({
     <ProjectsProvider value={projectsContextValue}>
       <ProjectConversationsProvider value={conversationsContextValue}>
         <div className="df-workspace-frame">
-          {projectId && !isMobile && !chatHidden && workspaceSidebar}
+          {projectId &&
+            !isMobile &&
+            sidebarOpen &&
+            !chatHidden &&
+            workspaceSidebar}
           <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {projectId && (
               <header
@@ -411,15 +415,43 @@ export function ProjectWorkspaceShell({
               >
                 <div className="flex shrink-0 items-center gap-1">
                   <button
+                    type="button"
+                    className="df-sidebar-collapse df-project-sidebar-toggle"
+                    data-collapsed={!sidebarOpen || chatHidden}
                     aria-label={
-                      sidebarOpen ? "Close navigation" : "Open navigation"
+                      sidebarOpen && !chatHidden
+                        ? "Collapse sidebar"
+                        : "Expand sidebar"
                     }
-                    title={sidebarOpen ? "Close navigation" : "Open navigation"}
-                    aria-expanded={sidebarOpen}
-                    onClick={() => setSidebarOpen((open) => !open)}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200 md:hidden"
+                    title={
+                      sidebarOpen && !chatHidden
+                        ? "Collapse sidebar"
+                        : "Expand sidebar"
+                    }
+                    aria-expanded={sidebarOpen && !chatHidden}
+                    onClick={() => {
+                      if (chatHidden) {
+                        setChatHidden(false);
+                        setSidebarOpen(true);
+                      } else setSidebarOpen((open) => !open);
+                    }}
                   >
-                    <MenuIcon className="size-4" />
+                    <img
+                      className="df-sidebar-mark-default"
+                      src="/brand/dreamforge-mark.svg"
+                      width="30"
+                      height="30"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <img
+                      className="df-sidebar-mark-action"
+                      src="/brand/dreamforge-mark-inverse.svg"
+                      width="30"
+                      height="30"
+                      alt=""
+                      aria-hidden="true"
+                    />
                   </button>
                   {selectedProject &&
                     (selectedProject.readOnly ? (
@@ -445,7 +477,6 @@ export function ProjectWorkspaceShell({
                       aria-pressed={chatHidden}
                       onClick={() => {
                         setChatHidden((value) => !value);
-                        setSidebarOpen(chatHidden);
                       }}
                       className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
                     >

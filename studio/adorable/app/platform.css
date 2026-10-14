@@ -2384,3 +2384,25 @@
 .df-brand-wordmark {
   line-height: 24px;
 }
+
+/* Project navigation disappears entirely; its toggle stays in the toolbar. */
+.df-project-sidebar-toggle {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+}
+.df-project-sidebar-toggle:hover,
+.df-project-sidebar-toggle:focus-visible {
+  background: #6b3ff7;
+}
+.df-project-sidebar-toggle:hover .df-sidebar-mark-default,
+.df-project-sidebar-toggle:focus-visible .df-sidebar-mark-default {
+  opacity: 0;
+}
+.df-project-sidebar-toggle:hover .df-sidebar-mark-action,
+.df-project-sidebar-toggle:focus-visible .df-sidebar-mark-action {
+  opacity: 1;
+}
+.df-project-sidebar-toggle[data-collapsed="true"] .df-sidebar-mark-action {
+  transform: none;
+}

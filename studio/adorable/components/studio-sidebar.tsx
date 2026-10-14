@@ -20,6 +20,7 @@ export function StudioSidebar({
   toggle,
   className = "",
   label = "Studio sidebar",
+  hideCollapseControl = false,
 }: {
   name?: string;
   remainingTokens?: number;
@@ -31,6 +32,7 @@ export function StudioSidebar({
   toggle?: ReactNode;
   className?: string;
   label?: string;
+  hideCollapseControl?: boolean;
 }) {
   const { collapsed, toggle: toggleCollapsed } = useSidebarState();
   const [fetchedBalance, setFetchedBalance] = useState<number | null>(null);
@@ -86,35 +88,37 @@ export function StudioSidebar({
     <aside
       className={`df-studio-sidebar ${sidebarCaption ? "" : "without-caption"} ${className}`}
       aria-label={label}
-      data-collapsed={collapsed}
+      data-collapsed={hideCollapseControl ? false : collapsed}
     >
       <div className="df-sidebar-brand">
         <DreamForgeBrand />
-        <button
-          className="df-sidebar-collapse"
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!collapsed}
-        >
-          <img
-            className="df-sidebar-mark-default"
-            src="/brand/dreamforge-mark.svg"
-            width="30"
-            height="30"
-            alt=""
-            aria-hidden="true"
-          />
-          <img
-            className="df-sidebar-mark-action"
-            src="/brand/dreamforge-mark-inverse.svg"
-            width="30"
-            height="30"
-            alt=""
-            aria-hidden="true"
-          />
-        </button>
+        {!hideCollapseControl && (
+          <button
+            className="df-sidebar-collapse"
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+          >
+            <img
+              className="df-sidebar-mark-default"
+              src="/brand/dreamforge-mark.svg"
+              width="30"
+              height="30"
+              alt=""
+              aria-hidden="true"
+            />
+            <img
+              className="df-sidebar-mark-action"
+              src="/brand/dreamforge-mark-inverse.svg"
+              width="30"
+              height="30"
+              alt=""
+              aria-hidden="true"
+            />
+          </button>
+        )}
         {toggle}
       </div>
       {sidebarCaption && <p className="df-sidebar-caption">{sidebarCaption}</p>}
