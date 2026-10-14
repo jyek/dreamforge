@@ -291,13 +291,12 @@ export async function POST(req: Request) {
                 "Your request could not finish. Please try again."
               );
             },
-            onFinish: async ({ messages: final }) => {
+            onFinish: async ({ messages: final, isAborted }) => {
               if (platformReservation) {
                 await settleUsage(platformReservation);
                 platformReservation = null;
               }
-              if (streamError) return;
-              const completion = ensureFinalResponse(final);
+              const completion = ensureFinalResponse(final, streamError || isAborted);
               completionText = completion.text;
               const safe = redactPayload(completion.messages) as UIMessage[];
               await screenContent(
@@ -375,7 +374,7 @@ export async function POST(req: Request) {
         onError: (error) =>
           modelErrorMessage(error) ||
           "Your request could not finish. Please try again.",
-        onFinish: async ({ messages: final }) => {
+        onFinish: async ({ messages: final, isAborted }) => {
           const completion = ensureFinalResponse(final);
           completionText = completion.text;
           await saveConversationMessages(
@@ -539,9 +538,8 @@ export async function POST(req: Request) {
           streamError = true;
           return "Your request could not finish. Please ask your teacher.";
         },
-        onFinish: async ({ messages: final }) => {
-          if (streamError) return;
-          const completion = ensureFinalResponse(final);
+        onFinish: async ({ messages: final, isAborted }) => {
+          const completion = ensureFinalResponse(final, streamError || isAborted);
           completionText = completion.text;
           final = completion.messages;
           await screenContent(

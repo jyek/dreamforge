@@ -7,10 +7,12 @@ export function safeProgressStream(source:ReadableStream<unknown>,screen:(text:s
    const status=(message:string)=>{if(!cancelled)controller.enqueue({type:'data-progress',data:{message},transient:true});};
    status('Getting ready…');
    const timer=setInterval(()=>status('Still working on your request…'),8000);
-   reader=source.getReader();let text='';let textId='';let completeText='';let bytes=0;
+   reader=source.getReader();let text='';let textId='';let completeText='';let bytes=0;let interrupted=false;
    try {
     while(true){const item=await reader.read();if(item.done)break;const chunk=item.value as any;bytes+=JSON.stringify(chunk).length;if(bytes>500000)throw new Error('Response too large');
-     if(chunk.type==='error'||chunk.type==='abort')throw new Error('Agent stream interrupted');
+     // Drain the source so its completion callback can persist partial tool
+     // results and append the trusted interruption status before we close.
+     if(chunk.type==='error'||chunk.type==='abort'){interrupted=true;continue;}
      if(chunk.type==='text-start'){text='';textId=chunk.id;continue;}
      if(chunk.type==='text-delta'){text+=chunk.delta;continue;}
      if(chunk.type==='text-end'){
@@ -27,6 +29,7 @@ export function safeProgressStream(source:ReadableStream<unknown>,screen:(text:s
      if(chunk.type==='finish')status('');
      controller.enqueue(chunk);
     }
+    if(interrupted){status('');controller.enqueue({type:'error',errorText:'This request could not finish. Please try again.'});}
    }catch(error){if(!cancelled){status('');controller.enqueue({type:'error',errorText:'This request could not finish. Please try again.'});}}
    finally{clearInterval(timer);await reader.cancel().catch(()=>{});reader.releaseLock();if(!cancelled)controller.close();}
   },cancel(){cancelled=true;return reader?.cancel();}

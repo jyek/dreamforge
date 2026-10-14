@@ -1,3 +1,4 @@
+import {safeProgressStream} from '../lib/safe-progress-stream';
 import {ensureFinalResponse,withFinalText} from '../lib/final-response';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -10,12 +11,14 @@ import { streamLlmResponse } from '../lib/llm-provider';
 async function main() {
 let calls: Record<string, unknown>[] = [];
 let emptyFinal=false;
+let crashFinal=false;
 const server = createServer(async (req, res) => {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   const body = JSON.parse(Buffer.concat(chunks).toString());
   calls.push(body);
   const answer = body.tool_choice === 'none';
+  if(crashFinal && answer){res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({error:{message:'Simulated provider failure'}}));return;}
   res.writeHead(200, { 'Content-Type': 'text/event-stream' });
   const envelope = (delta: unknown, finish_reason: string | null) => ({
     id: `smoke-${calls.length}`, object: 'chat.completion.chunk', created: 1, model: 'smoke',
@@ -63,6 +66,16 @@ try {
   assert.ok(events.some(event=>event.type==='text-delta'&&event.delta.includes('Harness status')));
   assert.equal(events.at(-1).type,'finish');
   console.log('PASS empty provider completion receives a visible and persisted harness status');
+  emptyFinal=false;crashFinal=true;let interrupted=false;fallback=null;saved=[];
+  const failed=await streamLlmResponse({system:'Inspect then answer.',apiKey:'local-test',maxSteps:2,messages:[{id:'failure',role:'user',parts:[{type:'text',text:'Inspect then answer.'}]}],tools:{inspect:tool({inputSchema:z.object({}),execute:async()=>({ok:true})})}});
+  const failedStream=failed.result.toUIMessageStream({onError:()=>{interrupted=true;return 'Provider failed';},onFinish:({messages,isAborted})=>{const completion=ensureFinalResponse(messages,interrupted||isAborted);fallback=completion.text;saved=completion.messages;}});
+  const failureReader=safeProgressStream(withFinalText(failedStream,()=>fallback),async()=>{},v=>v).getReader();const failureEvents:any[]=[];
+  while(true){const item=await failureReader.read();if(item.done)break;failureEvents.push(item.value);}
+  assert.ok(saved.at(-1).parts.some((p:any)=>p.type==='tool-inspect'&&p.state==='output-available'),'Completed tool result must survive provider failure');
+  assert.ok(failureEvents.some(e=>e.type==='text-delta'&&e.delta.includes('interrupted')),'Interruption status must reach the browser');
+  assert.ok(failureEvents.some(e=>e.type==='error'));
+  console.log('PASS later provider failure preserves completed tools and streams an interruption status');
+
 } finally {
   server.closeAllConnections();
   await new Promise<void>(resolve => server.close(() => resolve()));
