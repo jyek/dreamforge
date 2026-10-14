@@ -283,7 +283,7 @@ export function PlatformDashboard({
                   </>
                 </div>
               )}
-              {(data.unconfirmed || []).length > 0 && (
+              {teacher && (data.unconfirmed || []).length > 0 && (
                 <section
                   className="df-notice df-token-hold"
                   aria-label="Tokens awaiting confirmation"
@@ -293,9 +293,7 @@ export function PlatformDashboard({
                     <strong>Tokens waiting for confirmation</strong>
                   </div>
                   <p>
-                    {teacher
-                      ? "These AI requests ended without reporting their token usage."
-                      : "An earlier AI request ended without reporting how many tokens it used."}{" "}
+                    These AI requests ended without reporting their token usage.{" "}
                     <strong>
                       {data.unconfirmed
                         .reduce(
@@ -309,37 +307,27 @@ export function PlatformDashboard({
                     are temporarily set aside. They aren’t counted as used
                     tokens.
                   </p>
-                  {teacher ? (
-                    (data.unconfirmed || []).map((r) => (
-                      <div
-                        className="df-inline"
-                        key={r.id}
-                        style={{ marginTop: 10 }}
+                  {(data.unconfirmed || []).map((r) => (
+                    <div
+                      className="df-inline"
+                      key={r.id}
+                      style={{ marginTop: 10 }}
+                    >
+                      <span>
+                        {r.display_name} ·{" "}
+                        {Number(r.reserved_tokens).toLocaleString()} tokens held
+                      </span>
+                      <button
+                        disabled={busy}
+                        className="df-button secondary small"
+                        onClick={() =>
+                          action("/api/platform/usage", { id: r.id })
+                        }
                       >
-                        <span>
-                          {r.display_name} ·{" "}
-                          {Number(r.reserved_tokens).toLocaleString()} tokens
-                          held
-                        </span>
-                        <button
-                          disabled={busy}
-                          className="df-button secondary small"
-                          onClick={() =>
-                            action("/api/platform/usage", { id: r.id })
-                          }
-                        >
-                          Release this hold
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <p>
-                      You can keep building with your available tokens.{" "}
-                      {data.classes.length
-                        ? "Ask your teacher to review the hold if you need those tokens back."
-                        : "Join a teacher’s class so they can review and release the hold."}
-                    </p>
-                  )}
+                        Release this hold
+                      </button>
+                    </div>
+                  ))}
                 </section>
               )}
             </>
