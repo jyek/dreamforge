@@ -1,4 +1,5 @@
 "use client";
+import { TableEmptyState } from "./table-empty-state";
 import { SimpleLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -102,6 +103,14 @@ export function TeacherPromptGuidance({
       (!category ||
         (category === "any" ? s.guidance_count > 0 : !!s.categories[category])),
   );
+  const hasFilters = selected
+    ? Boolean(
+        search ||
+        category ||
+        offset > 0 ||
+        (project && project !== initialProjectId),
+      )
+    : Boolean(studentSearch || category);
   return (
     <section className="df-guidance">
       <div className="df-section-head">
@@ -206,6 +215,7 @@ export function TeacherPromptGuidance({
         <div
           className={`df-card df-guidance-table ${!selected ? "df-student-overview-table" : ""}`}
           aria-busy={loading}
+          data-empty={!loading && !(selected ? prompts.length : shown.length)}
         >
           <table className="df-table">
             <thead>
@@ -316,9 +326,45 @@ export function TeacherPromptGuidance({
               {!loading && !(selected ? prompts.length : shown.length) && (
                 <tr>
                   <td colSpan={6}>
-                    {selected
-                      ? "No prompts match these filters."
-                      : "No students match these filters."}
+                    <TableEmptyState
+                      title={
+                        hasFilters
+                          ? "No matches, just possibilities"
+                          : selected
+                            ? "Every big idea starts with a prompt"
+                            : "Your next dream team starts here"
+                      }
+                      description={
+                        hasFilters
+                          ? "Try another name, project or guidance area to find what you’re looking for."
+                          : selected
+                            ? "When this student starts building, their prompts and safety guidance will appear here."
+                            : "As students join your classrooms, their projects and progress will take shape here."
+                      }
+                      action={
+                        hasFilters ? (
+                          <button
+                            className="df-button secondary small"
+                            onClick={() => {
+                              setSearch("");
+                              setStudentSearch("");
+                              setCategory("");
+                              setProject("");
+                              setOffset(0);
+                            }}
+                          >
+                            Clear filters
+                          </button>
+                        ) : !selected ? (
+                          <Link
+                            className="df-button secondary small"
+                            href="/classrooms"
+                          >
+                            Go to classrooms →
+                          </Link>
+                        ) : undefined
+                      }
+                    />
                   </td>
                 </tr>
               )}
@@ -326,7 +372,7 @@ export function TeacherPromptGuidance({
           </table>
         </div>
       )}
-      {selected && (
+      {selected && (prompts.length > 0 || offset > 0) && (
         <div className="df-inline df-guidance-pagination">
           <button
             className="df-button secondary small"

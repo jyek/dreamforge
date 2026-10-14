@@ -1,4 +1,5 @@
 "use client";
+import { TableEmptyState } from "./table-empty-state";
 import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -108,7 +109,7 @@ export function TeacherClassroomDetail({
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          <div className="df-card df-guidance-table">
+          <div className="df-card df-guidance-table" data-empty={!shown.length}>
             <table className="df-table">
               <thead>
                 <tr>
@@ -180,9 +181,35 @@ export function TeacherClassroomDetail({
                 {!shown.length && (
                   <tr>
                     <td colSpan={5}>
-                      {data.students.length
-                        ? "No students match your search."
-                        : "No students have joined this classroom yet."}
+                      <TableEmptyState
+                        title={
+                          search
+                            ? "No matches, just possibilities"
+                            : "A dream team in the making"
+                        }
+                        description={
+                          search
+                            ? "Try a different name to find your student."
+                            : "Once students join this classroom, their projects and bright ideas will appear here."
+                        }
+                        action={
+                          search ? (
+                            <button
+                              className="df-button secondary small"
+                              onClick={() => setSearch("")}
+                            >
+                              Clear search
+                            </button>
+                          ) : (
+                            <Link
+                              href="/classrooms"
+                              className="df-button secondary small"
+                            >
+                              Back to classrooms →
+                            </Link>
+                          )
+                        }
+                      />
                     </td>
                   </tr>
                 )}
