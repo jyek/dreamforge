@@ -2637,3 +2637,24 @@
     min-width: 202px;
   }
 }
+
+/* Extend the account divider without shifting the profile content. */
+.df-sidebar-account {
+  position: relative;
+  border-top: 0;
+}
+.df-sidebar-account::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -6px;
+  right: -6px;
+  border-top: 1.5px solid var(--df-divider);
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .df-studio-sidebar[data-collapsed="true"] .df-sidebar-account::before {
+    left: -4px;
+    right: -4px;
+  }
+}
