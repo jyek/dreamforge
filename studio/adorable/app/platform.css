@@ -695,17 +695,6 @@
   border-radius: 18px;
   padding: 32px;
 }
-.df-auth-card::before {
-  content: "";
-  position: absolute;
-  top: -2px;
-  right: 26px;
-  width: 66px;
-  height: 8px;
-  background: #f0e9ff;
-  border: 2px solid #1a0f2e;
-  border-radius: 0 0 6px 6px;
-}
 .df-auth-copy .df-title {
   line-height: 1.16;
 }
@@ -1436,9 +1425,6 @@
 /* The entry screens keep their warm canvas; the builder starts with an idea. */
 .df-auth-page {
   background: #fff6e6;
-}
-.df-auth-page .df-auth-card::before {
-  background: #ffd23f;
 }
 .df-builder-start {
   min-height: calc(100svh - 48px);
