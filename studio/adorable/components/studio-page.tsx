@@ -9,7 +9,7 @@ export async function StudioPage({ section }: { section: string }) {
   if (section === "settings") redirect("/profile");
   const allowed =
     user.role === "teacher"
-      ? ["home", "projects", "classrooms", "students", "prompts", "profile"]
+      ? ["home", "projects", "classrooms", "students", "safety", "profile"]
       : ["home", "classrooms", "profile"];
   if (!allowed.includes(section)) redirect("/home");
   const data = await loadDashboardData(user, section);

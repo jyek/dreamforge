@@ -28,6 +28,7 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
     "builders",
     "students",
     "prompts",
+    "safety",
     "examples",
     "pay",
   ].includes(pathParts[0] || "");

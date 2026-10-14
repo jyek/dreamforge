@@ -22,7 +22,7 @@ import {
   Link2,
   Clock3,
 } from "lucide-react";
-import { DreamForgeArt, DreamForgeProjectArt } from "./dreamforge-brand";
+import { DreamForgeProjectArt } from "./dreamforge-brand";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 type Project = {
   vm_id: string;
@@ -231,50 +231,6 @@ export function PlatformDashboard({
           {((teacher && view === "home") ||
             (!teacher && view === "profile")) && (
             <>
-              {teacher && view === "home" && (
-                <section className="df-card df-hero">
-                  <div className="df-hero-copy">
-                    <span className="df-pill df-sticker">
-                      {teacher ? "TEACHER STUDIO" : "BUILDER"}
-                    </span>
-                    <h2 className="df-hero-title">
-                      {teacher ? (
-                        <>
-                          A little guidance.
-                          <br />
-                          <span className="df-highlight">Big ideas.</span>
-                        </>
-                      ) : (
-                        <>
-                          Hey,{" "}
-                          <span className="df-highlight">
-                            {data.user.display_name}!
-                          </span>
-                        </>
-                      )}
-                    </h2>
-                    <p style={{ margin: "0 0 24px" }}>
-                      {teacher
-                        ? "Follow your students’ projects, progress and prompts."
-                        : "What will your imagination build today?"}
-                    </p>
-                    {teacher && (
-                      <button
-                        className="df-button"
-                        onClick={() => selectSection("projects")}
-                      >
-                        Explore your students’ projects ↗
-                      </button>
-                    )}
-                    {!teacher && (
-                      <Link href="/examples" className="df-examples-link">
-                        Explore examples ↗
-                      </Link>
-                    )}
-                  </div>
-                  <DreamForgeArt />
-                </section>
-              )}
               {teacher && (
                 <div className="df-stats">
                   {" "}
@@ -303,7 +259,7 @@ export function PlatformDashboard({
                         size={22}
                         aria-hidden="true"
                       />
-                      Prompts to check
+                      Safety checks
                       <strong>{guidanceCount}</strong>
                       Prompts with guidance suggestions
                     </div>
@@ -375,8 +331,8 @@ export function PlatformDashboard({
                   <h3>Classrooms</h3>
                   <p className="df-muted">
                     {data.classes.length}{" "}
-                    {data.classes.length === 1 ? "class" : "classes"} · Create a
-                    class or share its code
+                    {data.classes.length === 1 ? "class" : "classes"} · Manage
+                    students in your classrooms
                   </p>
                   <footer>Manage classrooms →</footer>
                 </button>
@@ -395,16 +351,16 @@ export function PlatformDashboard({
                 </button>
                 <button
                   className="df-card df-project"
-                  onClick={() => selectSection("prompts")}
+                  onClick={() => selectSection("safety")}
                 >
                   <span className="df-project-icon">
                     <ShieldCheck size={23} aria-hidden="true" />
                   </span>
-                  <h3>Prompt reviews</h3>
+                  <h3>Safety</h3>
                   <p className="df-muted">
                     {guidanceCount} prompts with guidance suggestions
                   </p>
-                  <footer>Review prompts →</footer>
+                  <footer>Review safety →</footer>
                 </button>
               </div>
             </>
@@ -459,8 +415,10 @@ export function PlatformDashboard({
               )}
             </section>
           )}
-          {teacher && view === "students" && <TeacherPromptGuidance />}
-          {teacher && view === "prompts" && <TeacherPromptGuidance />}
+          {teacher && view === "students" && (
+            <TeacherPromptGuidance overviewTitle="Students" />
+          )}
+          {teacher && view === "safety" && <TeacherPromptGuidance />}
           {view === "classrooms" && (
             <>
               <div

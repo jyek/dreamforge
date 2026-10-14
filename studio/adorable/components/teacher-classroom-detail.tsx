@@ -168,7 +168,7 @@ export function TeacherClassroomDetail({
                                   setSelection({ student, project })
                                 }
                               >
-                                View prompts
+                                View safety
                               </button>
                             </div>
                           )}

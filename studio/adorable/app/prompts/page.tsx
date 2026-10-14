@@ -1,4 +1,4 @@
-import { StudioPage } from "@/components/studio-page";
-export default async function Page() {
-  return StudioPage({ section: "prompts" });
+import { redirect } from "next/navigation";
+export default function Page() {
+  redirect("/safety");
 }

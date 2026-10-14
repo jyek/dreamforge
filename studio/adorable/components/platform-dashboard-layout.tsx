@@ -5,7 +5,7 @@ import {
   School,
   UsersRound,
   FolderKanban,
-  MessagesSquare,
+  ShieldCheck,
   Menu,
   X,
 } from "lucide-react";
@@ -22,13 +22,13 @@ export const TEACHER_SECTIONS = [
     id: "classrooms",
     label: "Classrooms",
     icon: School,
-    description: "Manage your classes and invitation codes.",
+    description: "Manage your students and classrooms.",
   },
   {
     id: "students",
     label: "Students",
     icon: UsersRound,
-    description: "See your roster and each student’s token usage.",
+    description: "See your students, projects, and areas for guidance.",
   },
   {
     id: "projects",
@@ -37,10 +37,10 @@ export const TEACHER_SECTIONS = [
     description: "Explore the projects your students are creating.",
   },
   {
-    id: "prompts",
-    label: "Prompts",
-    icon: MessagesSquare,
-    description: "Review prompts and safety flags by project.",
+    id: "safety",
+    label: "Safety",
+    icon: ShieldCheck,
+    description: "Review safety concerns and guide your students.",
   },
 ] as const;
 export const BUILDER_SECTIONS = [
