@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "@/components/dream-loading";
+import { InlineSpinner } from "@/components/dream-loading";
 
 import { useState, type ReactNode } from "react";
 import { PencilIcon } from "lucide-react";
@@ -125,7 +125,7 @@ export function ProjectRename({
               Cancel
             </Button>
             <Button type="submit" disabled={saving || !draft.trim()}>
-              {saving && <DreamLoader className="size-4" />}Save name
+              {saving && <InlineSpinner className="size-4" />}Save name
             </Button>
           </div>
         </form>

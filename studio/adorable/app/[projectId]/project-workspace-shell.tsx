@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader, DreamLoading } from "@/components/dream-loading";
+import { InlineSpinner, SimpleLoading } from "@/components/dream-loading";
 
 import Link from "next/link";
 import { StudioSidebar } from "@/components/studio-sidebar";
@@ -388,7 +388,9 @@ export function ProjectWorkspaceShell({
                 <span>{project.name}</span>
               </button>
             ))}
-          {projectsLoading && <DreamLoading inline label="Loading projects…" />}
+          {projectsLoading && (
+            <SimpleLoading inline label="Loading projects…" />
+          )}
           {!projectsLoading &&
             !projects.filter((p) =>
               p.name.toLowerCase().includes(projectSearch.toLowerCase()),
@@ -647,7 +649,10 @@ export function ProjectWorkspaceShell({
 
 function PreviewPlaceholder() {
   return (
-    <DreamLoading label="Opening your workspace…" className="h-full bg-white" />
+    <SimpleLoading
+      label="Opening your workspace…"
+      className="h-full bg-white"
+    />
   );
 }
 
@@ -811,7 +816,7 @@ function AppPreview({
                 aria-live="polite"
                 className="flex flex-col items-center gap-3 px-6 text-center"
               >
-                <DreamLoader size={64} />
+                <InlineSpinner size={20} />
                 <p className="text-sm font-medium text-slate-600">
                   {activity.starting
                     ? "Waking up your project…"

@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "@/components/dream-loading";
+import { InlineSpinner } from "@/components/dream-loading";
 
 import { cn } from "@/lib/utils";
 import { useMessage } from "@assistant-ui/react";
@@ -201,7 +201,7 @@ export const ToolCallGroup: FC<
         className="inline-flex max-w-full items-center gap-1.5 rounded px-2 py-1 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60"
       >
         {showSpinner ? (
-          <DreamLoader className="size-3.5 shrink-0" />
+          <InlineSpinner className="size-3.5 shrink-0" />
         ) : (
           <CheckIcon className="size-3.5 shrink-0" />
         )}

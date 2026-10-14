@@ -2658,3 +2658,44 @@
     right: -4px;
   }
 }
+
+/* Quiet nested loading keeps existing panels and controls in place. */
+.df-inline-spinner {
+  animation: df-inline-spin 900ms linear infinite;
+}
+@keyframes df-inline-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.df-simple-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #82758f;
+  font-size: 13px;
+}
+.df-simple-loading-inline {
+  justify-content: flex-start;
+  min-height: 24px;
+}
+.df-simple-loading-panel {
+  min-height: 128px;
+  flex-direction: column;
+}
+.df-guidance-loading-status {
+  min-height: 28px;
+  margin-bottom: 8px;
+}
+.df-guidance-table {
+  min-height: 180px;
+}
+.df-guidance-table[aria-busy="true"] .df-table {
+  opacity: 0.65;
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-inline-spinner {
+    animation: none;
+  }
+}

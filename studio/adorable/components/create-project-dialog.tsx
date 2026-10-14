@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "./dream-loading";
+import { InlineSpinner } from "./dream-loading";
 import { useRef, useState, type FormEvent } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import {
@@ -121,7 +121,7 @@ export function CreateProjectDialog({
           )}
           <div className="df-inline">
             <button className="df-button" disabled={busy || !name.trim()}>
-              {busy && <DreamLoader className="size-4" />}
+              {busy && <InlineSpinner className="size-4" />}
               {busy ? "Creating your project…" : "Let’s build →"}
             </button>
             <button

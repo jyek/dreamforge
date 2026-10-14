@@ -1,6 +1,6 @@
 "use client";
 
-import { DreamLoading } from "@/components/dream-loading";
+import { SimpleLoading } from "@/components/dream-loading";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/lib/projects-context";
 import { type FC } from "react";
@@ -56,7 +56,7 @@ export const HomeWelcome: FC = () => {
           )}
         >
           {isLoading ? (
-            <DreamLoading label="Loading your projects…" />
+            <SimpleLoading label="Loading your projects…" />
           ) : hasProjects ? (
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

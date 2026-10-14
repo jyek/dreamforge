@@ -81,8 +81,64 @@ export function DreamLoader({
     </svg>
   );
 }
+/** Decorative loading is reserved for an entire main panel. */
 export function DreamLoading({
   label = "Dreaming up something…",
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn("df-dream-loading df-dream-loading-panel", className)}
+    >
+      <DreamLoader size={80} />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+/** A small, fixed-size indicator for buttons, tools and nested components. */
+export function InlineSpinner({
+  className,
+  size = 16,
+}: {
+  className?: string;
+  size?: number;
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={cn("df-inline-spinner shrink-0", className)}
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="2"
+        opacity=".2"
+      />
+      <path
+        d="M12 3a9 9 0 0 1 9 9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function SimpleLoading({
+  label = "Loading…",
   inline = false,
   className,
 }: {
@@ -95,12 +151,12 @@ export function DreamLoading({
       role="status"
       aria-live="polite"
       className={cn(
-        "df-dream-loading",
-        inline ? "df-dream-loading-inline" : "df-dream-loading-panel",
+        "df-simple-loading",
+        inline ? "df-simple-loading-inline" : "df-simple-loading-panel",
         className,
       )}
     >
-      <DreamLoader size={inline ? 24 : 80} />
+      <InlineSpinner />
       <span>{label}</span>
     </div>
   );

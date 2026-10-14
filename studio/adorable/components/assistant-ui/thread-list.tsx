@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { DreamLoading } from "@/components/dream-loading";
+import { SimpleLoading } from "@/components/dream-loading";
 import {
   AssistantIf,
   ThreadListItemMorePrimitive,
@@ -23,7 +23,7 @@ export const ThreadList: FC = () => {
 };
 
 const ThreadListSkeleton: FC = () => (
-  <DreamLoading
+  <SimpleLoading
     inline
     label="Loading conversations…"
     className="px-2 py-4 text-xs"

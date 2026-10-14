@@ -1,4 +1,4 @@
-import { DreamLoader } from "@/components/dream-loading";
+import { InlineSpinner } from "@/components/dream-loading";
 import { ModelUsed } from "./model-settings";
 import { ModelSelector } from "./model-selector";
 import {
@@ -98,7 +98,7 @@ export const Thread: FC<{
                 role="status"
                 className="flex items-center gap-2 px-3 text-xs text-slate-400"
               >
-                <DreamLoader className="size-3.5" />
+                <InlineSpinner className="size-3.5" />
                 {progress || "Thinking about your request…"}
               </div>
             </AssistantIf>

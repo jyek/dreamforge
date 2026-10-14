@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "./dream-loading";
+import { InlineSpinner } from "./dream-loading";
 import { useEffect, useState } from "react";
 import { TOPUP_PACKAGES } from "@/lib/topup-packages";
 import { DreamForgeBrand } from "./dreamforge-brand";
@@ -110,7 +110,7 @@ export function ParentTopup({
                 disabled={!enabled || !!busy}
                 onClick={() => pay(p.id)}
               >
-                {busy === p.id && <DreamLoader className="size-4" />}
+                {busy === p.id && <InlineSpinner className="size-4" />}
                 {busy === p.id
                   ? "Opening Stripe…"
                   : sandbox

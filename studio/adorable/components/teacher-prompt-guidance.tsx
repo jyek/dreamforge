@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoading } from "./dream-loading";
+import { SimpleLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { guidanceCategories, guidanceLabel } from "@/lib/prompt-guidance";
@@ -187,14 +187,20 @@ export function TeacherPromptGuidance({
           </label>
         )}
       </div>
+      <div className="df-guidance-loading-status">
+        {loading && (
+          <SimpleLoading
+            inline
+            label={`Loading ${selected ? "prompts" : "students"}…`}
+          />
+        )}
+      </div>
       {error ? (
         <div role="alert" className="df-empty">
           {error}
         </div>
-      ) : loading ? (
-        <DreamLoading label={`Loading ${selected ? "prompts" : "students"}…`} />
       ) : (
-        <div className="df-card df-guidance-table">
+        <div className="df-card df-guidance-table" aria-busy={loading}>
           <table className="df-table">
             <thead>
               <tr>
@@ -269,6 +275,7 @@ export function TeacherPromptGuidance({
                       <td>
                         <button
                           className="df-guidance-student"
+                          disabled={loading}
                           onClick={() => open(s)}
                         >
                           <strong>{s.display_name}</strong>
@@ -292,6 +299,7 @@ export function TeacherPromptGuidance({
                       <td>
                         <button
                           className="df-button secondary small"
+                          disabled={loading}
                           onClick={() => open(s)}
                         >
                           View prompts →
@@ -299,7 +307,7 @@ export function TeacherPromptGuidance({
                       </td>
                     </tr>
                   ))}
-              {!(selected ? prompts.length : shown.length) && (
+              {!loading && !(selected ? prompts.length : shown.length) && (
                 <tr>
                   <td colSpan={6}>
                     {selected
@@ -312,11 +320,11 @@ export function TeacherPromptGuidance({
           </table>
         </div>
       )}
-      {selected && !loading && (
+      {selected && (
         <div className="df-inline df-guidance-pagination">
           <button
             className="df-button secondary small"
-            disabled={!offset}
+            disabled={loading || !offset}
             onClick={() => setOffset(Math.max(0, offset - 50))}
           >
             Previous
@@ -324,7 +332,7 @@ export function TeacherPromptGuidance({
           <span>Page {offset / 50 + 1}</span>
           <button
             className="df-button secondary small"
-            disabled={!hasMore}
+            disabled={loading || !hasMore}
             onClick={() => setOffset(offset + 50)}
           >
             Next

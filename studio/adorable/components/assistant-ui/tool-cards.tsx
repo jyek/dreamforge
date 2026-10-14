@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "@/components/dream-loading";
+import { InlineSpinner } from "@/components/dream-loading";
 
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,9 @@ const StatusIcon = ({
   const cancelled =
     status?.type === "incomplete" && status.reason === "cancelled";
   if (running)
-    return <DreamLoader className="size-3.5 shrink-0 text-muted-foreground" />;
+    return (
+      <InlineSpinner className="size-3.5 shrink-0 text-muted-foreground" />
+    );
   if (failed || cancelled)
     return <XIcon className="size-3.5 shrink-0 text-red-500" />;
   return <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />;
@@ -157,7 +159,7 @@ export const BashToolCard: ToolCallMessagePartComponent = ({
     <ToolLine
       icon={
         running ? (
-          <DreamLoader className="size-3.5 shrink-0 text-muted-foreground" />
+          <InlineSpinner className="size-3.5 shrink-0 text-muted-foreground" />
         ) : (
           <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
         )
@@ -355,7 +357,7 @@ export const CommitToolCard: ToolCallMessagePartComponent = ({
     <ToolLine
       icon={
         running ? (
-          <DreamLoader className="size-3.5 shrink-0 text-muted-foreground" />
+          <InlineSpinner className="size-3.5 shrink-0 text-muted-foreground" />
         ) : failed ? (
           <XIcon className="size-3.5 shrink-0 text-red-500" />
         ) : (
@@ -389,7 +391,7 @@ export const CheckAppToolCard: ToolCallMessagePartComponent = ({
     <div className="my-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm">
       <span className="flex w-4 shrink-0 items-center justify-center">
         {running ? (
-          <DreamLoader className="size-3.5 shrink-0 text-muted-foreground" />
+          <InlineSpinner className="size-3.5 shrink-0 text-muted-foreground" />
         ) : (
           <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
         )}
@@ -454,7 +456,7 @@ export const DeploymentStatusToolCard: ToolCallMessagePartComponent = ({
     <div className="my-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm">
       <span className="flex w-4 shrink-0 items-center justify-center">
         {running ? (
-          <DreamLoader className="size-3.5 shrink-0 text-muted-foreground" />
+          <InlineSpinner className="size-3.5 shrink-0 text-muted-foreground" />
         ) : isLive ? (
           <CheckIcon className="size-3.5 shrink-0 text-green-500" />
         ) : (

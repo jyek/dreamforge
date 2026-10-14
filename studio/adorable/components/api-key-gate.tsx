@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader, DreamLoading } from "@/components/dream-loading";
+import { InlineSpinner, SimpleLoading } from "@/components/dream-loading";
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export function ApiKeyGate({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <DreamLoading label="Opening your workspace…" />
+        <SimpleLoading label="Opening your workspace…" />
       </div>
     );
   }
@@ -193,7 +193,7 @@ function ApiKeySetupScreen({ onSaved }: { onSaved: () => void }) {
             onClick={handleSave}
             disabled={saving || !apiKey.trim()}
           >
-            {saving ? <DreamLoader className="size-4" /> : "Continue"}
+            {saving ? <InlineSpinner className="size-4" /> : "Continue"}
           </Button>
 
           {/* Get key links */}
@@ -422,7 +422,7 @@ export function ApiKeySettingsDialog() {
                 onClick={handleSave}
                 disabled={saving || !apiKey.trim()}
               >
-                {saving ? <DreamLoader className="size-3.5" /> : "Save"}
+                {saving ? <InlineSpinner className="size-3.5" /> : "Save"}
               </Button>
             </div>
           </div>

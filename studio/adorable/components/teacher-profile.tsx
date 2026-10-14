@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "./dream-loading";
+import { InlineSpinner } from "./dream-loading";
 import { useState, type FormEvent } from "react";
 import { signOut } from "./studio-sidebar";
 export function TeacherProfile({
@@ -58,7 +58,7 @@ export function TeacherProfile({
         </label>
         <div className="df-inline">
           <button className="df-button" disabled={busy}>
-            {busy && <DreamLoader className="size-4" />}
+            {busy && <InlineSpinner className="size-4" />}
             {busy ? "Saving…" : "Save profile"}
           </button>
           <button

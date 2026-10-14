@@ -1,5 +1,5 @@
 "use client";
-import { DreamLoader } from "@/components/dream-loading";
+import { InlineSpinner } from "@/components/dream-loading";
 
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
 import { CheckIcon, ChevronRightIcon, WrenchIcon, XIcon } from "lucide-react";
@@ -27,7 +27,7 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
         )}
       >
         {running ? (
-          <DreamLoader className="size-3 shrink-0 text-muted-foreground" />
+          <InlineSpinner className="size-3 shrink-0 text-muted-foreground" />
         ) : failed ? (
           <XIcon className="size-3 shrink-0 text-muted-foreground" />
         ) : (
