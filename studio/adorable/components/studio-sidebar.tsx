@@ -69,11 +69,11 @@ export function StudioSidebar({
       <span className="df-studio-avatar" aria-hidden="true">
         {name?.charAt(0).toUpperCase() || "✦"}
       </span>
-      <div>
+      <div className="df-account-details">
         <strong>{name || "DreamForge"}</strong>
         {role === "child" ? (
           <small className="df-account-tokens">
-            Tokens{" "}
+            Tokens
             <span>{balance === null ? "—" : balance.toLocaleString()}</span>
           </small>
         ) : (

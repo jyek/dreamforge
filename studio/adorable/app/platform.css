@@ -2839,11 +2839,27 @@
     padding-bottom: 4px;
   }
   .df-teacher-dashboard > .df-studio-sidebar .df-profile-link strong {
-    line-height: 18px;
+    line-height: 16px;
   }
   .df-teacher-dashboard > .df-studio-sidebar .df-profile-link small {
-    line-height: 14px;
+    line-height: 13px;
   }
+}
+
+/* Keep the account labels close without changing the sidebar footer height. */
+.df-teacher-dashboard > .df-studio-sidebar:not([data-collapsed="true"]) .df-account-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.df-teacher-dashboard > .df-studio-sidebar .df-account-details > small {
+  display: block;
+  line-height: 13px;
+}
+.df-teacher-dashboard > .df-studio-sidebar .df-account-details > .df-account-tokens {
+  display: flex;
+  gap: 4px;
+  margin-top: 0;
 }
 
 /* Expanded dashboards keep the same horizontal inset as the collapsed rail. */
