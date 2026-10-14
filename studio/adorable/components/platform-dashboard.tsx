@@ -73,13 +73,15 @@ async function api(url: string, body?: unknown) {
 }
 export function PlatformDashboard({
   initialUser,
+  initialData,
   initialSection = "home",
 }: {
   initialUser?: Data["user"];
+  initialData?: Data;
   initialSection?: string;
 }) {
   const router = useRouter();
-  const [data, setData] = useState<Data | null>(null),
+  const [data, setData] = useState<Data | null>(initialData || null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [link, setLink] = useState(""),
@@ -87,9 +89,9 @@ export function PlatformDashboard({
     [view, setView] = useState(initialSection);
   useEffect(() => {
     setView(initialSection);
-  }, [initialSection]);
+    if (initialData) setData(initialData);
+  }, [initialSection, initialData]);
   function selectSection(section: string) {
-    setView(section);
     router.push(`/${section}`, { scroll: false });
   }
   async function load() {
@@ -111,8 +113,31 @@ export function PlatformDashboard({
     }
   }
   useEffect(() => {
-    void load();
+    if (!initialData) void load();
   }, []);
+  useEffect(() => {
+    if (!initialData || initialData.user.role !== "teacher" || view !== "home")
+      return;
+    const controller = new AbortController();
+    fetch("/api/platform/guidance", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw Error("Could not load guidance counts.");
+        return response.json();
+      })
+      .then((guidance) =>
+        setGuidanceCount(
+          guidance.students.reduce(
+            (total: number, student: { guidance_count: number }) =>
+              total + student.guidance_count,
+            0,
+          ),
+        ),
+      )
+      .catch((error) => {
+        if (error.name !== "AbortError") setError(error.message);
+      });
+    return () => controller.abort();
+  }, [initialData, view]);
   async function action(url: string, body: unknown) {
     setBusy(true);
     setError("");
