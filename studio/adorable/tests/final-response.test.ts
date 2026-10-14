@@ -11,3 +11,8 @@ test('ordinary text is preserved and tool failures do not become success',()=>{
 test('fallback text is inserted before finish in the streamed response',async()=>{
  const source=new ReadableStream({start(c){c.enqueue({type:'start'});c.enqueue({type:'finish'});c.close();}});const parts=[];const reader=withFinalText(source,()=> 'Harness status').getReader();while(true){const item=await reader.read();if(item.done)break;parts.push(item.value);}assert.deepEqual(parts.map(p=>p.type),['start','text-start','text-delta','text-end','finish']);
 });
+test('preliminary narration followed by empty final step gets an incomplete status',()=>{
+ const result=ensureFinalResponse([{id:'a',role:'assistant',parts:[{type:'step-start'},{type:'text',text:"I'll read the project first."},{type:'tool-readFileTool',state:'output-available',output:{content:'source'}},{type:'step-start'},{type:'text',text:''}]}] as any);
+ assert.match(result.text!,/Completion was not confirmed/);
+ assert.equal(ensureFinalResponse(result.messages).text,null);
+});

@@ -1,3 +1,4 @@
+import { withEmptyResponseRetry } from "./empty-response-retry";
 import { withQuotaFallback } from "./quota-fallback";
 import { DEFAULT_CODING_MODEL, QUOTA_FALLBACK_MODEL } from "./allowed-models";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -117,7 +118,7 @@ export const streamLlmResponse = async ({
         : model;
     const result = streamText({
       system,
-      model: routedModel,
+      model: withEmptyResponseRetry(routedModel),
       messages: modelMessages,
       maxOutputTokens: Number(process.env["LLM_MAX_OUTPUT_TOKENS"] || 4096),
       tools,
