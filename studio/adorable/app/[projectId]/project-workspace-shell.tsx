@@ -1,5 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { StudioSidebar } from "@/components/studio-sidebar";
+import { CreateProjectDialog } from "@/components/create-project-dialog";
+import { BUILDER_SECTIONS } from "@/components/platform-dashboard-layout";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,6 +23,7 @@ import {
   CodeIcon,
   Loader2Icon,
   MonitorIcon,
+  HomeIcon,
   PlusIcon,
   RotateCwIcon,
   XIcon,
@@ -228,7 +233,19 @@ export function ProjectWorkspaceShell({
   const showWorkspacePanel = Boolean(projectId);
   const isMobile = useIsMobile();
   const [chatHidden, setChatHidden] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [profile, setProfile] = useState<{
+    display_name: string;
+    role: "teacher" | "child";
+  } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/platform/auth", { signal: controller.signal })
+      .then((r) => r.json())
+      .then((d) => setProfile(d.user || null))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   const [projectSearch, setProjectSearch] = useState("");
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const onProjectRenamed = useCallback((id: string, name: string) => {
@@ -240,7 +257,7 @@ export function ProjectWorkspaceShell({
     window.dispatchEvent(new Event("adorable:projects-updated"));
   }, []);
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
+    setSidebarOpen(!isMobile);
   }, [isMobile]);
   const [chatPercent, setChatPercent] = useState(29);
   const [resizing, setResizing] = useState(false);
@@ -303,280 +320,285 @@ export function ProjectWorkspaceShell({
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const workspaceSidebar = (
+    <StudioSidebar
+      label="Project sidebar"
+      name={profile?.display_name}
+      role={profile?.role}
+      className="df-workspace-sidebar"
+      navigation={
+        <nav className="df-studio-nav" aria-label="Workspace navigation">
+          {(profile?.role === "teacher"
+            ? [
+                { id: "home", label: "Home", icon: HomeIcon },
+                { id: "projects", label: "Projects", icon: FolderIcon },
+              ]
+            : BUILDER_SECTIONS
+          ).map((section) => (
+            <Link
+              key={section.id}
+              href={`/dashboard?section=${section.id}`}
+              aria-current={section.id === "projects" ? "page" : undefined}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <section.icon size={20} aria-hidden="true" />
+              {section.label}
+            </Link>
+          ))}
+        </nav>
+      }
+    >
+      <div className="df-workspace-projects">
+        {profile?.role === "child" && <CreateProjectDialog />}
+        <h2 className="df-sidebar-caption">YOUR PROJECTS</h2>
+        <label className="df-project-search">
+          <SearchIcon size={16} aria-hidden="true" />
+          <input
+            aria-label="Search projects"
+            placeholder="Find a project…"
+            value={projectSearch}
+            onChange={(event) => setProjectSearch(event.target.value)}
+          />
+        </label>
+        <nav
+          className="df-studio-nav df-recent-projects"
+          aria-label="Recent projects"
+        >
+          {projects
+            .filter((project) =>
+              project.name.toLowerCase().includes(projectSearch.toLowerCase()),
+            )
+            .map((project) => (
+              <button
+                key={project.id}
+                aria-current={project.id === projectId ? "page" : undefined}
+                title={project.name}
+                onClick={() => {
+                  if (isMobile) setSidebarOpen(false);
+                  handleSelectProject(project.id);
+                }}
+              >
+                <FolderIcon size={17} aria-hidden="true" />
+                <span>{project.name}</span>
+              </button>
+            ))}
+          {projectsLoading && <p className="df-muted">Loading projects…</p>}
+          {!projectsLoading &&
+            !projects.filter((p) =>
+              p.name.toLowerCase().includes(projectSearch.toLowerCase()),
+            ).length && <p className="df-muted">No matching projects.</p>}
+        </nav>
+      </div>
+    </StudioSidebar>
+  );
+
   return (
     <ProjectsProvider value={projectsContextValue}>
       <ProjectConversationsProvider value={conversationsContextValue}>
-        <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
-          {projectId && (
-            <header
-              aria-label="Project toolbar"
-              className="flex h-12 shrink-0 flex-nowrap items-center gap-2 bg-[#f7f7f8] px-2"
-            >
-              <div className="flex shrink-0 items-center gap-1">
-                <button
-                  aria-label="Open navigation"
-                  title="Open navigation"
-                  aria-expanded={sidebarOpen}
-                  onClick={() => setSidebarOpen(true)}
-                  className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
-                >
-                  <MenuIcon className="size-4" />
-                </button>
-                {selectedProject &&
-                  (selectedProject.readOnly ? (
-                    <span className="hidden max-w-40 truncate text-sm font-semibold lg:block">
-                      {selectedProject.name}
-                    </span>
-                  ) : (
-                    <ProjectRename
-                      projectId={selectedProject.id}
-                      name={selectedProject.name}
-                      onRenamed={onProjectRenamed}
-                      className="group hidden max-w-40 items-center gap-1 rounded-lg px-1 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 lg:flex"
-                    >
-                      <span className="truncate">{selectedProject.name}</span>
-                    </ProjectRename>
-                  ))}
-                {!isMobile && (
-                  <button
-                    aria-label={
-                      chatHidden ? "Exit full preview" : "Full preview"
-                    }
-                    title={chatHidden ? "Exit full preview" : "Full preview"}
-                    aria-pressed={chatHidden}
-                    onClick={() => setChatHidden((value) => !value)}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
-                  >
-                    {chatHidden ? (
-                      <Minimize2Icon className="size-4" />
-                    ) : (
-                      <Maximize2Icon className="size-4" />
-                    )}
-                  </button>
-                )}
-                {isMobile && (
-                  <button
-                    aria-label={
-                      mobileView === "chat" ? "Show preview" : "Show chat"
-                    }
-                    title={mobileView === "chat" ? "Show preview" : "Show chat"}
-                    onClick={() =>
-                      setMobileView((value) =>
-                        value === "chat" ? "preview" : "chat",
-                      )
-                    }
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
-                  >
-                    {mobileView === "chat" ? (
-                      <MonitorIcon className="size-4" />
-                    ) : (
-                      <MessageSquareIcon className="size-4" />
-                    )}
-                  </button>
-                )}
-              </div>
-              <div
-                ref={setToolbarHost}
-                className="flex min-w-0 flex-1 items-center gap-2"
-              />
-            </header>
-          )}
-          <div className="relative flex min-h-0 flex-1">
+        <div className="df-workspace-frame">
+          {projectId && !isMobile && sidebarOpen && workspaceSidebar}
+          <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {projectId && (
-              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                <SheetContent
-                  side="left"
-                  className="w-72 gap-0 bg-[#f7f7f8] sm:max-w-72"
-                >
-                  <SheetHeader className="border-b border-slate-200 pb-4">
-                    <SheetTitle>DreamForge</SheetTitle>
-                    <SheetDescription className="truncate">
-                      {selectedProject?.name || "Project workspace"}
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                    <nav
-                      aria-label="Workspace navigation"
-                      className="space-y-1"
+              <header
+                aria-label="Project toolbar"
+                className="df-workspace-toolbar flex h-12 shrink-0 flex-nowrap items-center gap-2 px-2"
+              >
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    aria-label={
+                      sidebarOpen ? "Close navigation" : "Open navigation"
+                    }
+                    title={sidebarOpen ? "Close navigation" : "Open navigation"}
+                    aria-expanded={sidebarOpen}
+                    onClick={() => setSidebarOpen((open) => !open)}
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                  >
+                    <MenuIcon className="size-4" />
+                  </button>
+                  {selectedProject &&
+                    (selectedProject.readOnly ? (
+                      <span className="hidden max-w-40 truncate text-sm font-semibold lg:block">
+                        {selectedProject.name}
+                      </span>
+                    ) : (
+                      <ProjectRename
+                        projectId={selectedProject.id}
+                        name={selectedProject.name}
+                        onRenamed={onProjectRenamed}
+                        className="group hidden max-w-40 items-center gap-1 rounded-lg px-1 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 lg:flex"
+                      >
+                        <span className="truncate">{selectedProject.name}</span>
+                      </ProjectRename>
+                    ))}
+                  {!isMobile && (
+                    <button
+                      aria-label={
+                        chatHidden ? "Exit full preview" : "Full preview"
+                      }
+                      title={chatHidden ? "Exit full preview" : "Full preview"}
+                      aria-pressed={chatHidden}
+                      onClick={() => {
+                        setChatHidden((value) => !value);
+                        setSidebarOpen(chatHidden);
+                      }}
+                      className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
                     >
-                      <button
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-200/70"
-                        onClick={() => {
-                          setSidebarOpen(false);
-                          window.dispatchEvent(new Event("adorable:go-home"));
-                          router.push("/");
-                        }}
-                      >
-                        <PlusIcon className="size-4" />
-                        New project
-                      </button>
-                      <button
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-200/70"
-                        onClick={() => {
-                          setSidebarOpen(false);
-                          window.dispatchEvent(new Event("adorable:go-home"));
-                          router.push("/");
-                        }}
-                      >
-                        <FolderIcon className="size-4" />
-                        All projects
-                      </button>
-                    </nav>
-                    <div className="mt-5 border-t border-slate-200 pt-4">
-                      <h2 className="px-3 text-xs font-medium text-slate-500">
-                        Projects
-                      </h2>
-                      <label className="mx-2 my-3 flex items-center gap-2 rounded-lg border bg-white px-2">
-                        <SearchIcon className="size-3.5 text-slate-400" />
-                        <input
-                          aria-label="Search projects"
-                          placeholder="Search projects…"
-                          value={projectSearch}
-                          onChange={(event) =>
-                            setProjectSearch(event.target.value)
-                          }
-                          className="h-9 min-w-0 flex-1 bg-transparent text-xs outline-none"
-                        />
-                      </label>
-                      <nav aria-label="Recent projects" className="space-y-1">
-                        {projects
-                          .filter((project) =>
-                            project.name
-                              .toLowerCase()
-                              .includes(projectSearch.toLowerCase()),
-                          )
-                          .map((project) => (
-                            <button
-                              key={project.id}
-                              aria-current={
-                                project.id === projectId ? "page" : undefined
-                              }
-                              className={cn(
-                                "block w-full truncate rounded-lg px-3 py-2.5 text-left text-sm",
-                                project.id === projectId
-                                  ? "bg-white font-medium text-slate-800 shadow-sm"
-                                  : "text-slate-600 hover:bg-slate-200/70",
-                              )}
-                              onClick={() => {
-                                setSidebarOpen(false);
-                                handleSelectProject(project.id);
-                              }}
-                            >
-                              {project.name}
-                            </button>
-                          ))}
-                        {!projectsLoading &&
-                          !projects.filter((project) =>
-                            project.name
-                              .toLowerCase()
-                              .includes(projectSearch.toLowerCase()),
-                          ).length && (
-                            <p className="px-3 py-2 text-xs text-slate-400">
-                              No matching projects.
-                            </p>
-                          )}
-                      </nav>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            )}
-
-            {/* Main content grid */}
-            <div
-              ref={gridRef}
-              className={cn(
-                "relative grid min-h-0 min-w-0 flex-1 bg-[#f7f7f8]",
-                !isMobile &&
-                  !resizing &&
-                  "transition-[grid-template-columns] duration-500 ease-in-out",
-              )}
-              style={
-                isMobile ? undefined : { gridTemplateColumns: gridColumns }
-              }
-            >
-              <div
-                className={cn(
-                  "studio-chat relative min-w-0 overflow-hidden bg-[#f7f7f8]",
-
-                  !isMobile && chatHidden && "invisible",
-                  isMobile && mobileView === "preview" && "hidden",
-                )}
-              >
-                {children}
-              </div>
-
-              {showWorkspacePanel && !isMobile && !chatHidden && (
+                      {chatHidden ? (
+                        <Minimize2Icon className="size-4" />
+                      ) : (
+                        <Maximize2Icon className="size-4" />
+                      )}
+                    </button>
+                  )}
+                  {isMobile && (
+                    <button
+                      aria-label={
+                        mobileView === "chat" ? "Show preview" : "Show chat"
+                      }
+                      title={
+                        mobileView === "chat" ? "Show preview" : "Show chat"
+                      }
+                      onClick={() =>
+                        setMobileView((value) =>
+                          value === "chat" ? "preview" : "chat",
+                        )
+                      }
+                      className="rounded-lg p-2 text-slate-500 hover:bg-slate-200"
+                    >
+                      {mobileView === "chat" ? (
+                        <MonitorIcon className="size-4" />
+                      ) : (
+                        <MessageSquareIcon className="size-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
                 <div
-                  role="separator"
-                  aria-label="Resize chat panel"
-                  aria-orientation="vertical"
-                  aria-valuemin={20}
-                  aria-valuemax={65}
-                  aria-valuenow={Math.round(chatPercent)}
-                  tabIndex={0}
-                  className="absolute inset-y-0 z-30 w-2 -translate-x-1 cursor-col-resize touch-none outline-none hover:bg-blue-400/30 focus-visible:bg-blue-400/30"
-                  style={{ left: `${chatPercent}%` }}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    resizeStart.current = {
-                      x: event.clientX,
-                      width:
-                        ((gridRef.current?.clientWidth || 0) * chatPercent) /
-                        100,
-                    };
-                    setResizing(true);
-                  }}
-                  onPointerMove={(event) => {
-                    const start = resizeStart.current;
-                    if (start)
-                      resizeChat(start.width + event.clientX - start.x);
-                  }}
-                  onPointerUp={(event) => {
-                    resizeStart.current = null;
-                    setResizing(false);
-                    event.currentTarget.releasePointerCapture(event.pointerId);
-                  }}
-                  onLostPointerCapture={() => {
-                    resizeStart.current = null;
-                    setResizing(false);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
-                      return;
-                    event.preventDefault();
-                    resizeChat(
-                      ((gridRef.current?.clientWidth || 0) * chatPercent) /
-                        100 +
-                        (event.key === "ArrowRight" ? 20 : -20),
-                    );
-                  }}
+                  ref={setToolbarHost}
+                  className="flex min-w-0 flex-1 items-center gap-2"
                 />
+              </header>
+            )}
+            <div className="relative flex min-h-0 flex-1">
+              {projectId && isMobile && (
+                <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                  <SheetContent
+                    side="left"
+                    className="df-workspace-sheet w-72 gap-0 sm:max-w-72"
+                  >
+                    <SheetHeader className="sr-only">
+                      <SheetTitle>DreamForge navigation</SheetTitle>
+                      <SheetDescription>
+                        Your studio and projects
+                      </SheetDescription>
+                    </SheetHeader>
+                    {workspaceSidebar}
+                  </SheetContent>
+                </Sheet>
               )}
-              <div
-                className={cn(
-                  "min-w-0 overflow-hidden pr-2 pb-2",
 
-                  !isMobile && "transition-opacity duration-500",
-                  showWorkspacePanel && (!isMobile || mobileView === "preview")
-                    ? "opacity-100"
-                    : !isMobile && "pointer-events-none opacity-0",
-                  isMobile && mobileView === "chat" && "hidden",
+              {/* Main content grid */}
+              <div
+                ref={gridRef}
+                className={cn(
+                  "relative grid min-h-0 min-w-0 flex-1 bg-[#f7f7f8]",
+                  !isMobile &&
+                    !resizing &&
+                    "transition-[grid-template-columns] duration-500 ease-in-out",
                 )}
+                style={
+                  isMobile ? undefined : { gridTemplateColumns: gridColumns }
+                }
               >
-                {showWorkspacePanel &&
-                  (selectedProject?.previewUrl ? (
-                    <AppPreview
-                      toolbarHost={toolbarHost}
-                      key={selectedProject.id}
-                      project={selectedProject}
-                      iframeRef={iframeRef}
-                      running={threadIsRunning}
-                    />
-                  ) : (
-                    <PreviewPlaceholder />
-                  ))}
+                <div
+                  className={cn(
+                    "studio-chat relative min-w-0 overflow-hidden bg-[#f7f7f8]",
+
+                    !isMobile && chatHidden && "invisible",
+                    isMobile && mobileView === "preview" && "hidden",
+                  )}
+                >
+                  {children}
+                </div>
+
+                {showWorkspacePanel && !isMobile && !chatHidden && (
+                  <div
+                    role="separator"
+                    aria-label="Resize chat panel"
+                    aria-orientation="vertical"
+                    aria-valuemin={20}
+                    aria-valuemax={65}
+                    aria-valuenow={Math.round(chatPercent)}
+                    tabIndex={0}
+                    className="absolute inset-y-0 z-30 w-2 -translate-x-1 cursor-col-resize touch-none outline-none hover:bg-blue-400/30 focus-visible:bg-blue-400/30"
+                    style={{ left: `${chatPercent}%` }}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      resizeStart.current = {
+                        x: event.clientX,
+                        width:
+                          ((gridRef.current?.clientWidth || 0) * chatPercent) /
+                          100,
+                      };
+                      setResizing(true);
+                    }}
+                    onPointerMove={(event) => {
+                      const start = resizeStart.current;
+                      if (start)
+                        resizeChat(start.width + event.clientX - start.x);
+                    }}
+                    onPointerUp={(event) => {
+                      resizeStart.current = null;
+                      setResizing(false);
+                      event.currentTarget.releasePointerCapture(
+                        event.pointerId,
+                      );
+                    }}
+                    onLostPointerCapture={() => {
+                      resizeStart.current = null;
+                      setResizing(false);
+                    }}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key !== "ArrowLeft" &&
+                        event.key !== "ArrowRight"
+                      )
+                        return;
+                      event.preventDefault();
+                      resizeChat(
+                        ((gridRef.current?.clientWidth || 0) * chatPercent) /
+                          100 +
+                          (event.key === "ArrowRight" ? 20 : -20),
+                      );
+                    }}
+                  />
+                )}
+                <div
+                  className={cn(
+                    "min-w-0 overflow-hidden pr-2 pb-2",
+
+                    !isMobile && "transition-opacity duration-500",
+                    showWorkspacePanel &&
+                      (!isMobile || mobileView === "preview")
+                      ? "opacity-100"
+                      : !isMobile && "pointer-events-none opacity-0",
+                    isMobile && mobileView === "chat" && "hidden",
+                  )}
+                >
+                  {showWorkspacePanel &&
+                    (selectedProject?.previewUrl ? (
+                      <AppPreview
+                        toolbarHost={toolbarHost}
+                        key={selectedProject.id}
+                        project={selectedProject}
+                        iframeRef={iframeRef}
+                        running={threadIsRunning}
+                      />
+                    ) : (
+                      <PreviewPlaceholder />
+                    ))}
+                </div>
               </div>
             </div>
           </div>

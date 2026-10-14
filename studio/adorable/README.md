@@ -29,10 +29,10 @@ If a request ends without confirmed usage, its allowance remains held rather tha
 Proposed pilot packages in `lib/topup-packages.ts`:
 
 | SGD price | Total tokens |
-| --- | --- |
-| S$5 | 1,000,000 |
-| S$10 | 2,500,000 |
-| S$20 | 6,000,000 |
+| --------- | ------------ |
+| S$5       | 1,000,000    |
+| S$10      | 2,500,000    |
+| S$20      | 6,000,000    |
 
 Review these prices before enabling real checkout. At OpenRouter's Qwen rate of US$0.07/M input and US$0.28/M output, a million tokens with a 75/25 split costs approximately US$0.1225 for the model. Runtime, Vercel, database, OpenRouter funding and payment fees are additional. Stripe Singapore advertises 3.4% + S$0.50 for domestic cards; tiny top-ups are inefficient. See [OpenRouter Qwen pricing](https://openrouter.ai/qwen/qwen3-coder-30b-a3b-instruct) and [Stripe Singapore pricing](https://stripe.com/en-sg/pricing).
 
@@ -60,3 +60,5 @@ Keep real credentials, migration backups and test artifacts in ignored local fil
 ### DreamForge visual language
 
 The account screens, teacher studio, builder dashboard and example cards use the existing cream, purple, orange, yellow and lime palette. The Magnum kids-learning [design reference](https://www.behance.net/gallery/220686341/Magnum-Kids-Learning-website-Website-Redesign) informs framed headers, bold outlines, offset shadows, compact labels and clearer card hierarchy. The logo and coding illustrations are original SVG assets; project illustrations are decorative, not screenshots of a builder’s project. Mobile navigation and reduced-motion preferences are supported.
+
+Students use the same studio sidebar as teachers, with Home, Projects, Classrooms and Tokens. The project workspace keeps matching navigation and a searchable project list visible on desktop, with collapse controls and a mobile drawer. Full preview hides the sidebar and chat; leaving full preview restores the workspace. Dashboard sections support `?section=` links from project navigation.

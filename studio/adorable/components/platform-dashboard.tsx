@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { PlatformClassCard } from "./platform-class-card";
 import {
@@ -72,21 +73,31 @@ async function api(url: string, body?: unknown) {
 }
 export function PlatformDashboard({
   initialUser,
+  initialSection = "home",
 }: {
   initialUser?: Data["user"];
+  initialSection?: string;
 }) {
+  const router = useRouter();
   const [data, setData] = useState<Data | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [link, setLink] = useState(""),
     [reviews, setReviews] = useState<Review[]>([]),
-    [view, setView] = useState("home"),
+    [view, setView] = useState(initialSection),
     [reviewCursor, setReviewCursor] = useState<string | null>(null),
     [flagsOnly, setFlagsOnly] = useState(false),
     [reviewProjects, setReviewProjects] = useState<ReviewProject[]>([]),
     [selectedReviewProject, setSelectedReviewProject] = useState<string | null>(
       null,
     );
+  useEffect(() => {
+    setView(initialSection);
+  }, [initialSection]);
+  function selectSection(section: string) {
+    setView(section);
+    router.replace(`/dashboard?section=${section}`, { scroll: false });
+  }
   async function loadReviews(
     flags = flagsOnly,
     before?: string,
@@ -141,7 +152,6 @@ export function PlatformDashboard({
     );
   }
   const teacher = (data?.user || initialUser)?.role === "teacher";
-  const HeroHeading = teacher ? "h2" : "h1";
   const remaining = data?.wallet
     ? Math.max(
         0,
@@ -155,7 +165,7 @@ export function PlatformDashboard({
       teacher={!!teacher}
       name={data?.user.display_name || initialUser?.display_name}
       section={view}
-      onSectionChange={setView}
+      onSectionChange={selectSection}
     >
       {error && (
         <p className="df-error" role="alert">
@@ -170,46 +180,48 @@ export function PlatformDashboard({
         </div>
       ) : (
         <>
-          {(!teacher || view === "home") && (
+          {(view === "home" || (!teacher && view === "tokens")) && (
             <>
-              <section className="df-card df-hero">
-                <div className="df-hero-copy">
-                  <span className="df-pill df-sticker">
-                    {teacher ? "TEACHER STUDIO" : "BUILDER"}
-                  </span>
-                  <HeroHeading className="df-hero-title">
-                    {teacher ? (
-                      <>
-                        A little guidance.
-                        <br />
-                        <span className="df-highlight">Big ideas.</span>
-                      </>
-                    ) : (
-                      <>
-                        Hey,{" "}
-                        <span className="df-highlight">
-                          {data.user.display_name}!
-                        </span>
-                      </>
+              {view === "home" && (
+                <section className="df-card df-hero">
+                  <div className="df-hero-copy">
+                    <span className="df-pill df-sticker">
+                      {teacher ? "TEACHER STUDIO" : "BUILDER"}
+                    </span>
+                    <h2 className="df-hero-title">
+                      {teacher ? (
+                        <>
+                          A little guidance.
+                          <br />
+                          <span className="df-highlight">Big ideas.</span>
+                        </>
+                      ) : (
+                        <>
+                          Hey,{" "}
+                          <span className="df-highlight">
+                            {data.user.display_name}!
+                          </span>
+                        </>
+                      )}
+                    </h2>
+                    <p style={{ margin: "0 0 24px" }}>
+                      {teacher
+                        ? "Follow your builders’ projects, progress and prompts."
+                        : "What will your imagination build today?"}
+                    </p>
+                    {teacher && (
+                      <button
+                        className="df-button"
+                        onClick={() => selectSection("projects")}
+                      >
+                        Explore your builders’ projects ↗
+                      </button>
                     )}
-                  </HeroHeading>
-                  <p style={{ margin: "0 0 24px" }}>
-                    {teacher
-                      ? "Follow your builders’ projects, progress and prompts."
-                      : "What will your imagination build today?"}
-                  </p>
-                  {teacher && (
-                    <button
-                      className="df-button"
-                      onClick={() => setView("projects")}
-                    >
-                      Explore your builders’ projects ↗
-                    </button>
-                  )}
-                  {!teacher && <CreateProjectDialog />}
-                </div>
-                <DreamForgeArt />
-              </section>
+                    {!teacher && <CreateProjectDialog />}
+                  </div>
+                  <DreamForgeArt />
+                </section>
+              )}
               <div className="df-stats">
                 {teacher ? (
                   <>
@@ -331,7 +343,7 @@ export function PlatformDashboard({
               <div className="df-projects df-home-shortcuts">
                 <button
                   className="df-card df-project"
-                  onClick={() => setView("classrooms")}
+                  onClick={() => selectSection("classrooms")}
                 >
                   <span className="df-project-icon">
                     <School size={23} aria-hidden="true" />
@@ -346,7 +358,7 @@ export function PlatformDashboard({
                 </button>
                 <button
                   className="df-card df-project"
-                  onClick={() => setView("projects")}
+                  onClick={() => selectSection("projects")}
                 >
                   <span className="df-project-icon">
                     <FolderKanban size={23} aria-hidden="true" />
@@ -359,7 +371,7 @@ export function PlatformDashboard({
                 </button>
                 <button
                   className="df-card df-project"
-                  onClick={() => setView("prompts")}
+                  onClick={() => selectSection("prompts")}
                 >
                   <span className="df-project-icon">
                     <ShieldCheck size={23} aria-hidden="true" />
@@ -377,7 +389,7 @@ export function PlatformDashboard({
               </div>
             </>
           )}
-          {(!teacher || view === "projects") && (
+          {(view === "projects" || (!teacher && view === "home")) && (
             <>
               <div className="df-section-head">
                 <h2>
@@ -385,7 +397,12 @@ export function PlatformDashboard({
                     ? "Your builders’ projects"
                     : "Your little masterpieces"}
                 </h2>
-                <span className="df-pill">{data.projects.length} projects</span>
+                <div className="df-inline">
+                  <span className="df-pill">
+                    {data.projects.length} projects
+                  </span>
+                  {!teacher && view === "projects" && <CreateProjectDialog />}
+                </div>
               </div>
               {data.projects.length ? (
                 <div className="df-projects">
@@ -622,7 +639,7 @@ export function PlatformDashboard({
               )}
             </>
           )}
-          {(!teacher || view === "classrooms") && (
+          {view === "classrooms" && (
             <>
               <div className="df-section-head">
                 <h2>{teacher ? "Your classrooms" : "Your classes"}</h2>
@@ -658,7 +675,7 @@ export function PlatformDashboard({
               </form>
             </>
           )}
-          {!teacher && (
+          {!teacher && view === "tokens" && (
             <section
               className="df-card"
               style={{ marginTop: 35, background: "#F4EEFF" }}
@@ -702,7 +719,7 @@ export function PlatformDashboard({
               </button>
             </section>
           )}
-          {link && (!teacher || view === "settings") && (
+          {link && (teacher ? view === "settings" : view === "tokens") && (
             <div className="df-notice" style={{ marginTop: 20 }}>
               <p style={{ marginTop: 0 }}>Share this link privately:</p>
               <div className="df-inline">

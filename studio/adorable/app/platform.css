@@ -420,7 +420,7 @@
   background: #fff6e6;
   font-family: var(--font-geist-sans), sans-serif;
 }
-.df-teacher-sidebar {
+.df-studio-sidebar {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -447,11 +447,12 @@
   color: #81758f;
   margin: 42px 14px 14px;
 }
-.df-teacher-nav {
+.df-studio-nav {
   display: grid;
   gap: 8px;
 }
-.df-teacher-nav button {
+.df-studio-nav button,
+.df-studio-nav a {
   display: flex;
   align-items: center;
   gap: 13px;
@@ -465,11 +466,13 @@
   cursor: pointer;
   color: #645976;
 }
-.df-teacher-nav button:hover {
+.df-studio-nav button:hover,
+.df-studio-nav a:hover {
   background: #f4eeff;
   color: #1a0f2e;
 }
-.df-teacher-nav button[aria-current="page"] {
+.df-studio-nav button[aria-current="page"],
+.df-studio-nav a[aria-current="page"] {
   background: #6b3ff7;
   border-color: #1a0f2e;
   box-shadow: 3px 3px 0 #1a0f2e;
@@ -483,7 +486,7 @@
   gap: 10px;
   align-items: center;
 }
-.df-teacher-avatar {
+.df-studio-avatar {
   height: 36px;
   width: 36px;
   flex-shrink: 0;
@@ -606,7 +609,7 @@
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
   }
-  .df-teacher-sidebar {
+  .df-studio-sidebar {
     padding: 14px 22px;
     border-right: 0;
     border-bottom: 2px solid #1a0f2e;
@@ -621,16 +624,16 @@
     display: block;
   }
   .df-sidebar-caption,
-  .df-teacher-nav,
+  .df-studio-nav,
   .df-sidebar-account {
     display: none;
   }
-  .df-teacher-sidebar.is-open .df-teacher-nav {
+  .df-studio-sidebar.is-open .df-studio-nav {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     margin-top: 20px;
   }
-  .df-teacher-sidebar.is-open .df-sidebar-account {
+  .df-studio-sidebar.is-open .df-sidebar-account {
     display: flex;
     padding-top: 18px;
   }
@@ -648,7 +651,8 @@
     font-size: 10px;
     padding: 7px 8px;
   }
-  .df-teacher-nav button {
+  .df-studio-nav button,
+  .df-studio-nav a {
     padding: 10px;
     font-size: 13px;
   }
@@ -842,17 +846,17 @@
   padding-top: 20px;
   margin-top: auto;
 }
-.df-teacher-nav {
+.df-studio-nav {
   margin-bottom: 32px;
 }
-.df-teacher-nav button:focus-visible,
+.df-studio-nav button:focus-visible,
 .df-button:focus-visible,
 .df-project:focus-visible,
 .df-input:focus-visible {
   outline: 3px solid #6b3ff7;
   outline-offset: 5px;
 }
-.df-teacher-nav button[aria-current="page"]:focus-visible {
+.df-studio-nav button[aria-current="page"]:focus-visible {
   outline-color: #ff6b2b;
 }
 @media (max-width: 1100px) and (min-width: 761px) {
@@ -962,4 +966,127 @@
 }
 .df-project-dialog .df-inline {
   margin-top: 8px;
+}
+
+.df-studio-nav a {
+  text-decoration: none;
+}
+
+/* The project workspace shares the studio navigation rail. */
+.df-workspace-frame {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.df-workspace-sidebar {
+  width: 246px;
+  flex-shrink: 0;
+  height: 100%;
+}
+.df-workspace-sidebar .df-sidebar-brand {
+  flex-shrink: 0;
+}
+.df-workspace-sidebar .df-studio-nav {
+  flex-shrink: 0;
+}
+.df-workspace-projects {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+.df-workspace-projects > .df-button {
+  width: 100%;
+  font-size: 12px;
+  padding: 10px;
+}
+.df-workspace-projects .df-sidebar-caption {
+  margin: 30px 12px 14px;
+}
+.df-project-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid #1a0f2e;
+  border-radius: 9px;
+  background: #fffdf8;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+.df-project-search input {
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+  background: transparent;
+  color: #1a0f2e;
+  outline: none;
+}
+.df-project-search:focus-within {
+  outline: 3px solid #6b3ff7;
+  outline-offset: 3px;
+}
+.df-recent-projects button {
+  font-size: 12px;
+  padding: 11px;
+  min-width: 0;
+}
+.df-recent-projects button svg {
+  flex-shrink: 0;
+}
+.df-recent-projects button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.df-recent-projects button[aria-current="page"] {
+  background: #e5d6ff;
+  color: #1a0f2e;
+}
+.df-workspace-projects .df-muted {
+  font-size: 12px;
+  padding: 8px;
+}
+.df-workspace-toolbar {
+  background: #fff6e6;
+  border-bottom: 1.5px solid #1a0f2e;
+}
+.df-workspace-sheet {
+  background: #fff6e6;
+  border-right: 2px solid #1a0f2e;
+}
+.df-workspace-sheet .df-workspace-sidebar {
+  width: 100%;
+  border: 0;
+  padding-top: 36px;
+}
+@media (max-width: 1100px) and (min-width: 768px) {
+  .df-workspace-sidebar {
+    width: 218px;
+  }
+}
+@media (max-width: 767px) {
+  .df-workspace-sidebar {
+    overflow: hidden;
+    padding: 36px 20px 20px;
+    border-bottom: 0;
+  }
+  .df-workspace-sidebar .df-studio-nav {
+    display: grid;
+    margin-bottom: 22px;
+  }
+  .df-workspace-sidebar .df-sidebar-caption {
+    display: block;
+    margin-top: 28px;
+  }
+  .df-workspace-sidebar .df-sidebar-account {
+    display: flex;
+    margin-top: auto;
+  }
+  .df-workspace-sidebar .df-sidebar-brand .df-brand {
+    font-size: 24px;
+  }
+  .df-workspace-sidebar .df-studio-nav a {
+    padding: 11px 13px;
+  }
 }

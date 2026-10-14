@@ -8,11 +8,11 @@ import {
   FolderKanban,
   MessagesSquare,
   Settings,
-  LogOut,
+  Coins,
   Menu,
   X,
 } from "lucide-react";
-import { DreamForgeBrand } from "./dreamforge-brand";
+import { StudioSidebar } from "./studio-sidebar";
 export const TEACHER_SECTIONS = [
   {
     id: "home",
@@ -51,10 +51,32 @@ export const TEACHER_SECTIONS = [
     description: "Manage teacher invitations.",
   },
 ] as const;
-async function signOut() {
-  await fetch("/api/platform/auth", { method: "DELETE" });
-  window.location.assign("/login");
-}
+export const BUILDER_SECTIONS = [
+  {
+    id: "home",
+    label: "Home",
+    icon: Home,
+    description: "Your ideas, progress and next big creation.",
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    description: "Pick up a creation or start something new.",
+  },
+  {
+    id: "classrooms",
+    label: "Classrooms",
+    icon: School,
+    description: "Your classes and invitation codes.",
+  },
+  {
+    id: "tokens",
+    label: "Tokens",
+    icon: Coins,
+    description: "Keep track of your allowance and ask a parent for a top-up.",
+  },
+] as const;
 export function PlatformDashboardLayout({
   teacher,
   name,
@@ -69,74 +91,48 @@ export function PlatformDashboardLayout({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
-  if (!teacher)
-    return (
-      <main className="df-page">
-        <header className="df-header">
-          <DreamForgeBrand />
-          <nav className="df-nav">
-            <Link href="/examples">Examples</Link>
-            <button className="df-button secondary small" onClick={signOut}>
-              Sign out
-            </button>
-          </nav>
-        </header>
-        <div className="df-container">{children}</div>
-      </main>
-    );
-  const current =
-    TEACHER_SECTIONS.find((s) => s.id === section) || TEACHER_SECTIONS[0];
+  const sections = teacher ? TEACHER_SECTIONS : BUILDER_SECTIONS;
+  const current = sections.find((s) => s.id === section) || sections[0];
   return (
     <div className="df-teacher-dashboard">
-      <aside
-        className={`df-teacher-sidebar ${navOpen ? "is-open" : ""}`}
-        aria-label="Teacher sidebar"
-      >
-        <div className="df-sidebar-brand">
-          <DreamForgeBrand />
+      <StudioSidebar
+        name={name}
+        role={teacher ? "teacher" : "child"}
+        label={teacher ? "Teacher sidebar" : "Builder sidebar"}
+        className={navOpen ? "is-open" : ""}
+        toggle={
           <button
             className="df-mobile-menu"
             aria-label={navOpen ? "Close navigation" : "Open navigation"}
-            aria-controls="teacher-sections"
+            aria-controls="studio-sections"
             aria-expanded={navOpen}
             onClick={() => setNavOpen(!navOpen)}
           >
             {navOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-        </div>
-        <p className="df-sidebar-caption">TEACHER STUDIO</p>
-        <nav
-          id="teacher-sections"
-          className="df-teacher-nav"
-          aria-label="Teacher sections"
-        >
-          {TEACHER_SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              aria-current={section === s.id ? "page" : undefined}
-              onClick={() => {
-                onSectionChange(s.id);
-                setNavOpen(false);
-              }}
-            >
-              <s.icon size={20} aria-hidden="true" />
-              <span>{s.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="df-sidebar-account">
-          <span className="df-teacher-avatar" aria-hidden="true">
-            {name?.charAt(0).toUpperCase() || "T"}
-          </span>
-          <div>
-            <strong>{name}</strong>
-            <small>Teacher</small>
-          </div>
-          <button aria-label="Sign out" title="Sign out" onClick={signOut}>
-            <LogOut size={18} />
-          </button>
-        </div>
-      </aside>
+        }
+        navigation={
+          <nav
+            id="studio-sections"
+            className="df-studio-nav"
+            aria-label={teacher ? "Teacher sections" : "Builder sections"}
+          >
+            {sections.map((s) => (
+              <button
+                key={s.id}
+                aria-current={section === s.id ? "page" : undefined}
+                onClick={() => {
+                  onSectionChange(s.id);
+                  setNavOpen(false);
+                }}
+              >
+                <s.icon size={20} aria-hidden="true" />
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </nav>
+        }
+      />
       <main className="df-page df-teacher-content">
         <header className="df-teacher-header">
           <div>
