@@ -980,6 +980,7 @@
   overflow: hidden;
 }
 .df-workspace-sidebar {
+  background: #fff;
   width: 246px;
   flex-shrink: 0;
   height: 100%;
@@ -1048,11 +1049,11 @@
   padding: 8px;
 }
 .df-workspace-toolbar {
-  background: #fff6e6;
+  background: #fff;
   border-bottom: 1.5px solid #1a0f2e;
 }
 .df-workspace-sheet {
-  background: #fff6e6;
+  background: #fff;
   border-right: 2px solid #1a0f2e;
 }
 .df-workspace-sheet .df-workspace-sidebar {
