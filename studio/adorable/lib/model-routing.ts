@@ -63,6 +63,16 @@ export function createModelRouting(
         ),
       );
       delete body.max_completion_tokens;
+      // DeepSeek exposes optional reasoning; disable it for responsive coding
+      // rather than letting thinking consume the entire completion budget.
+      if (model === MODELS.deepseek) {
+        delete body.reasoning_effort;
+        body.reasoning = { enabled: false, exclude: true };
+      }
+      if (model === MODELS.glm) {
+        delete body.reasoning_effort;
+        body.reasoning = { effort: "low", exclude: true };
+      }
       if (model === MODELS.qwen) delete body.reasoning_effort;
       const visual = /"type"\s*:\s*"image_url"/.test(
         JSON.stringify(body.messages),
