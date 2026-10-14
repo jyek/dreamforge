@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DreamForge",
+  title: "The safer way for students to learn and build with AI",
   description: "Build beautiful apps with AI",
   icons: {
     icon: {
