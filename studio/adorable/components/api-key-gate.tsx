@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoader, DreamLoading } from "@/components/dream-loading";
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  ExternalLinkIcon,
-  KeyIcon,
-  Loader2Icon,
-  SettingsIcon,
-} from "lucide-react";
+import { ExternalLinkIcon, KeyIcon, SettingsIcon } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -60,7 +56,7 @@ export function ApiKeyGate({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2Icon className="size-5 animate-spin text-muted-foreground/40" />
+        <DreamLoading label="Opening your workspace…" />
       </div>
     );
   }
@@ -197,11 +193,7 @@ function ApiKeySetupScreen({ onSaved }: { onSaved: () => void }) {
             onClick={handleSave}
             disabled={saving || !apiKey.trim()}
           >
-            {saving ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              "Continue"
-            )}
+            {saving ? <DreamLoader className="size-4" /> : "Continue"}
           </Button>
 
           {/* Get key links */}
@@ -430,11 +422,7 @@ export function ApiKeySettingsDialog() {
                 onClick={handleSave}
                 disabled={saving || !apiKey.trim()}
               >
-                {saving ? (
-                  <Loader2Icon className="size-3.5 animate-spin" />
-                ) : (
-                  "Save"
-                )}
+                {saving ? <DreamLoader className="size-3.5" /> : "Save"}
               </Button>
             </div>
           </div>

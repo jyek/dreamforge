@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoading } from "./dream-loading";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -163,11 +164,13 @@ export function PlatformDashboard({
         </p>
       )}
       {!data ? (
-        <div className="df-empty">
-          {teacher
-            ? "Loading your dashboard…"
-            : "Opening your creative corner…"}
-        </div>
+        <DreamLoading
+          label={
+            teacher
+              ? "Loading your dashboard…"
+              : "Opening your creative corner…"
+          }
+        />
       ) : (
         <>
           {!teacher && view === "profile" && (

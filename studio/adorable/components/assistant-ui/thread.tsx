@@ -1,5 +1,5 @@
+import { DreamLoader } from "@/components/dream-loading";
 import { ModelUsed } from "./model-settings";
-import { Loader2Icon } from "lucide-react";
 import { ModelSelector } from "./model-selector";
 import {
   ComposerAddAttachment,
@@ -98,10 +98,7 @@ export const Thread: FC<{
                 role="status"
                 className="flex items-center gap-2 px-3 text-xs text-slate-400"
               >
-                <Loader2Icon
-                  aria-hidden="true"
-                  className="size-3.5 animate-spin"
-                />
+                <DreamLoader className="size-3.5" />
                 {progress || "Thinking about your request…"}
               </div>
             </AssistantIf>

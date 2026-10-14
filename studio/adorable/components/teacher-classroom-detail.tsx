@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -80,9 +81,7 @@ export function TeacherClassroomDetail({
           {error}
         </p>
       ) : !data ? (
-        <div role="status" className="df-empty">
-          Loading classroom…
-        </div>
+        <DreamLoading label="Loading classroom…" />
       ) : selection ? (
         <>
           <button

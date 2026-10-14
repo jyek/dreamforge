@@ -1,4 +1,5 @@
 "use client";
+import { DreamLoader, DreamLoading } from "@/components/dream-loading";
 
 import Link from "next/link";
 import { StudioSidebar } from "@/components/studio-sidebar";
@@ -23,7 +24,6 @@ import {
   FolderIcon,
   SearchIcon,
   CodeIcon,
-  Loader2Icon,
   MonitorIcon,
   PlusIcon,
   RotateCwIcon,
@@ -388,7 +388,7 @@ export function ProjectWorkspaceShell({
                 <span>{project.name}</span>
               </button>
             ))}
-          {projectsLoading && <p className="df-muted">Loading projects…</p>}
+          {projectsLoading && <DreamLoading inline label="Loading projects…" />}
           {!projectsLoading &&
             !projects.filter((p) =>
               p.name.toLowerCase().includes(projectSearch.toLowerCase()),
@@ -647,10 +647,7 @@ export function ProjectWorkspaceShell({
 
 function PreviewPlaceholder() {
   return (
-    <div className="flex h-full items-center justify-center bg-white text-sm text-slate-400">
-      <Loader2Icon className="mr-2 size-4 animate-spin" />
-      Opening workspace…
-    </div>
+    <DreamLoading label="Opening your workspace…" className="h-full bg-white" />
   );
 }
 
@@ -814,10 +811,10 @@ function AppPreview({
                 aria-live="polite"
                 className="flex flex-col items-center gap-3 px-6 text-center"
               >
-                <Loader2Icon className="size-6 animate-spin text-slate-400" />
+                <DreamLoader size={64} />
                 <p className="text-sm font-medium text-slate-600">
                   {activity.starting
-                    ? "Starting up your VM…"
+                    ? "Waking up your project…"
                     : "Loading preview…"}
                 </p>
                 {activity.starting && (

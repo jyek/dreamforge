@@ -2406,3 +2406,80 @@
 .df-project-sidebar-toggle[data-collapsed="true"] .df-sidebar-mark-action {
   transform: none;
 }
+
+/* One dream animation for page, preview, code and inline activity states. */
+.df-dream-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #82758f;
+  font-size: 14px;
+}
+.df-dream-loading-panel {
+  flex-direction: column;
+  min-height: 120px;
+  padding: 24px;
+  text-align: center;
+}
+.df-dream-loading-inline {
+  flex-direction: row;
+  gap: 8px;
+  font-size: inherit;
+}
+.df-dream-glyph {
+  overflow: visible;
+}
+.df-dream-cloud {
+  animation: df-dream-float 3.6s ease-in-out infinite;
+  transform-origin: 40px 48px;
+}
+.df-dream-moon {
+  animation: df-dream-moon-sway 5s ease-in-out infinite;
+  transform-origin: 49px 30px;
+}
+.df-dream-star {
+  animation: df-dream-twinkle 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.df-dream-star-two {
+  animation-delay: -1.1s;
+}
+.df-dream-star-three {
+  animation-delay: -2.2s;
+}
+@keyframes df-dream-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes df-dream-moon-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes df-dream-twinkle {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-dream-glyph * {
+    animation: none !important;
+  }
+}

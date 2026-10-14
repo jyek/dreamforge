@@ -1,8 +1,9 @@
 "use client";
+import { DreamLoader } from "@/components/dream-loading";
 
 import { cn } from "@/lib/utils";
 import { useMessage } from "@assistant-ui/react";
-import { CheckIcon, ChevronRightIcon, CircleDashedIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { type FC, type PropsWithChildren, useState } from "react";
 
 /* ------------------------------------------------------------------ */
@@ -200,7 +201,7 @@ export const ToolCallGroup: FC<
         className="inline-flex max-w-full items-center gap-1.5 rounded px-2 py-1 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60"
       >
         {showSpinner ? (
-          <CircleDashedIcon className="size-3.5 shrink-0 animate-spin" />
+          <DreamLoader className="size-3.5 shrink-0" />
         ) : (
           <CheckIcon className="size-3.5 shrink-0" />
         )}

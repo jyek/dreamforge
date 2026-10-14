@@ -1,13 +1,8 @@
 "use client";
+import { DreamLoader } from "@/components/dream-loading";
 
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
-import {
-  CheckIcon,
-  ChevronRightIcon,
-  CircleDashedIcon,
-  WrenchIcon,
-  XIcon,
-} from "lucide-react";
+import { CheckIcon, ChevronRightIcon, WrenchIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +27,7 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
         )}
       >
         {running ? (
-          <CircleDashedIcon className="size-3 shrink-0 animate-spin text-muted-foreground" />
+          <DreamLoader className="size-3 shrink-0 text-muted-foreground" />
         ) : failed ? (
           <XIcon className="size-3 shrink-0 text-muted-foreground" />
         ) : (
