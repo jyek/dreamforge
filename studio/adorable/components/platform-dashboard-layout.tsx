@@ -54,7 +54,7 @@ export const BUILDER_SECTIONS = [
     id: "classrooms",
     label: "Classrooms",
     icon: School,
-    description: "Your classrooms and Class Numbers.",
+    description: "A place to learn, create, and build together.",
   },
 ] as const;
 export function PlatformDashboardLayout({
