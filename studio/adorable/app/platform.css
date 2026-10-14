@@ -2829,3 +2829,19 @@
   left: 0;
   right: 0;
 }
+
+/* Match the collapsed profile row so the dashboard footer divider never moves. */
+@media (min-width: 768px) {
+  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link {
+    height: 44px;
+    min-height: 44px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link strong {
+    line-height: 18px;
+  }
+  .df-teacher-dashboard > .df-studio-sidebar .df-profile-link small {
+    line-height: 14px;
+  }
+}
