@@ -1,4 +1,5 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
 import { TableEmptyState } from "./table-empty-state";
 import { SimpleLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
@@ -212,175 +213,173 @@ export function TeacherPromptGuidance({
           {error}
         </div>
       ) : (
-        <div
-          className={`df-card df-guidance-table ${!selected ? "df-student-overview-table" : ""}`}
-          aria-busy={loading}
-          data-empty={!loading && !(selected ? prompts.length : shown.length)}
+        <StudentReviewTable
+          compact={!selected}
+          busy={loading}
+          empty={!loading && !(selected ? prompts.length : shown.length)}
         >
-          <table className="df-table">
-            <thead>
-              <tr>
-                {(selected
-                  ? [
-                      "Date",
-                      "Project",
-                      "Prompt",
-                      "Guidance area",
-                      "How to guide",
-                      "Safety check",
-                    ]
-                  : [
-                      "Student",
-                      "Projects",
-                      "Prompts",
-                      "Needs guidance",
-                      "Guidance areas",
-                      "",
-                    ]
-                ).map((h) => (
-                  <th key={h}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {selected
-                ? prompts.map((p) => (
-                    <tr key={p.id}>
-                      <td>{new Date(p.created_at).toLocaleString()}</td>
-                      <td>
-                        <Link
-                          className="df-purple"
-                          href={`/${p.vm_id}/${p.conversation_id}`}
-                        >
-                          {p.project_name} ↗
-                        </Link>
-                      </td>
-                      <td className="df-guidance-content">{p.content}</td>
-                      <td>
-                        {p.guidance.length ? (
-                          p.guidance.map((c) => (
-                            <span key={c} className="df-guidance-tag">
-                              {guidanceLabel(c)}
-                            </span>
+          <thead>
+            <tr>
+              {(selected
+                ? [
+                    "Date",
+                    "Project",
+                    "Prompt",
+                    "Guidance area",
+                    "How to guide",
+                    "Safety check",
+                  ]
+                : [
+                    "Student",
+                    "Projects",
+                    "Prompts",
+                    "Needs guidance",
+                    "Guidance areas",
+                    "",
+                  ]
+              ).map((h) => (
+                <th key={h}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {selected
+              ? prompts.map((p) => (
+                  <tr key={p.id}>
+                    <td>{new Date(p.created_at).toLocaleString()}</td>
+                    <td>
+                      <Link
+                        className="df-purple"
+                        href={`/${p.vm_id}/${p.conversation_id}`}
+                      >
+                        {p.project_name} ↗
+                      </Link>
+                    </td>
+                    <td className="df-guidance-content">{p.content}</td>
+                    <td>
+                      {p.guidance.length ? (
+                        p.guidance.map((c) => (
+                          <span key={c} className="df-guidance-tag">
+                            {guidanceLabel(c)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="df-muted">No suggestions</span>
+                      )}
+                    </td>
+                    <td className="df-guidance-tip">
+                      {p.guidance.length
+                        ? p.guidance.map((c) => (
+                            <p key={c}>
+                              {guidanceCategories[c]?.tip ||
+                                "Read the prompt in context and help the student choose a safe request."}
+                            </p>
                           ))
-                        ) : (
-                          <span className="df-muted">No suggestions</span>
+                        : "Encourage the student to keep experimenting."}
+                    </td>
+                    <td>
+                      {p.decision === "allow"
+                        ? "Allowed"
+                        : p.decision === "block"
+                          ? "Blocked"
+                          : "Safety review"}
+                    </td>
+                  </tr>
+                ))
+              : shown.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <button
+                        className="df-guidance-student"
+                        disabled={loading}
+                        onClick={() => open(s)}
+                      >
+                        <strong>{s.display_name}</strong>
+                        <span className="df-muted">@{s.username}</span>
+                      </button>
+                    </td>
+                    <td>{s.project_count}</td>
+                    <td>{s.prompt_count}</td>
+                    <td>{s.guidance_count}</td>
+                    <td>
+                      {Object.entries(s.categories).length ? (
+                        Object.entries(s.categories).map(([c, n]) => (
+                          <span className="df-guidance-tag" key={c}>
+                            {guidanceLabel(c)} · {n}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="df-muted">No suggestions</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="df-inline">
+                        {overviewTitle === "Students" && (
+                          <Link
+                            className="df-button secondary small"
+                            href={`/students/${s.id}/projects`}
+                          >
+                            View projects
+                          </Link>
                         )}
-                      </td>
-                      <td className="df-guidance-tip">
-                        {p.guidance.length
-                          ? p.guidance.map((c) => (
-                              <p key={c}>
-                                {guidanceCategories[c]?.tip ||
-                                  "Read the prompt in context and help the student choose a safe request."}
-                              </p>
-                            ))
-                          : "Encourage the student to keep experimenting."}
-                      </td>
-                      <td>
-                        {p.decision === "allow"
-                          ? "Allowed"
-                          : p.decision === "block"
-                            ? "Blocked"
-                            : "Safety review"}
-                      </td>
-                    </tr>
-                  ))
-                : shown.map((s) => (
-                    <tr key={s.id}>
-                      <td>
                         <button
-                          className="df-guidance-student"
+                          className="df-button secondary small"
                           disabled={loading}
                           onClick={() => open(s)}
                         >
-                          <strong>{s.display_name}</strong>
-                          <span className="df-muted">@{s.username}</span>
+                          View safety
                         </button>
-                      </td>
-                      <td>{s.project_count}</td>
-                      <td>{s.prompt_count}</td>
-                      <td>{s.guidance_count}</td>
-                      <td>
-                        {Object.entries(s.categories).length ? (
-                          Object.entries(s.categories).map(([c, n]) => (
-                            <span className="df-guidance-tag" key={c}>
-                              {guidanceLabel(c)} · {n}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="df-muted">No suggestions</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="df-inline">
-                          {overviewTitle === "Students" && (
-                            <Link
-                              className="df-button secondary small"
-                              href={`/students/${s.id}/projects`}
-                            >
-                              View projects
-                            </Link>
-                          )}
-                          <button
-                            className="df-button secondary small"
-                            disabled={loading}
-                            onClick={() => open(s)}
-                          >
-                            View safety
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              {!loading && !(selected ? prompts.length : shown.length) && (
-                <tr>
-                  <td colSpan={6}>
-                    <TableEmptyState
-                      title={
-                        hasFilters
-                          ? "No matches, just possibilities"
-                          : selected
-                            ? "Every big idea starts with a prompt"
-                            : "Your next dream team starts here"
-                      }
-                      description={
-                        hasFilters
-                          ? "Try another name, project or guidance area to find what you’re looking for."
-                          : selected
-                            ? "When this student starts building, their prompts and safety guidance will appear here."
-                            : "As students join your classrooms, their projects and progress will take shape here."
-                      }
-                      action={
-                        hasFilters ? (
-                          <button
-                            className="df-button secondary small"
-                            onClick={() => {
-                              setSearch("");
-                              setStudentSearch("");
-                              setCategory("");
-                              setProject("");
-                              setOffset(0);
-                            }}
-                          >
-                            Clear filters
-                          </button>
-                        ) : !selected ? (
-                          <Link
-                            className="df-button secondary small"
-                            href="/classrooms"
-                          >
-                            Go to classrooms →
-                          </Link>
-                        ) : undefined
-                      }
-                    />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            {!loading && !(selected ? prompts.length : shown.length) && (
+              <tr>
+                <td colSpan={6}>
+                  <TableEmptyState
+                    title={
+                      hasFilters
+                        ? "No matches, just possibilities"
+                        : selected
+                          ? "Every big idea starts with a prompt"
+                          : "Your next dream team starts here"
+                    }
+                    description={
+                      hasFilters
+                        ? "Try another name, project or guidance area to find what you’re looking for."
+                        : selected
+                          ? "When this student starts building, their prompts and safety guidance will appear here."
+                          : "As students join your classrooms, their projects and progress will take shape here."
+                    }
+                    action={
+                      hasFilters ? (
+                        <button
+                          className="df-button secondary small"
+                          onClick={() => {
+                            setSearch("");
+                            setStudentSearch("");
+                            setCategory("");
+                            setProject("");
+                            setOffset(0);
+                          }}
+                        >
+                          Clear filters
+                        </button>
+                      ) : !selected ? (
+                        <Link
+                          className="df-button secondary small"
+                          href="/classrooms"
+                        >
+                          Go to classrooms →
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </StudentReviewTable>
       )}
       {selected && (prompts.length > 0 || offset > 0) && (
         <div className="df-inline df-guidance-pagination">

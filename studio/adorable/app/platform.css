@@ -3101,3 +3101,9 @@
   border: 1px solid var(--df-divider);
   background: #fff;
 }
+
+.df-no-classroom-projects { display: inline-flex; align-items: center; gap: 6px; }
+.df-class-project-help { display: inline-flex; align-items: center; justify-content: center; padding: 3px; border: 0; background: transparent; color: #81758f; border-radius: 4px; cursor: help; }
+.df-class-project-help:hover { color: #6b3ff7; }
+.df-class-project-help:focus-visible { outline: 2px solid #6b3ff7; outline-offset: 2px; }
+.df-student-project-table .df-guidance-student { cursor: default; }
