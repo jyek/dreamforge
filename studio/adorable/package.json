@@ -11,7 +11,10 @@
     "prettier:fix": "prettier --write .",
     "bootstrap": "node scripts/bootstrap-base-snapshot.mjs",
     "runtime:migrate": "tsx scripts/migrate-runtime.mts",
-    "runtime:test": "tsx scripts/test-runtime-workspace.mts"
+    "runtime:test": "tsx scripts/test-runtime-workspace.mts",
+    "test:prompting": "tsx --test tests/final-response.test.ts tests/safe-progress.test.ts tests/empty-response-retry.test.ts tests/chat-input.test.ts tests/local-safety.test.ts && tsx tests/llm-smoke.ts && node --test tests/e2e-runner.test.mjs",
+    "test:e2e:setup": "tsx scripts/provision-e2e.mts",
+    "test:e2e:prompting": "node scripts/e2e-prompting.mjs"
   },
   "prettier": {
     "plugins": [

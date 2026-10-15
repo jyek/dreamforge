@@ -44,3 +44,6 @@ next-env.d.ts
 
 !.env.example
 /supabase/.temp/
+
+# Local end-to-end reports and reusable test project state
+/.e2e-results/
