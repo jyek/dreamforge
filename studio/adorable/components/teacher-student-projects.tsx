@@ -251,6 +251,7 @@ export function TeacherStudentProjects({
                 <tr>
                   <td colSpan={5}>
                     <TableEmptyState
+                      illustration={search ? "search" : "projects"}
                       title={
                         search ? "No matching students" : "No projects yet"
                       }

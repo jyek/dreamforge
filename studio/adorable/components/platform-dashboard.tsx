@@ -1,4 +1,5 @@
 "use client";
+import { TableEmptyState } from "./table-empty-state";
 import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -413,13 +414,19 @@ export function PlatformDashboard({
                   ))}
                 </div>
               ) : teacher ? (
-                <div className="df-empty">
-                  Create your first project, then share it with a classroom.
-                </div>
+                <TableEmptyState
+                  framed
+                  illustration="projects"
+                  title="Make room for your first idea"
+                  description="Create a project, then share it with a classroom for your students to explore."
+                />
               ) : (
-                <div className="df-empty">
-                  Your first project will appear here. Start with an idea above.
-                </div>
+                <TableEmptyState
+                  framed
+                  illustration="projects"
+                  title="Your ideas will live here"
+                  description="Start with an idea above. Your games, apps and websites will be waiting here when you come back."
+                />
               )}
             </section>
           )}
@@ -444,11 +451,20 @@ export function PlatformDashboard({
                 ))}
               </div>
               {!data.classes.length && (
-                <div className="df-empty">
-                  {teacher
-                    ? "Create your first class to invite students."
-                    : "Join a class with the Class Number from your teacher."}
-                </div>
+                <TableEmptyState
+                  framed
+                  illustration="classrooms"
+                  title={
+                    teacher
+                      ? "A space to build together"
+                      : "Your classroom adventure starts here"
+                  }
+                  description={
+                    teacher
+                      ? "Create your first classroom and invite your students to bring their ideas along."
+                      : "Choose Join class and enter the Class Number from your teacher."
+                  }
+                />
               )}
             </>
           )}
@@ -509,10 +525,11 @@ export function PlatformDashboard({
                   </table>
                 </div>
               ) : (
-                <p className="df-muted">
-                  Create a project to start building. Its token usage will
-                  appear here.
-                </p>
+                <TableEmptyState
+                  illustration="usage"
+                  title="A fresh start for your ideas"
+                  description="Once you start building, you can see how many tokens each project uses here."
+                />
               )}
             </section>
           )}

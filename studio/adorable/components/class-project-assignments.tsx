@@ -87,6 +87,7 @@ export function ClassProjectAssignments({
             ))
           ) : (
             <TableEmptyState
+              illustration="projects"
               title="Your ideas belong here"
               description="After you build a project, you can choose to share it with this classroom."
             />

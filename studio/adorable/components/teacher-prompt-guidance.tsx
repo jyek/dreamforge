@@ -337,11 +337,14 @@ export function TeacherPromptGuidance({
               <tr>
                 <td colSpan={6}>
                   <TableEmptyState
+                    illustration={
+                      hasFilters ? "search" : selected ? "prompts" : "students"
+                    }
                     title={
                       hasFilters
                         ? "No matches, just possibilities"
                         : selected
-                          ? "Every big idea starts with a prompt"
+                          ? "Every idea starts with a prompt"
                           : "Your next dream team starts here"
                     }
                     description={

@@ -2985,9 +2985,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 28px 20px 32px;
+  min-height: 280px;
+  padding: 40px 24px;
   text-align: center;
   white-space: normal;
+}
+.df-empty-panel {
+  width: 100%;
+  border: 1px solid var(--df-divider);
+  border-radius: 24px;
+  background: #fff;
+}
+.df-empty-art {
+  flex: none;
+  margin-bottom: 8px;
 }
 .df-table-empty h3 {
   font-size: 17px;
@@ -2997,8 +3008,8 @@
   color: #403354;
 }
 .df-table-empty p {
-  max-width: 390px;
-  font-size: 13px;
+  max-width: 440px;
+  font-size: 14px;
   line-height: 1.6;
   color: #82758f;
   margin: 0;

@@ -188,6 +188,7 @@ export function StudentClassroomDetail({
           {!shown.length && (
             <div className="df-card df-class-empty">
               <TableEmptyState
+                illustration="classrooms"
                 title="A classroom full of possibilities"
                 description={
                   student
