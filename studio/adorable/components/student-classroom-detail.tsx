@@ -8,6 +8,7 @@ import {
   type AssignableProject,
 } from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
+import { ClassroomAvatar } from "./classroom-avatar";
 import { SimpleLoading } from "./dream-loading";
 type Project = {
   vm_id: string;
@@ -17,7 +18,7 @@ type Project = {
   conversation_id: string | null;
 };
 type Data = {
-  classroom: { name: string; teacher_name: string };
+  classroom: { name: string; teacher_name: string; teacher_id?: string };
   students: { id: string; display_name: string }[];
   projects: Project[];
   availableProjects: AssignableProject[];
@@ -68,9 +69,16 @@ export function StudentClassroomDetail({
           {data.projects.length === 1 ? "project" : "projects"}
         </span>
       </div>
-      <p className="df-muted">
-        Teacher: <strong>{data.classroom.teacher_name}</strong>
-      </p>
+      <div className="df-class-teacher-person">
+        <ClassroomAvatar
+          identity={data.classroom.teacher_id || data.classroom.teacher_name}
+          role="teacher"
+        />
+        <div>
+          <span className="df-muted">Your teacher</span>
+          <strong>{data.classroom.teacher_name}</strong>
+        </div>
+      </div>
       {preview ? (
         <>
           <button
@@ -88,10 +96,17 @@ export function StudentClassroomDetail({
             <div>
               {data.students.length ? (
                 data.students.map((s) => (
-                  <span className="df-class-student-chip" key={s.id}>
-                    {s.display_name}
-                    {s.id === user.id ? " · You" : ""}
-                  </span>
+                  <div
+                    className="df-classmate"
+                    key={s.id}
+                    data-self={s.id === user.id}
+                  >
+                    <ClassroomAvatar identity={s.id} />
+                    <strong title={s.display_name}>{s.display_name}</strong>
+                    {s.id === user.id && (
+                      <span className="df-classmate-you">You</span>
+                    )}
+                  </div>
                 ))
               ) : (
                 <p className="df-muted">The dream team is still gathering.</p>

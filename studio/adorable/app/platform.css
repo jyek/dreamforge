@@ -3107,3 +3107,23 @@
 .df-class-project-help:hover { color: #6b3ff7; }
 .df-class-project-help:focus-visible { outline: 2px solid #6b3ff7; outline-offset: 2px; }
 .df-student-project-table .df-guidance-student { cursor: default; }
+
+/* Small classroom companions, with stable artwork for each person. */
+.df-classroom-avatar { width: 64px; height: 64px; flex-shrink: 0; overflow: visible; }
+.df-avatar-body { transform-origin: 32px 48px; animation: df-avatar-bob var(--df-avatar-duration, 6s) ease-in-out infinite; animation-delay: var(--df-avatar-delay, 0ms); }
+.df-avatar-eyes { transform-origin: 33px 32px; animation: df-avatar-blink 6.5s infinite; animation-delay: var(--df-avatar-delay, 0ms); }
+.df-class-teacher-person { display: inline-flex; gap: 12px; align-items: center; margin: 4px 0 8px; }
+.df-class-teacher-person .df-classroom-avatar { width: 52px; height: 52px; }
+.df-class-teacher-person > div { display: flex; flex-direction: column; gap: 2px; }
+.df-class-teacher-person .df-muted { font-size: 12px; }
+.df-class-teacher-person strong { font-size: 15px; color: #25183e; }
+.df-class-roster > div { gap: 14px; align-items: stretch; }
+.df-classmate { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; min-height: 142px; padding: 12px 10px; border: 1px solid #e8dffa; border-radius: 20px; background: #fff; text-align: center; transition: border-color 180ms, background 180ms; }
+.df-classmate[data-self="true"] { border-color: #c8b6ff; background: #faf7ff; }
+.df-classmate strong { max-width: 100%; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; font-weight: 650; }
+.df-classmate-you { padding: 1px 8px; border-radius: 20px; background: #eee5ff; font-size: 10px; line-height: 16px; color: #6336db; font-weight: 700; }
+.df-classmate:hover { border-color: #bda3ff; background: #faf7ff; }
+@keyframes df-avatar-bob { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-1.5px) rotate(1deg); } }
+@keyframes df-avatar-blink { 0%,43%,47%,100% { transform: scaleY(1); } 45% { transform: scaleY(.12); } }
+@media (max-width: 520px) { .df-classmate { width: 112px; min-height: 132px; } }
+@media (prefers-reduced-motion: reduce) { .df-classroom-avatar * { animation: none !important; } }
