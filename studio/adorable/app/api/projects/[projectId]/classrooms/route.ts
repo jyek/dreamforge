@@ -1,3 +1,4 @@
+import { classroomTeacherSQL } from "@/lib/classroom-permissions";
 import { database } from "@/lib/database";
 import { getProfile, checkOrigin } from "@/lib/platform-auth";
 export async function GET(
@@ -19,7 +20,7 @@ export async function GET(
   if (!rowCount)
     return Response.json({ error: "Project not found." }, { status: 404 });
   const { rows } = await db.query(
-    "select c.id,c.name,exists(select 1 from adorable.class_projects pc where pc.class_id=c.id and pc.vm_id=$2) as attached from adorable.classes c where c.teacher_id=$1 order by c.created_at",
+    `select c.id,c.name,exists(select 1 from adorable.class_projects pc where pc.class_id=c.id and pc.vm_id=$2) as attached from adorable.classes c where ${classroomTeacherSQL("c.id")} order by c.created_at`,
     [user.id, projectId],
   );
   return Response.json({ classes: rows });
@@ -59,13 +60,13 @@ export async function PUT(
       return Response.json({ error: "Project not found." }, { status: 404 });
     }
     const classes = await db.query(
-      "select id from adorable.classes where teacher_id=$1 and id=any($2::uuid[]) for share",
+      `select c.id from adorable.classes c where ${classroomTeacherSQL("c.id")} and c.id=any($2::uuid[]) for share`,
       [user.id, unique],
     );
     if (classes.rows.length !== unique.length) {
       await db.query("rollback");
       return Response.json(
-        { error: "Choose your own classrooms." },
+        { error: "Choose a classroom you facilitate." },
         { status: 403 },
       );
     }

@@ -3127,3 +3127,20 @@
 @keyframes df-avatar-blink { 0%,43%,47%,100% { transform: scaleY(1); } 45% { transform: scaleY(.12); } }
 @media (max-width: 520px) { .df-classmate { width: 112px; min-height: 132px; } }
 @media (prefers-reduced-motion: reduce) { .df-classroom-avatar * { animation: none !important; } }
+
+.df-class-teachers-dialog { max-width: 620px; max-height: 85vh; overflow-y: auto; }
+.df-teaching-team-list { display: grid; gap: 12px; margin: 20px 0; }
+.df-teaching-team-person { display: flex; align-items: center; gap: 10px; }
+.df-teaching-team-person .df-classroom-avatar { width: 44px; height: 44px; }
+.df-teaching-team-person > div { flex: 1; display: grid; gap: 2px; }
+.df-teaching-team-person small { color: #81758f; }
+.df-class-teachers-dialog .df-notice { margin-top: 18px; }
+.df-class-teachers-dialog .df-input { flex: 1; min-width: 0; }
+.df-pending-teacher-invites { display: grid; gap: 12px; margin-top: 20px; font-size: 12px; }
+.df-pending-teacher-invites h3 { font-size: 14px; font-weight: 700; }
+.df-teacher-invitation { max-width: 650px; margin: 48px auto; }
+.df-teacher-invitation h1 { font-size: 28px; font-weight: 750; }
+.df-teacher-invitation p { margin: 16px 0 24px; }
+.df-class-teaching-team { margin: 12px 0 20px; }
+.df-class-teaching-team h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.df-class-teaching-team > div { display: flex; gap: 24px; flex-wrap: wrap; }

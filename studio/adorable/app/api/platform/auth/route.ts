@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       await db.query("begin");
       const invitation = teacher
         ? await db.query(
-            "select token_hash from adorable.teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
+            "select token_hash,classroom_id,created_by from adorable.teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
             [tokenHash(body.teacherInvite)],
           )
         : code
@@ -130,12 +130,21 @@ export async function POST(req: Request) {
         "insert into adorable.profiles(id,username,display_name,auth_email,role) values($1,$2,$3,$4,$5)",
         [authId, username, name, email, teacher ? "teacher" : "child"],
       );
-      if (teacher)
+      if (teacher) {
+        if (invitation.rows[0].classroom_id)
+          await db.query(
+            "insert into adorable.class_teachers(class_id,teacher_id,added_by) values($1,$2,$3)",
+            [
+              invitation.rows[0].classroom_id,
+              authId,
+              invitation.rows[0].created_by,
+            ],
+          );
         await db.query(
           "update adorable.teacher_invites set used_by=$2,used_at=now() where token_hash=$1",
           [tokenHash(body.teacherInvite), authId],
         );
-      else {
+      } else {
         if (code)
           await db.query(
             "insert into adorable.class_members(class_id,child_id) values($1,$2)",

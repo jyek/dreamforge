@@ -6,9 +6,11 @@ import { DreamForgeBrand, DreamForgeArt } from "./dreamforge-brand";
 export function PlatformAuthForm({
   signup = false,
   teacherInvite = "",
+  returnTo = "",
 }: {
   signup?: boolean;
   teacherInvite?: string;
+  returnTo?: string;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -29,7 +31,11 @@ export function PlatformAuthForm({
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
-      window.location.assign("/home");
+      window.location.assign(
+        /^\/classrooms\/invite\/[A-Za-z0-9_-]{20,100}$/.test(returnTo)
+          ? returnTo
+          : "/home",
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {

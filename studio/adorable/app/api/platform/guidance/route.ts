@@ -1,3 +1,4 @@
+import { teacherStudentAccessSQL } from "@/lib/classroom-permissions";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
 import { guidanceSQL } from "@/lib/prompt-guidance";
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
   const studentId = params.get("studentId");
   const scoped = `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.created_at,p.metadata->>'name' as project_name,${guidanceSQL} as guidance
     from adorable.prompt_reviews r join adorable.projects p on p.vm_id=r.vm_id
-    where exists(select 1 from adorable.teacher_builders b where b.child_id=r.child_id and b.teacher_id=$1))`;
+    where ${teacherStudentAccessSQL("r.child_id")})`;
   if (!studentId) {
     const { rows } = await database().query(
       `${scoped}
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
       (select count(*)::int from prompts r where r.child_id=pr.id) as prompt_count,
       (select count(*)::int from prompts r where r.child_id=pr.id and cardinality(r.guidance)>0) as guidance_count,
       coalesce((select jsonb_object_agg(category,n) from (select category,count(*)::int as n from prompts r cross join lateral unnest(r.guidance) category where r.child_id=pr.id group by category) counts),'{}'::jsonb) as categories
-      from adorable.profiles pr where exists(select 1 from adorable.teacher_builders b where b.child_id=pr.id and b.teacher_id=$1) order by lower(pr.display_name),pr.id`,
+      from adorable.profiles pr where ${teacherStudentAccessSQL("pr.id")} order by lower(pr.display_name),pr.id`,
       [user.id],
     );
     return Response.json({ students: rows });
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
     return Response.json({ error: "Invalid page." }, { status: 400 });
   const db = database();
   const { rows: students } = await db.query(
-    `select pr.id,pr.display_name from adorable.profiles pr where pr.id=$2 and exists(select 1 from adorable.teacher_builders b where b.child_id=pr.id and b.teacher_id=$1)`,
+    `select pr.id,pr.display_name from adorable.profiles pr where pr.id=$2 and ${teacherStudentAccessSQL("pr.id")}`,
     [user.id, studentId],
   );
   if (!students.length)

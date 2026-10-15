@@ -19,6 +19,7 @@ type Project = {
 };
 type Data = {
   classroom: { name: string; teacher_name: string; teacher_id?: string };
+  teachers?: { id: string; display_name: string; is_owner: boolean }[];
   students: { id: string; display_name: string }[];
   projects: Project[];
   availableProjects: AssignableProject[];
@@ -43,10 +44,15 @@ export function StudentClassroomDetail({
     setData(d);
   }
   const shown = data.projects.filter((p) => !student || p.owner_id === student);
-  const teacherIdentity =
-    data.classroom.teacher_id || data.classroom.teacher_name;
+  const teachers = data.teachers || [
+    {
+      id: data.classroom.teacher_id || data.classroom.teacher_name,
+      display_name: data.classroom.teacher_name,
+      is_owner: true,
+    },
+  ];
   const avatarShapes = classroomAvatarShapes([
-    teacherIdentity,
+    ...teachers.map((t) => t.id),
     ...data.students.map((s) => s.id),
   ]);
   return (
@@ -75,17 +81,26 @@ export function StudentClassroomDetail({
           {data.projects.length === 1 ? "project" : "projects"}
         </span>
       </div>
-      <div className="df-class-teacher-person">
-        <ClassroomAvatar
-          identity={teacherIdentity}
-          silhouette={avatarShapes[teacherIdentity]}
-          role="teacher"
-        />
+      <section className="df-class-teaching-team" aria-label="Class teachers">
+        <h3>{teachers.length === 1 ? "Your teacher" : "Your teachers"}</h3>
         <div>
-          <span className="df-muted">Your teacher</span>
-          <strong>{data.classroom.teacher_name}</strong>
+          {teachers.map((teacher) => (
+            <div className="df-class-teacher-person" key={teacher.id}>
+              <ClassroomAvatar
+                identity={teacher.id}
+                silhouette={avatarShapes[teacher.id]}
+                role="teacher"
+              />
+              <div>
+                <strong>{teacher.display_name}</strong>
+                <span className="df-muted">
+                  {teacher.is_owner ? "Classroom owner" : "Co-teacher"}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
       {preview ? (
         <>
           <button

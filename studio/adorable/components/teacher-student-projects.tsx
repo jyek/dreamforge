@@ -1,4 +1,5 @@
 "use client";
+import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
 import { StudentReviewTable } from "./student-review-table";
 import { NoClassroomProjects } from "./no-classroom-projects";
 import { useEffect, useState } from "react";
@@ -18,6 +19,7 @@ import {
 type Project = {
   vm_id: string;
   owner_id: string;
+  owner_name?: string;
   name: string;
   conversation_id: string | null;
   prompt_count: number;
@@ -86,16 +88,27 @@ export function TeacherStudentProjects({
       section={classId ? "classrooms" : "students"}
       headerAction={
         classId && data?.availableProjects ? (
-          <ClassProjectAssignments
-            classId={classId}
-            projects={data.availableProjects}
-            onChanged={async () => {
-              const r = await fetch(`/api/platform/classes/${classId}`);
-              const d = await r.json();
-              if (!r.ok) throw Error(d.error);
-              setData(d);
-            }}
-          />
+          <div className="df-inline">
+            <ClassroomTeachersDialog
+              classId={classId}
+              onChanged={async () => {
+                const r = await fetch(`/api/platform/classes/${classId}`);
+                const d = await r.json();
+                if (!r.ok) throw Error(d.error);
+                setData(d);
+              }}
+            />
+            <ClassProjectAssignments
+              classId={classId}
+              projects={data.availableProjects}
+              onChanged={async () => {
+                const r = await fetch(`/api/platform/classes/${classId}`);
+                const d = await r.json();
+                if (!r.ok) throw Error(d.error);
+                setData(d);
+              }}
+            />
+          </div>
         ) : undefined
       }
       onSectionChange={(s) => router.push(`/${s}`)}
@@ -169,7 +182,7 @@ export function TeacherStudentProjects({
               {teachingProjects.map((project) => (
                 <tr key={project.vm_id}>
                   <td>
-                    <strong>{teacherName}</strong>
+                    <strong>{project.owner_name || teacherName}</strong>
                     <div className="df-muted">Teacher</div>
                   </td>
                   <td>{project.name}</td>
@@ -239,9 +252,7 @@ export function TeacherStudentProjects({
                   <td colSpan={5}>
                     <TableEmptyState
                       title={
-                        search
-                          ? "No matching students"
-                          : "No projects yet"
+                        search ? "No matching students" : "No projects yet"
                       }
                       description={
                         search

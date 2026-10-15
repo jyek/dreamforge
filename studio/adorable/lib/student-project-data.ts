@@ -1,3 +1,7 @@
+import {
+  classroomTeacherSQL,
+  teacherStudentAccessSQL,
+} from "./classroom-permissions";
 import { database } from "./database";
 import { guidanceSQL } from "./prompt-guidance";
 export async function studentProjectData(
@@ -7,14 +11,14 @@ export async function studentProjectData(
   const db = database();
   if (filter.classId) {
     const { rowCount } = await db.query(
-      "select 1 from adorable.classes where id=$1 and teacher_id=$2",
+      `select 1 where ${classroomTeacherSQL("$1", "$2")}`,
       [filter.classId, teacherId],
     );
     if (!rowCount) return null;
   }
   if (filter.studentId) {
     const { rowCount } = await db.query(
-      "select 1 from adorable.teacher_builders where teacher_id=$1 and child_id=$2",
+      `select 1 where ${teacherStudentAccessSQL("$2")}`,
       [teacherId, filter.studentId],
     );
     if (!rowCount) return null;
@@ -24,7 +28,7 @@ export async function studentProjectData(
  (select count(*)::int from adorable.projects p where p.owner_id=pr.id and not p.is_example) as project_count,
  (select count(*)::int from adorable.prompt_reviews r where r.child_id=pr.id) as prompt_count,
  (select count(*)::int from adorable.prompt_reviews r where r.child_id=pr.id and cardinality(${guidanceSQL})>0) as guidance_count,'{}'::jsonb as categories
- from adorable.profiles pr where exists(select 1 from adorable.teacher_builders b where b.child_id=pr.id and b.teacher_id=$1) and ($2::uuid is null or exists(select 1 from adorable.class_members m where m.class_id=$2 and m.child_id=pr.id)) and ($3::uuid is null or pr.id=$3) order by lower(pr.display_name),pr.id`,
+ from adorable.profiles pr where ${teacherStudentAccessSQL("pr.id")} and ($2::uuid is null or exists(select 1 from adorable.class_members m where m.class_id=$2 and m.child_id=pr.id)) and ($3::uuid is null or pr.id=$3) order by lower(pr.display_name),pr.id`,
     [teacherId, filter.classId || null, filter.studentId || null],
   );
   const { rows: projects } = await db.query(

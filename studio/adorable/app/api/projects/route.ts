@@ -1,3 +1,8 @@
+import {
+  classroomTeacherSQL,
+  sharedTeachingProjectSQL,
+  teacherStudentAccessSQL,
+} from "@/lib/classroom-permissions";
 import { getProfile, platformEnabled, checkOrigin } from "@/lib/platform-auth";
 import { safetyEnabled } from "@/lib/safety-mode";
 import { demoMode } from "@/lib/demo-mode";
@@ -45,7 +50,7 @@ export async function GET(req: Request) {
     const user = await getProfile();
     const requested = new URL(req.url).searchParams.get("projectId");
     const { rows } = await database().query(
-      `select p.vm_id,p.metadata,p.owner_id,p.is_example from adorable.projects p where p.owner_id=$1 or (p.vm_id=$3 and (p.is_example or ($2='teacher' and exists(select 1 from adorable.teacher_builders b where b.child_id=p.owner_id and b.teacher_id=$1)) or ($2='child' and exists(select 1 from adorable.class_projects pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=p.vm_id and m.child_id=$1 and c.teacher_id=p.owner_id)))) order by p.updated_at desc`,
+      `select p.vm_id,p.metadata,p.owner_id,p.is_example from adorable.projects p where p.owner_id=$1 or (p.vm_id=$3 and (p.is_example or ($2='teacher' and (${teacherStudentAccessSQL("p.owner_id")} or ${sharedTeachingProjectSQL("p.vm_id", "p.owner_id")})) or ($2='child' and exists(select 1 from adorable.class_projects pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=p.vm_id and m.child_id=$1 and ${classroomTeacherSQL("c.id", "p.owner_id")})))) order by p.updated_at desc`,
       [user?.id || null, user?.role || null, requested],
     );
     return NextResponse.json({
