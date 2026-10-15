@@ -8,7 +8,7 @@ import {
   type AssignableProject,
 } from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
-import { ClassroomAvatar } from "./classroom-avatar";
+import { ClassroomAvatar, classroomAvatarShapes } from "./classroom-avatar";
 import { SimpleLoading } from "./dream-loading";
 type Project = {
   vm_id: string;
@@ -43,6 +43,12 @@ export function StudentClassroomDetail({
     setData(d);
   }
   const shown = data.projects.filter((p) => !student || p.owner_id === student);
+  const teacherIdentity =
+    data.classroom.teacher_id || data.classroom.teacher_name;
+  const avatarShapes = classroomAvatarShapes([
+    teacherIdentity,
+    ...data.students.map((s) => s.id),
+  ]);
   return (
     <PlatformDashboardLayout
       teacher={false}
@@ -71,7 +77,8 @@ export function StudentClassroomDetail({
       </div>
       <div className="df-class-teacher-person">
         <ClassroomAvatar
-          identity={data.classroom.teacher_id || data.classroom.teacher_name}
+          identity={teacherIdentity}
+          silhouette={avatarShapes[teacherIdentity]}
           role="teacher"
         />
         <div>
@@ -101,7 +108,10 @@ export function StudentClassroomDetail({
                     key={s.id}
                     data-self={s.id === user.id}
                   >
-                    <ClassroomAvatar identity={s.id} />
+                    <ClassroomAvatar
+                      identity={s.id}
+                      silhouette={avatarShapes[s.id]}
+                    />
                     <strong title={s.display_name}>{s.display_name}</strong>
                     {s.id === user.id && (
                       <span className="df-classmate-you">You</span>

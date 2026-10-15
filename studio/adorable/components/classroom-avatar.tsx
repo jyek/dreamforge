@@ -26,18 +26,33 @@ function hash(value: string) {
   }
   return h >>> 0;
 }
-/** Identity-derived artwork stays consistent across classrooms and page loads. */
+/** Resolve silhouette collisions consistently for the same classroom roster. */
+export function classroomAvatarShapes(identities: string[]) {
+  const counts = Array(shapes.length).fill(0) as number[];
+  const result: Record<string, number> = {};
+  for (const identity of [...new Set(identities)].sort()) {
+    let shape = (hash(identity) >>> 4) % shapes.length;
+    const least = Math.min(...counts);
+    while (counts[shape] > least) shape = (shape + 1) % shapes.length;
+    counts[shape]++;
+    result[identity] = shape;
+  }
+  return result;
+}
+/** Colors, expression and motion phase are derived from the account identity. */
 export function ClassroomAvatar({
   identity,
   role = "student",
+  silhouette,
 }: {
   identity: string;
   role?: "student" | "teacher";
+  silhouette?: number;
 }) {
   const seed = hash(identity),
     body = colors[seed % colors.length],
     accent = colors[(seed >>> 8) % colors.length],
-    shape = (seed >>> 4) % shapes.length;
+    shape = silhouette ?? (seed >>> 4) % shapes.length;
   const style = {
     "--df-avatar-delay": `${-(seed % 6000)}ms`,
     "--df-avatar-duration": `${5 + (seed % 4)}s`,
