@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DreamLoading } from "./dream-loading";
-import { ClassProjectAssignments, type AssignableProject } from './class-project-assignments';
+import {
+  ClassProjectAssignments,
+  type AssignableProject,
+} from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import {
@@ -36,7 +39,9 @@ export function TeacherStudentProjects({
   initialData?: StudentProjectsData;
 }) {
   const router = useRouter();
-  const [data, setData] = useState<StudentProjectsData | null>(initialData || null),
+  const [data, setData] = useState<StudentProjectsData | null>(
+      initialData || null,
+    ),
     [error, setError] = useState(""),
     [search, setSearch] = useState(""),
     [selection, setSelection] = useState<{
@@ -44,7 +49,7 @@ export function TeacherStudentProjects({
       project: Project;
     } | null>(null);
   useEffect(() => {
-    if(initialData)return;
+    if (initialData) return;
     const controller = new AbortController();
     fetch(
       classId
@@ -68,12 +73,29 @@ export function TeacherStudentProjects({
         .toLowerCase()
         .includes(search.toLowerCase()),
     ) || [];
+  const teachingProjects =
+    data?.projects.filter(
+      (p) => !data.students.some((s) => s.id === p.owner_id) && !search,
+    ) || [];
   return (
     <PlatformDashboardLayout
       teacher
       name={teacherName}
       section={classId ? "classrooms" : "students"}
-      headerAction={classId && data?.availableProjects ? <ClassProjectAssignments classId={classId} projects={data.availableProjects} onChanged={async()=>{const r=await fetch(`/api/platform/classes/${classId}`);const d=await r.json();if(!r.ok)throw Error(d.error);setData(d);}}/> : undefined}
+      headerAction={
+        classId && data?.availableProjects ? (
+          <ClassProjectAssignments
+            classId={classId}
+            projects={data.availableProjects}
+            onChanged={async () => {
+              const r = await fetch(`/api/platform/classes/${classId}`);
+              const d = await r.json();
+              if (!r.ok) throw Error(d.error);
+              setData(d);
+            }}
+          />
+        ) : undefined
+      }
       onSectionChange={(s) => router.push(`/${s}`)}
     >
       <Link className="df-purple" href={classId ? "/classrooms" : "/students"}>
@@ -130,7 +152,7 @@ export function TeacherStudentProjects({
           )}
           <div
             className="df-card df-guidance-table df-student-project-table"
-            data-empty={!shown.length}
+            data-empty={!shown.length && !teachingProjects.length}
           >
             <div className="df-table-scroll">
               <table className="df-table">
@@ -144,6 +166,25 @@ export function TeacherStudentProjects({
                   </tr>
                 </thead>
                 <tbody>
+                  {teachingProjects.map((project) => (
+                    <tr key={project.vm_id}>
+                      <td>
+                        <strong>{teacherName}</strong>
+                        <div className="df-muted">Teacher</div>
+                      </td>
+                      <td>{project.name}</td>
+                      <td>{project.prompt_count}</td>
+                      <td>{project.guidance_count}</td>
+                      <td>
+                        <Link
+                          className="df-button secondary small"
+                          href={`/${project.vm_id}${project.conversation_id ? `/${project.conversation_id}` : ""}`}
+                        >
+                          View project
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
                   {shown.flatMap((student) => {
                     const projects = data.projects.filter(
                       (p) => p.owner_id === student.id,
@@ -190,7 +231,7 @@ export function TeacherStudentProjects({
                       ),
                     );
                   })}
-                  {!shown.length && (
+                  {!shown.length && !teachingProjects.length && (
                     <tr>
                       <td colSpan={5}>
                         <TableEmptyState
