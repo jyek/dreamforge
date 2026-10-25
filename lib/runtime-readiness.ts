@@ -10,6 +10,29 @@ export async function wakeVm(
   }
 }
 
+/** Request lifecycle transitions without holding a browser poll for a minute. */
+export async function resumeProjectRuntime(
+  sandbox: {
+    state: string;
+    wake: (options: { wait: false; signal: AbortSignal }) => Promise<unknown>;
+    restart: (options: { wait: false; signal: AbortSignal }) => Promise<unknown>;
+  },
+  startServer: () => Promise<void>,
+  signal: AbortSignal,
+) {
+  if (sandbox.state === "paused" || sandbox.state === "pausing") {
+    await sandbox.wake({ wait: false, signal });
+    return;
+  }
+  if (sandbox.state === "stopped") {
+    await sandbox.restart({ wait: false, signal });
+    return;
+  }
+  // These transitions are already in flight. The next HTTP probe checks them.
+  if (["starting", "resuming", "stopping"].includes(sandbox.state)) return;
+  await startServer();
+}
+
 /** A loaded proxy error page does not mean the app is ready. */
 export async function previewResponding(
   previewUrl: string,
@@ -18,7 +41,7 @@ export async function previewResponding(
   try {
     const response = await request(previewUrl, {
       cache: "no-store",
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(2000),
     });
     await response.body?.cancel();
     // Keep real app errors (including Next's compile-error UI) visible.
@@ -30,6 +53,16 @@ export async function previewResponding(
 
 export function runtimeFailure(error: unknown) {
   const failure = error as { code?: string; message?: string } | null;
+  if (failure?.code === "operation_failed" || failure?.code === "host_unknown")
+    return {
+      status: 503,
+      body: {
+        state: "blocked",
+        ready: false,
+        error:
+          "Project hosting could not resume this workspace. Your saved files are preserved. Please contact DreamForge support.",
+      },
+    };
   if (failure?.code === "PROJECT_MIGRATION_REQUIRED")
     return {
       status: 409,

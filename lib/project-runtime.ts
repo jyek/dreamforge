@@ -15,7 +15,10 @@ let client: Runtime | undefined;
 export const runtime = () => (client ??= new Runtime({ waitForCapacityMs: 0 }));
 
 /** Stable DreamForge project IDs are independent of the compute provider. */
-export async function runtimeSandbox(projectId: string) {
+export async function runtimeSandbox(
+  projectId: string,
+  options: { timeoutMs?: number; signal?: AbortSignal } = {},
+) {
   const { rows } = await database().query(
     "select sandbox_id from adorable.runtime_bindings where project_id=$1",
     [projectId],
@@ -28,7 +31,7 @@ export async function runtimeSandbox(projectId: string) {
       { code: "PROJECT_MIGRATION_REQUIRED" },
     );
   }
-  return runtime().sandboxes.get(rows[0].sandbox_id);
+  return runtime().sandboxes.get(rows[0].sandbox_id, options);
 }
 
 export async function bindRuntime(projectId: string, sandboxId: string) {

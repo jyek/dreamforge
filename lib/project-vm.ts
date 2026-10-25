@@ -1,6 +1,7 @@
 import { requestSandboxCreation } from "./runtime-provisioning";
 import { database } from "./database";
 import { prepareProjectRuntime } from "./prepare-project-runtime";
+import { resumeProjectRuntime } from "./runtime-readiness";
 import { randomUUID } from "crypto";
 import type { Vm } from "./project-runtime";
 import {
@@ -44,17 +45,13 @@ export async function restartDevServer(vm: Vm) {
 
 /** The failed HTTP probe already established that repair is needed. */
 export async function restoreProjectServer(projectId: string): Promise<void> {
-  const sandbox = await runtimeSandbox(projectId); // one fresh provider status
-  if (
-    sandbox.state === "paused" ||
-    sandbox.state === "pausing" ||
-    sandbox.state === "resuming"
-  ) {
-    await sandbox.wake(); // memory resumes with its running server intact
-    return;
-  }
-  if (sandbox.state === "stopped") await sandbox.restart();
-  await startDevServer(devVm(projectId));
+  const signal = AbortSignal.timeout(8000);
+  const sandbox = await runtimeSandbox(projectId, { signal });
+  await resumeProjectRuntime(
+    sandbox,
+    () => startDevServer(devVm(projectId)),
+    signal,
+  );
 }
 
 export type CreatedProjectVms = {
