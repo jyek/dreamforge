@@ -5,7 +5,7 @@ Object.assign(process.env,dotenv.parse(await fs.readFile('.env')));
 const {Freestyle}=await import('freestyle');
 const freestyle=new Freestyle({apiKey:process.env.FREESTYLE_API_KEY,baseUrl:process.env.FREESTYLE_BASE_URL});
 const devVm=(id:string)=>freestyle.vms.ref(id);
-const listProjectVms=async()=>{const {vms}=await freestyle.vms.list({metadata:'dreamforge:project,adorableRole:dev',limit:200});return vms;};
+const listProjectVms=async()=>{const {vms}=await freestyle.vms.list({metadata:'adorable:project,adorableRole:dev',limit:200});return vms;};
 const connection=new URL(process.env.DATABASE_URL!);
 connection.port='6543';
 for(const key of ['sslmode','sslrootcert','sslcert','sslkey'])connection.searchParams.delete(key);
