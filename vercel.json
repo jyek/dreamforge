@@ -8,5 +8,6 @@
     "app/api/**/route.ts": {
       "maxDuration": 300
     }
-  }
+  },
+  "buildCommand": "npm run build:verified"
 }

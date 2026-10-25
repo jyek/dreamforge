@@ -1,0 +1,41 @@
+name: DreamForge CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dreamforge-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Tests and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run deterministic tests
+        run: npm run test:unit
+      - name: Install local PostgreSQL for database tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql
+          echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
+      - name: Test quota accounting and execution recovery
+        run: npm run test:database
+      - name: Build production app
+        run: npm run build

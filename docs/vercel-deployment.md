@@ -11,7 +11,7 @@ The production Next.js application is at the **repository root**. There is no np
 | Framework preset | Next.js |
 | Root Directory | Leave empty (repository root) |
 | Install command | `npm ci` |
-| Build command | `npm run build` |
+| Build command | `npm run build:verified` (set in `vercel.json`) |
 | Output directory | Next.js default |
 | Node.js | 22.x or 24.x |
 
@@ -27,7 +27,19 @@ Apply required SQL migrations using a server-authorised connection before enabli
 
 Once a production deployment is Ready, add the desired domain under Settings → Domains and connect it to Production. Domain assignment is managed in Vercel; renaming source folders does not transfer or release a `vercel.app` address. Enable automatic production-domain assignment if pushes to `main` should update the public site.
 
-The refactor itself does not change Vercel settings, assign domains or deploy the application.
+The production domain is currently `dreamforge2.vercel.app`. Set `DREAMFORGE_SITE_URL` to the active production origin so invitation and payment links use the correct address.
+
+## Automated tests and release gates
+
+The `DreamForge CI` GitHub Actions workflow runs on pull requests and pushes to `main`. Its `Tests and build` job installs dependencies, runs deterministic harness and safety tests, checks quota accounting and execution recovery against a temporary local PostgreSQL database, and builds the production app. These checks need no production credentials and create no Runtime VMs or production projects.
+
+Vercel's build command is `npm run build:verified`: deterministic tests must pass before `next build` starts, and both must succeed before Vercel releases the deployment. A failed test or build leaves the existing production deployment serving traffic. Keep the Build Command override disabled in Vercel so the repository's command is used.
+
+To also require the database checks before releasing, once the first workflow has run, open Vercel's project Settings → Deployment Checks and select `Tests and build`. Vercel will then wait for the full GitHub Actions check before assigning production domains. See [Vercel Deployment Checks](https://vercel.com/docs/deployment-checks). Without this setting, the database tests run in GitHub Actions but are not part of Vercel's release gate.
+
+In GitHub Settings → Rules → Rulesets, protect `main` by requiring a pull request and the `Tests and build` status check. Enable the requirement that branches are up to date before merging. This prevents merging changes that failed CI; Vercel's own test and build gate also covers direct pushes.
+
+Live browser/model E2E tests remain a separate explicit operation because they require a dedicated account and can consume Runtime and model credits. Follow the cleanup requirements below when running them.
 
 ## Verification
 
