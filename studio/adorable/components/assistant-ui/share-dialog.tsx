@@ -1,8 +1,6 @@
 "use client";
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -11,97 +9,100 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  CheckIcon,
-  CopyIcon,
-  ExternalLinkIcon,
-  Share2Icon,
-} from "lucide-react";
+import { Share2Icon } from "lucide-react";
 import type { ProjectItem } from "@/lib/project-types";
-
 export function ShareDialog({ project }: { project: ProjectItem }) {
-  const [copied, setCopied] = useState(false);
-  const [copyError, setCopyError] = useState("");
-  const [shareUrl, setShareUrl] = useState(project.previewUrl);
-
-  const copyLink = async () => {
-    setCopyError("");
+  const [share, setShare] = useState<{
+      url?: string;
+      revision?: number;
+    } | null>(null),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  async function load() {
+    setError("");
+    setShare(null);
     try {
-      const response = await fetch(`/api/projects/${project.id}/share`, {
+      const r = await fetch(`/api/projects/${project.id}/share`, {
         cache: "no-store",
       });
-      if (!response.ok) throw Error("Could not create share link");
-      const { url } = await response.json();
-      setShareUrl(url);
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
+      if (!r.ok) throw Error();
+      setShare(await r.json());
     } catch {
-      setCopyError("Select the link to copy it manually.");
+      setError("Could not load approved sharing.");
     }
-  };
-
+  }
+  async function approve() {
+    setBusy(true);
+    setError("");
+    try {
+      const status = await fetch(`/api/projects/${project.id}/execution`, {
+        cache: "no-store",
+      });
+      if (!status.ok) throw Error("Project status is unavailable.");
+      const { revision } = await status.json();
+      const r = await fetch(`/api/projects/${project.id}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revision }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error);
+      setShare(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not approve sharing.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <Dialog
-      onOpenChange={() => {
-        setCopied(false);
-        setCopyError("");
-        setShareUrl(project.previewUrl);
+      onOpenChange={(open) => {
+        if (open) void load();
       }}
     >
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-colors hover:bg-foreground/90"
-        >
+        <button className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background">
           <Share2Icon className="size-3" />
           Share
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Share site</DialogTitle>
+          <DialogTitle>Share a reviewed revision</DialogTitle>
           <DialogDescription>
-            Anyone with this link can open your current preview.
+            Your teacher approves a fixed copy. Later edits stay in your
+            workspace.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              aria-label="Share link"
-              value={shareUrl}
-              readOnly
-              onFocus={(event) => event.currentTarget.select()}
-            />
-            <Button onClick={copyLink} className="shrink-0">
-              {copied ? (
-                <CheckIcon className="size-4" />
-              ) : (
-                <CopyIcon className="size-4" />
-              )}
-              {copied ? "Copied" : "Copy link"}
-            </Button>
-          </div>
-          {copyError && (
-            <p role="alert" className="text-xs text-destructive">
-              {copyError}
-            </p>
-          )}
-          <div className="flex items-start justify-between gap-4 text-xs text-muted-foreground">
-            <p>
-              This link shows your latest changes and wakes a resting workspace.
-              Runtime trial links expire after seven days; copy a fresh link
-              here.
-            </p>
+        {share?.url ? (
+          <>
             <a
-              href={shareUrl}
+              className="break-all underline"
+              href={share.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex shrink-0 items-center gap-1 hover:underline"
             >
-              Open site <ExternalLinkIcon className="size-3" />
+              Open approved revision {share.revision}
             </a>
-          </div>
-        </div>
+            <Button
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(share.url!)
+                  .catch(() => setError("Select the link to copy it."))
+              }
+            >
+              Copy approved link
+            </Button>
+          </>
+        ) : (
+          <p>No approved link yet. Ask your teacher to review this project.</p>
+        )}
+        <Button disabled={busy} onClick={() => void approve()}>
+          {busy
+            ? "Preparing reviewed copy…"
+            : "Teacher: approve current revision"}
+        </Button>
+        {error && <p role="alert">{error}</p>}
       </DialogContent>
     </Dialog>
   );

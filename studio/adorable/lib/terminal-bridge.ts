@@ -1,4 +1,5 @@
 import type { PtySession } from "./project-runtime";
+import { prepareProjectRuntime } from "./prepare-project-runtime";
 import { devVm } from "./project-vm";
 
 /**
@@ -46,6 +47,7 @@ const bridge = (vmId: string, slug: string, command?: string) => {
   if (existing) return existing;
 
   const opening = (async (): Promise<BridgedSession> => {
+    await prepareProjectRuntime(vmId);
     const subscribers = new Set<(chunk: Uint8Array) => void>();
 
     const history: Uint8Array[] = [];

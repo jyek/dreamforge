@@ -1,3 +1,6 @@
+import { requestSandboxCreation } from "./runtime-provisioning";
+import { database } from "./database";
+import { prepareProjectRuntime } from "./prepare-project-runtime";
 import { randomUUID } from "crypto";
 import type { Vm } from "./project-runtime";
 import {
@@ -7,7 +10,10 @@ import {
   runtime,
   runtimeSandbox,
 } from "./project-runtime";
-import { BLANK_PROJECT_COMMAND } from "./blank-project.mjs";
+import {
+  BLANK_PROJECT_COMMAND,
+  TEMPLATE_COMPATIBILITY_COMMAND,
+} from "./blank-project.mjs";
 import { activityCommand } from "../scripts/activity-bridge.mjs";
 import {
   ADORABLE_DIR,
@@ -36,6 +42,21 @@ export async function restartDevServer(vm: Vm) {
   await startDevServer(vm);
 }
 
+/** The failed HTTP probe already established that repair is needed. */
+export async function restoreProjectServer(projectId: string): Promise<void> {
+  const sandbox = await runtimeSandbox(projectId); // one fresh provider status
+  if (
+    sandbox.state === "paused" ||
+    sandbox.state === "pausing" ||
+    sandbox.state === "resuming"
+  ) {
+    await sandbox.wake(); // memory resumes with its running server intact
+    return;
+  }
+  if (sandbox.state === "stopped") await sandbox.restart();
+  await startDevServer(devVm(projectId));
+}
+
 export type CreatedProjectVms = {
   projectId: string;
   previewDomain: string;
@@ -48,18 +69,53 @@ export async function createProjectVms(
   sourceRepoUrl?: string,
 ): Promise<CreatedProjectVms> {
   const projectId = `vm-${randomUUID().replaceAll("-", "")}`;
-  const sandbox = await runtime().sandboxes.create({
-    name: `dreamforge-${projectId}`,
-    vcpu: 2,
-    memoryMiB: 4096,
-    diskMiB: 10240,
-    idlePauseSeconds: PROJECT_IDLE_SECONDS,
-    autoWake: true,
-    labels: { application: "dreamforge", projectId, role: "dev" },
-    ...(process.env.RUNTIME_BASE_SNAPSHOT
-      ? { snapshot: process.env.RUNTIME_BASE_SNAPSHOT }
-      : {}),
-  });
+  const prepared = Boolean(process.env.RUNTIME_BASE_SNAPSHOT) && !sourceRepoUrl;
+  let sandboxId: string | undefined;
+  let sandbox: Awaited<ReturnType<typeof runtimeSandbox>>;
+  try {
+    sandboxId = await requestSandboxCreation({
+      name: `dreamforge-${projectId}`,
+      vcpu: 2,
+      memoryMiB: 4096,
+      diskMiB: 10240,
+      idlePauseSeconds: PROJECT_IDLE_SECONDS,
+      autoWake: true,
+      labels: { application: "dreamforge", projectId, role: "dev" },
+      ...(prepared ? { snapshot: process.env.RUNTIME_BASE_SNAPSHOT } : {}),
+    });
+    sandbox = await runtime().sandboxes.get(sandboxId, { timeoutMs: 15000 });
+    if (sandbox.state !== "running")
+      await sandbox.waitFor("running", {
+        timeoutSeconds: 60,
+        timeoutMs: 70000,
+      });
+    if (sandbox.state !== "running")
+      throw Object.assign(Error("Project hosting did not start."), {
+        code: "hosting_start_timeout",
+      });
+  } catch (error) {
+    // A timed-out create can have allocated compute. Reconcile only this exact
+    // request's generated name/label; never retry under a different identity.
+    try {
+      if (sandboxId)
+        await runtime().sandboxes.delete(sandboxId, { timeoutMs: 15000 });
+      else
+        for await (const candidate of await runtime().sandboxes.list(
+          {
+            name: `dreamforge-${projectId}`,
+            labels: { projectId },
+            includeStopped: true,
+          },
+          { timeoutMs: 10000 },
+        )) {
+          if (candidate.info.name === `dreamforge-${projectId}`)
+            await candidate.delete({ timeoutMs: 15000 });
+        }
+    } catch {
+      console.error("project.provision.cleanup.failed", { projectId });
+    }
+    throw error;
+  }
   try {
     await bindRuntime(projectId, sandbox.id);
     const vm = devVm(projectId);
@@ -80,19 +136,41 @@ export async function createProjectVms(
           `Could not prepare project: ${install.stderr?.slice(-500) || install.stdout?.slice(-500)}`,
         );
     }
-    if (!sourceRepoUrl) {
-      const reset = await vm.exec({ command: BLANK_PROJECT_COMMAND });
+    if (!sourceRepoUrl && !prepared) {
+      const reset = await vm.exec({
+        command: BLANK_PROJECT_COMMAND + "\n" + TEMPLATE_COMPATIBILITY_COMMAND,
+      });
       if (reset.statusCode !== 0)
         throw Error("Could not prepare a blank project");
     }
-    const activity = await vm.exec({ command: activityCommand });
-    if (activity.statusCode !== 0)
-      throw Error("Could not prepare preview activity tracking");
+    if (prepared) {
+      const manifest = JSON.parse(
+        await vm.fs.readTextFile("/adorable/starter.json"),
+      );
+      if (manifest.version !== "next-shadcn-v1")
+        throw Error("Unsupported prepared starter version.");
+    } else {
+      const activity = await vm.exec({ command: activityCommand });
+      if (activity.statusCode !== 0)
+        throw Error("Could not prepare preview activity tracking");
+    }
     const preview = await sandbox.previews.create(VM_PORT, {
       visibility: "private",
       ttlSeconds: 7 * 86400,
     });
-    await startDevServer(vm);
+    if (!prepared) await prepareProjectRuntime(projectId);
+    await database().query(
+      "update adorable.runtime_bindings set preview=$2 where project_id=$1",
+      [
+        projectId,
+        JSON.stringify({
+          url: preview.urlWithToken || preview.url,
+          baseUrl: preview.url,
+          token: preview.token,
+          expiresAt: preview.tokenExpiresAt,
+        }),
+      ],
+    );
     const previewDomain = new URL(preview.url).host;
     return { projectId, previewDomain, productionDomain: previewDomain };
   } catch (error) {

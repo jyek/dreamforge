@@ -12,9 +12,12 @@
     "bootstrap": "node scripts/bootstrap-base-snapshot.mjs",
     "runtime:migrate": "tsx scripts/migrate-runtime.mts",
     "runtime:test": "tsx scripts/test-runtime-workspace.mts",
-    "test:prompting": "tsx --test tests/final-response.test.ts tests/safe-progress.test.ts tests/empty-response-retry.test.ts tests/chat-input.test.ts tests/local-safety.test.ts && tsx tests/llm-smoke.ts && node --test tests/e2e-runner.test.mjs",
+    "test:prompting": "tsx --test tests/final-response.test.ts tests/safe-progress.test.ts tests/empty-response-retry.test.ts tests/chat-input.test.ts tests/model-context.test.ts tests/project-creation.test.ts tests/local-safety.test.ts && tsx tests/llm-smoke.ts && node --test tests/e2e-runner.test.mjs",
     "test:e2e:setup": "tsx scripts/provision-e2e.mts",
-    "test:e2e:prompting": "node scripts/e2e-prompting.mjs"
+    "test:e2e:prompting": "node scripts/e2e-prompting.mjs",
+    "test:safety-execution": "tsx --test tests/preview-access.test.ts tests/preview-asset-cache.test.ts tests/runtime-preview.test.ts tests/project-readiness.test.ts tests/managed-chat.test.ts tests/child-policy.test.ts tests/project-repository.test.ts tests/safety-mode.test.ts tests/builtin-moderation.test.ts tests/moderation-decision.test.ts tests/provider-privacy.test.ts tests/runtime-snapshot-name.test.ts && python3 tests/run-database-tests.py",
+    "test:preview-browser": "tsx --test tests/preview-browser.test.ts && node --import tsx tests/isolated-next-preview.mjs",
+    "runtime:prepare": "tsx scripts/prepare-project-runtimes.mts"
   },
   "prettier": {
     "plugins": [
@@ -35,6 +38,7 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@sparticuz/chromium": "^147.0.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "ai": "^6.0.50",
@@ -48,6 +52,7 @@
     "motion": "^12.29.2",
     "next": "16.1.5",
     "pg": "^8.23.1",
+    "playwright-core": "^1.64.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "remark-gfm": "^4.0.1",

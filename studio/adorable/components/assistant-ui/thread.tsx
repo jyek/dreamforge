@@ -73,12 +73,12 @@ export const Thread: FC<{
   return (
     <ReadOnlyContext.Provider value={readOnly}>
       <ThreadPrimitive.Root
-        className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
+        className="aui-root aui-thread-root @container flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
         style={{
           ["--thread-max-width" as string]: "44rem",
         }}
       >
-        <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex flex-1 flex-col overflow-x-hidden overflow-y-scroll px-4 pt-4">
+        <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll px-4 pt-4">
           {welcome && (
             <AssistantIf condition={({ thread }) => thread.isEmpty}>
               {welcome}
@@ -92,7 +92,7 @@ export const Thread: FC<{
             }}
           />
 
-          <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
+          <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) shrink-0 flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
             <AssistantIf condition={({ thread }) => thread.isRunning}>
               <div
                 role="status"
@@ -188,7 +188,7 @@ const ComposerAction: FC = () => {
           <TooltipIconButton
             tooltip="Send message"
             side="bottom"
-            type="submit"
+            type="button"
             variant="default"
             size="icon"
             className="aui-composer-send size-8 rounded-full"

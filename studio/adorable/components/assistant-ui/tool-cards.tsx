@@ -400,8 +400,8 @@ export const CheckAppToolCard: ToolCallMessagePartComponent = ({
         {running
           ? "Checking app…"
           : isOk
-            ? "App is healthy"
-            : "App returned an error"}
+            ? "Recorded checks passed"
+            : "Checks incomplete or failed"}
       </span>
       {!running && statusCode !== null && (
         <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">

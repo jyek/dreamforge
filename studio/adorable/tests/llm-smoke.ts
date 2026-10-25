@@ -57,6 +57,24 @@ try {
     assert.equal(settlements, maxSteps);
     console.log(`PASS ${maxSteps} steps: tool results followed by visible answer; accounting hooks preserved`);
   }
+  let fatal = false, formattedErrors = 0;
+  let recoveredMessages: any[] = [];
+  const recovered = await streamLlmResponse({
+    system:'Inspect then answer.',apiKey:'local-test',maxSteps:2,
+    messages:[{id:'recovered',role:'user',parts:[{type:'text',text:'Inspect then summarize.'}]}],
+    tools:{inspect:tool({inputSchema:z.object({}),execute:async():Promise<{ok:boolean}>=>{throw Error('Recoverable file read failure');}})},
+    onStreamError:async()=>{fatal=true;},
+  });
+  const recoveredReader = recovered.result.toUIMessageStream({
+    onError:()=>{formattedErrors++;return 'Tool failed';},
+    onFinish:({messages,isAborted})=>{recoveredMessages=ensureFinalResponse(messages,fatal||isAborted).messages;},
+  }).getReader();
+  while(!(await recoveredReader.read()).done) {}
+  assert.equal(formattedErrors,1);
+  assert.equal(fatal,false,'Tool errors must not mark the provider stream as failed');
+  assert.ok(recoveredMessages.at(-1).parts.some((p:any)=>p.type==='text'&&p.text==='SMOKE_FINAL_ANSWER'));
+  assert.ok(!recoveredMessages.at(-1).parts.some((p:any)=>p.type==='text'&&p.text.includes('Harness status')));
+  console.log('PASS recoverable tool error preserves the final reply without a false interrupted status');
   emptyFinal=true;
   const {result}=await streamLlmResponse({system:'Inspect then answer.',apiKey:'local-test',maxSteps:2,messages:[{id:'empty',role:'user',parts:[{type:'text',text:'Inspect then answer.'}]}],tools:{inspect:tool({inputSchema:z.object({}),execute:async()=>({ok:true})})}});
   let fallback:string|null=null;let saved:any[]=[];

@@ -1,3 +1,4 @@
+import { safetyEnabled } from "./safety-mode";
 import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
 import { database } from "./database";
@@ -40,7 +41,8 @@ export async function platformProjectAccess(
   );
   const row = rows[0];
   if (!row) return null;
-  if (readOnly && row.is_example) return row.metadata;
+  if (readOnly && row.is_example)
+    return !safetyEnabled() || profile ? row.metadata : null;
   if (!profile || row.is_example) return null;
   if (row.owner_id === profile.id) return row.metadata;
   if (readOnly && profile.role === "child") {

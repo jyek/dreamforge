@@ -1,4 +1,5 @@
 "use client";
+import { projectCreationResult } from "@/lib/project-creation-response";
 import { InlineSpinner } from "./dream-loading";
 import { useRef, useState, type FormEvent } from "react";
 import { Plus, Sparkles } from "lucide-react";
@@ -19,6 +20,7 @@ export function CreateProjectDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [repository, setRepository] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
@@ -33,13 +35,12 @@ export function CreateProjectDialog({
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: projectName }),
+        body: JSON.stringify({
+          name: projectName,
+          ...(repository.trim() ? { githubRepoName: repository.trim() } : {}),
+        }),
       });
-      const result = await response.json();
-      if (!response.ok)
-        throw Error(
-          result.error || "We couldn’t create your project. Try again.",
-        );
+      const result = await projectCreationResult(response);
       if (initialPrompt.trim())
         sessionStorage.setItem(
           `dreamforge:initial-prompt:${result.id}:${result.conversationId}`,
@@ -60,6 +61,7 @@ export function CreateProjectDialog({
         setOpen(next);
         if (next) {
           setName("");
+          setRepository("");
           setError("");
         }
       }}
@@ -108,6 +110,18 @@ export function CreateProjectDialog({
             disabled={busy}
             autoComplete="off"
             autoFocus
+          />
+          <label htmlFor="new-project-repository">
+            GitHub repository (optional)
+          </label>
+          <input
+            id="new-project-repository"
+            className="df-input"
+            value={repository}
+            onChange={(e) => setRepository(e.target.value)}
+            placeholder="owner/repository or a public GitHub URL"
+            disabled={busy}
+            autoComplete="off"
           />
           {error && (
             <p className="df-error" role="alert">

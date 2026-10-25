@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 const KEY = "dreamforge.sidebar.collapsed";
 const EVENT = "dreamforge:sidebar-preference";
 export function useSidebarState() {
@@ -18,13 +18,16 @@ export function useSidebarState() {
       window.removeEventListener("storage", read);
     };
   }, []);
-  function toggle() {
-    const next = !collapsed;
+  const setPreference = useCallback((next: boolean) => {
     setCollapsed(next);
     try {
       localStorage.setItem(KEY, String(next));
     } catch {}
     window.dispatchEvent(new Event(EVENT));
-  }
-  return { collapsed, toggle };
+  }, []);
+  return {
+    collapsed,
+    setCollapsed: setPreference,
+    toggle: () => setPreference(!collapsed),
+  };
 }

@@ -15,6 +15,7 @@ with tempfile.TemporaryDirectory(prefix='adorable-tests-') as tmp:
   run(cmd+['-f',str(root/'supabase/migrations/202610100006_student_harness.sql')])
   run(cmd,input='create schema adorable; create table adorable.projects(vm_id text primary key);')
   run(cmd+['-f',str(root/'supabase/migrations/202610120003_anonymous_safety.sql')])
+  run(cmd+['-f',str(root/'supabase/migrations/202610170001_execution.sql')])
   env=os.environ.copy();env['TEST_DATABASE_URL']=f'postgresql://harness_test@127.0.0.1:{port}/postgres';env['DATABASE_URL']=env['TEST_DATABASE_URL'];env['PATH']='/Users/justinyek/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:'+env['PATH']
-  print(run(['node','--import','tsx','--test','tests/quota-safety.test.ts'],cwd=root,env=env))
+  print(run(['node','--import','tsx','--test','tests/quota-safety.test.ts','tests/execution.test.ts'],cwd=root,env=env))
  finally: run(['pg_ctl','-D',str(data),'-m','immediate','-w','stop'])

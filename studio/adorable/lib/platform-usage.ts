@@ -1,3 +1,5 @@
+import { TOKEN_LIMIT_MESSAGE } from "./trusted-errors";
+import { QuotaError } from "./token-quota";
 import { database } from "./database";
 // Price caps sent to OpenRouter, not a promise of exact provider billing.
 export function estimatedCost(model: string, input: number, output: number) {
@@ -22,10 +24,7 @@ export async function reserveUsage(
       "update adorable.token_accounts set reserved_tokens=reserved_tokens+$2 where child_id=$1 and used_tokens+reserved_tokens+$2<=token_limit",
       [child, bound],
     );
-    if (!rowCount)
-      throw Error(
-        "You need more tokens for this request. Ask a parent to top up or try a smaller change.",
-      );
+    if (!rowCount) throw new QuotaError(TOKEN_LIMIT_MESSAGE);
     const { rows } = await db.query(
       "insert into adorable.usage_runs(child_id,vm_id,reserved_tokens) values($1,$2,$3) returning id",
       [child, project, bound],

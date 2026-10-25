@@ -8,6 +8,7 @@ import {
 import { useChat } from "@ai-sdk/react";
 import { type UIMessage } from "ai";
 import { useModelSettings } from "@/components/assistant-ui/model-settings";
+import { ProjectRevisionSync } from "@/components/project-revision-sync";
 import { Thread } from "@/components/assistant-ui/thread";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -54,6 +55,12 @@ export const Assistant = ({
   welcome?: ReactNode;
   readOnly?: boolean;
 }) => {
+  const revisionRef = useRef<{ project: string; revision: number } | null>(
+    null,
+  );
+  const rememberRevision = useCallback((project: string, revision: number) => {
+    revisionRef.current = { project, revision };
+  }, []);
   const [progress, setProgress] = useState("");
   const { choice: modelChoice, ready: modelReady } = useModelSettings();
   const modelChoiceRef = useRef(modelChoice);
@@ -380,8 +387,19 @@ export const Assistant = ({
           );
         }
 
+        if (revisionRef.current?.project !== active.projectId) {
+          const status = await fetch(
+            `/api/projects/${active.projectId}/execution`,
+            { cache: "no-store" },
+          );
+          if (!status.ok)
+            throw Error("Run status is unavailable. Reload before editing.");
+          const data = await status.json();
+          rememberRevision(active.projectId, data.revision);
+        }
         return {
           body: {
+            revision: revisionRef.current!.revision,
             ...options.body,
             modelChoice: modelChoiceRef.current,
             // The server loads authoritative history. Resending old image
@@ -431,6 +449,10 @@ export const Assistant = ({
   return (
     <AssistantRuntimeProvider key={runtimeKey} runtime={runtime}>
       <ThreadStateBridge onThreadStateChange={handleThreadStateChange} />
+      <ProjectRevisionSync
+        projectId={localProjectId}
+        onRevision={rememberRevision}
+      />
       <Thread welcome={welcome} progress={progress} readOnly={readOnly} />
     </AssistantRuntimeProvider>
   );

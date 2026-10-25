@@ -47,6 +47,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarState } from "@/lib/use-sidebar-state";
 
 type TerminalTab = {
   id: string;
@@ -109,11 +110,6 @@ export function ProjectWorkspaceShell({
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    loadProjects();
-  }, [loadProjects, projectId]);
 
   useEffect(() => {
     if (!threadIsRunning && !hasPublishingProject) return;
@@ -234,7 +230,14 @@ export function ProjectWorkspaceShell({
   const showWorkspacePanel = Boolean(projectId);
   const isMobile = useIsMobile();
   const [chatHidden, setChatHidden] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed } =
+    useSidebarState();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const sidebarOpen = isMobile ? mobileSidebarOpen : !sidebarCollapsed;
+  const setSidebarOpen = (open: boolean) => {
+    if (isMobile) setMobileSidebarOpen(open);
+    else setSidebarCollapsed(!open);
+  };
   const [profile, setProfile] = useState<{
     display_name: string;
     role: "teacher" | "child";
@@ -258,7 +261,7 @@ export function ProjectWorkspaceShell({
     window.dispatchEvent(new Event("adorable:projects-updated"));
   }, []);
   useEffect(() => {
-    setSidebarOpen(!isMobile);
+    setMobileSidebarOpen(false);
   }, [isMobile]);
   const [chatPercent, setChatPercent] = useState(29);
   const [resizing, setResizing] = useState(false);
@@ -345,7 +348,9 @@ export function ProjectWorkspaceShell({
                   ? "page"
                   : undefined
               }
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                if (isMobile) setMobileSidebarOpen(false);
+              }}
             >
               <section.icon size={20} aria-hidden="true" />
               <span>{section.label}</span>
@@ -439,7 +444,7 @@ export function ProjectWorkspaceShell({
                       if (chatHidden) {
                         setChatHidden(false);
                         setSidebarOpen(true);
-                      } else setSidebarOpen((open) => !open);
+                      } else setSidebarOpen(!sidebarOpen);
                     }}
                   >
                     <img
@@ -555,7 +560,7 @@ export function ProjectWorkspaceShell({
               >
                 <div
                   className={cn(
-                    "studio-chat relative min-w-0 overflow-hidden bg-[#f7f7f8]",
+                    "studio-chat relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#f7f7f8]",
 
                     !isMobile && chatHidden && "invisible",
                     isMobile && mobileView === "preview" && "hidden",
@@ -765,7 +770,11 @@ function AppPreview({
                   { id: "terminal", label: "Terminal", Icon: TerminalIcon },
                 ] as const
               )
-                .filter(({ id }) => !project.readOnly || id !== "terminal")
+                .filter(
+                  ({ id }) =>
+                    id !== "terminal" ||
+                    (!project.readOnly && project.shellAllowed === true),
+                )
                 .map(({ id, label, Icon }) => (
                   <button
                     key={id}
@@ -838,7 +847,7 @@ function AppPreview({
             <div className="flex h-full items-center justify-center bg-white">
               <div className="text-center">
                 <p className="mb-3 text-sm text-slate-500">
-                  Project resting after 5 minutes without activity.
+                  Project resting after 30 minutes without activity.
                 </p>
                 <button
                   onClick={() => void activity.resume()}
@@ -898,72 +907,74 @@ function AppPreview({
           <ProjectCode projectId={project.id} />
         </div>
       )}
-      {view === "terminal" && !activity.idle && (
-        <div
-          id="workspace-terminal"
-          role="tabpanel"
-          aria-label="Terminal"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
-        >
-          <div className="flex shrink-0 items-center gap-0 border-y bg-slate-100 px-1">
-            {allTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`group flex items-center gap-1 px-2 py-1.5 text-xs transition-colors ${
-                  activeTab === tab.id
-                    ? "border-b-2 border-foreground bg-slate-100 text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span>{tab.label}</span>
-                {tab.closable && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTerminal(tab.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
+      {view === "terminal" &&
+        project.shellAllowed === true &&
+        !activity.idle && (
+          <div
+            id="workspace-terminal"
+            role="tabpanel"
+            aria-label="Terminal"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
+          >
+            <div className="flex shrink-0 items-center gap-0 border-y bg-slate-100 px-1">
+              {allTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group flex items-center gap-1 px-2 py-1.5 text-xs transition-colors ${
+                    activeTab === tab.id
+                      ? "border-b-2 border-foreground bg-slate-100 text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {tab.closable && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
                         e.stopPropagation();
                         closeTerminal(tab.id);
-                      }
-                    }}
-                    className="ml-0.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
-                  >
-                    <XIcon className="size-3" />
-                  </span>
-                )}
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          closeTerminal(tab.id);
+                        }
+                      }}
+                      className="ml-0.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
+                    >
+                      <XIcon className="size-3" />
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={addTerminal}
+                className="ml-1 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="New terminal"
+              >
+                <PlusIcon className="size-3.5" />
               </button>
-            ))}
+            </div>
 
-            <button
-              type="button"
-              onClick={addTerminal}
-              className="ml-1 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              title="New terminal"
-            >
-              <PlusIcon className="size-3.5" />
-            </button>
+            <div className="relative min-h-0 flex-1 bg-white">
+              {allTabs.map((tab) => (
+                <VmTerminal
+                  key={tab.id}
+                  projectId={project.id}
+                  session={tab.session}
+                  className="absolute inset-0 h-full w-full p-1"
+                  // Kept mounted so a background terminal keeps receiving output.
+                  style={{ display: activeTab === tab.id ? "block" : "none" }}
+                />
+              ))}
+            </div>
           </div>
-
-          <div className="relative min-h-0 flex-1 bg-white">
-            {allTabs.map((tab) => (
-              <VmTerminal
-                key={tab.id}
-                projectId={project.id}
-                session={tab.session}
-                className="absolute inset-0 h-full w-full p-1"
-                // Kept mounted so a background terminal keeps receiving output.
-                style={{ display: activeTab === tab.id ? "block" : "none" }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
@@ -979,7 +990,9 @@ function BrowserControls({
 }) {
   const [urlValue, setUrlValue] = useState(() => {
     try {
-      return new URL(previewUrl).pathname;
+      return previewUrl.includes("/preview/")
+        ? "/"
+        : new URL(previewUrl).pathname;
     } catch {
       return "/";
     }
@@ -987,7 +1000,9 @@ function BrowserControls({
 
   useEffect(() => {
     try {
-      setUrlValue(new URL(previewUrl).pathname);
+      setUrlValue(
+        previewUrl.includes("/preview/") ? "/" : new URL(previewUrl).pathname,
+      );
     } catch {
       setUrlValue("/");
     }
@@ -995,11 +1010,14 @@ function BrowserControls({
 
   const previewPathUrl = (path: string) => {
     const url = new URL(previewUrl);
+    const previewBase = url.pathname.includes("/preview/")
+      ? url.pathname.replace(/\/$/, "")
+      : "";
     const requested = new URL(
       path.startsWith("/") ? path : `/${path}`,
       url.origin,
     );
-    url.pathname = requested.pathname;
+    url.pathname = previewBase + requested.pathname;
     for (const [key, value] of requested.searchParams)
       url.searchParams.set(key, value);
     return url.toString();

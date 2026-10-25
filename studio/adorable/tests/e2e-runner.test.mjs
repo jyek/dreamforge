@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 // Exercise the CLI itself over HTTP. Provider/runtime behavior is a fixture here;
 // this validates test-runner failures, not DreamForge's live deployment.
-for (const mode of ["success", "tool-only", "stream-error"])
+for (const mode of ["success", "reused-text-id", "tool-only", "stream-error"])
   test(`E2E runner: ${mode}`, async () => {
     const output = await mkdtemp(path.join(os.tmpdir(), "dreamforge-e2e-"));
     const histories = new Map();
@@ -43,6 +43,14 @@ for (const mode of ["success", "tool-only", "stream-error"])
         };
         return json({ id: project.id, project });
       }
+      if (
+        req.url === "/api/projects/vm-fixture/e2e" &&
+        req.method === "DELETE"
+      ) {
+        project = null;
+        histories.clear();
+        return json({ removed: true, snapshotsDeleted: 1 });
+      }
       if (req.url === "/api/projects")
         return json({ projects: project ? [project] : [] });
       if (req.url === "/api/projects/vm-fixture/conversations")
@@ -55,6 +63,8 @@ for (const mode of ["success", "tool-only", "stream-error"])
         return json({ files: ["app/page.tsx"] });
       if (req.url.startsWith("/api/projects/vm-fixture/files?"))
         return json({ content: "DreamForge E2E Counter" });
+      if (req.url === "/api/projects/vm-fixture/execution")
+        return json({ revision: 0 });
       if (req.url === "/api/projects/vm-fixture/runtime")
         return json({ ready: true });
       if (req.url === "/preview") {
@@ -84,12 +94,24 @@ for (const mode of ["success", "tool-only", "stream-error"])
         const events = [
           { type: "data-progress", data: { message: "Getting ready…" } },
         ];
+        if (build && mode === "reused-text-id")
+          events.push(
+            { type: "text-start", id: "answer" },
+            {
+              type: "text-delta",
+              id: "answer",
+              delta: "I will inspect the project first.",
+            },
+            { type: "text-end", id: "answer" },
+          );
         if (build)
           events.push({
             type: "tool-output-available",
             toolCallId: "fixture",
             output: { ok: true },
           });
+        if (build && mode === "reused-text-id")
+          events.push({ type: "text-start", id: "answer" });
         if (!(build && mode === "tool-only"))
           events.push({ type: "text-delta", id: "answer", delta: answer });
         if (build && mode === "stream-error")
@@ -127,9 +149,10 @@ for (const mode of ["success", "tool-only", "stream-error"])
       const report = JSON.parse(
         await readFile(path.join(output, "latest.json"), "utf8"),
       );
-      assert.equal(result.code, mode === "success" ? 0 : 1, result.logs);
-      assert.equal(report.status, mode === "success" ? "passed" : "failed");
-      if (mode === "success")
+      const success = mode === "success" || mode === "reused-text-id";
+      assert.equal(result.code, success ? 0 : 1, result.logs);
+      assert.equal(report.status, success ? "passed" : "failed");
+      if (success)
         assert.equal(
           report.checks.filter((c) => c.status === "passed").length,
           7,
@@ -139,6 +162,15 @@ for (const mode of ["success", "tool-only", "stream-error"])
           report.checks.at(-1).name,
           "code edit, app check, final answer and saved history",
         );
+      assert.equal(report.cleanup.status, "passed");
+      assert.equal(
+        project,
+        null,
+        "Test project must be removed even on failure",
+      );
+      await assert.rejects(() => readFile(path.join(output, "project.json")), {
+        code: "ENOENT",
+      });
       assert(
         !JSON.stringify(report).includes("test_session"),
         "Report must not contain authentication cookies",

@@ -1,3 +1,4 @@
+import { PROJECT_IDLE_SECONDS } from "../lib/project-idle.mjs";
 /** One-time, resumable migration. Freestyle source VMs are retained, never deleted. */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -119,7 +120,7 @@ try {
       vcpu: 2,
       memoryMiB: 4096,
       diskMiB: 10240,
-      idlePauseSeconds: 300,
+      idlePauseSeconds: PROJECT_IDLE_SECONDS,
       autoWake: true,
       labels: { application: "dreamforge", projectId: id, role: "dev" },
     });

@@ -1,3 +1,4 @@
+import { privateProviderFetch } from "./provider-privacy";
 import { withEmptyResponseRetry } from "./empty-response-retry";
 import { withQuotaFallback } from "./quota-fallback";
 import { DEFAULT_CODING_MODEL, QUOTA_FALLBACK_MODEL } from "./allowed-models";
@@ -14,7 +15,7 @@ import {
   convertToModelMessages,
 } from "ai";
 
-import { normalizeModelHistory } from "./model-history";
+import { compactPastToolHistory, normalizeModelHistory } from "./model-history";
 import { createModelRouting } from "./model-routing";
 import type { ModelChoice } from "./model-catalog";
 
@@ -27,6 +28,7 @@ const getProviderName = (override?: string): LlmProviderName => {
 };
 
 type StreamLlmResponseParams = {
+  abortSignal?: AbortSignal;
   system: string;
   messages: UIMessage[];
   tools: ToolSet;
@@ -51,6 +53,7 @@ type StreamLlmResponseResult = {
 };
 
 export const streamLlmResponse = async ({
+  abortSignal,
   system,
   messages,
   tools,
@@ -63,10 +66,11 @@ export const streamLlmResponse = async ({
   modelChoice,
   modelOverride,
 }: StreamLlmResponseParams): Promise<StreamLlmResponseResult> => {
-  system += "\nWhen the user asks you to build or change the app, carry out the changes with the tools in this turn. A plan, file inspection, or promise to implement later is not completion. Continue from successful tool results without asking the user to say continue. Before ending, either summarize the implemented result and checks, or explicitly explain the blocker and what remains incomplete. For questions, answer directly without unnecessary edits.";
+  system +=
+    "\nOlder tool payloads are omitted from prior turns to keep context small. Read the current project files before changing them; never assume an old file listing is current.\nWhen the user asks you to build or change the app, carry out the changes with the tools in this turn. A plan, file inspection, or promise to implement later is not completion. Continue from successful tool results without asking the user to say continue. Before ending, either summarize the implemented result and checks, or explicitly explain the blocker and what remains incomplete. For questions, answer directly without unnecessary edits.";
   const provider = getProviderName(providerOverride);
   const modelMessages = normalizeModelHistory(
-    await convertToModelMessages(messages),
+    compactPastToolHistory(await convertToModelMessages(messages)),
   );
   const stepLimit = Math.max(2, Math.min(20, Math.floor(maxSteps)));
   const prepareStep = async ({
@@ -95,10 +99,15 @@ export const streamLlmResponse = async ({
         ? createModelRouting(
             modelChoice,
             apiKey || process.env.OPENROUTER_API_KEY!,
+            { request: privateProviderFetch() },
           )
         : undefined;
     const openaiProvider = createOpenAI({
-      ...(routing ? { fetch: routing.fetch } : {}),
+      ...(routing
+        ? { fetch: routing.fetch }
+        : baseURL?.includes("openrouter.ai")
+          ? { fetch: privateProviderFetch() }
+          : {}),
       apiKey:
         apiKey ||
         process.env["OPENROUTER_API_KEY"] ||
@@ -118,6 +127,7 @@ export const streamLlmResponse = async ({
           )
         : model;
     const result = streamText({
+      abortSignal,
       system,
       model: withEmptyResponseRetry(routedModel),
       messages: modelMessages,
@@ -126,7 +136,9 @@ export const streamLlmResponse = async ({
       prepareStep,
       maxRetries: routing ? 0 : 2,
       timeout: { stepMs: 90000, totalMs: 240000 },
-      onAbort: async () => { await onStreamError?.(); },
+      onAbort: async () => {
+        await onStreamError?.();
+      },
       onError: async () => {
         await onStreamError?.();
       },
@@ -152,13 +164,19 @@ export const streamLlmResponse = async ({
     ? createAnthropic({ apiKey })
     : createAnthropic({});
   const result = streamText({
+    abortSignal,
     system,
     model: anthropicProvider("claude-sonnet-4-20250514"),
+    onError: async () => {
+      await onStreamError?.();
+    },
     messages: modelMessages,
     tools,
     prepareStep,
     timeout: { stepMs: 90000, totalMs: 240000 },
-    onAbort: async () => { await onStreamError?.(); },
+    onAbort: async () => {
+      await onStreamError?.();
+    },
     onStepFinish: async ({ usage, response }) => {
       await afterStep?.({ ...usage, modelId: response.modelId });
     },

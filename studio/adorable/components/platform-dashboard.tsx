@@ -16,6 +16,7 @@ import { ProfileModuleHeader } from "./profile-module-header";
 import { CopyButton } from "./copy-button";
 import { signOut } from "./studio-sidebar";
 import { PlatformClassCard } from "./platform-class-card";
+import { TableEmptyState } from "./table-empty-state";
 import {
   School,
   FolderKanban,
@@ -412,14 +413,15 @@ export function PlatformDashboard({
                     </article>
                   ))}
                 </div>
-              ) : teacher ? (
-                <div className="df-empty">
-                  Create your first project, then share it with a classroom.
-                </div>
               ) : (
-                <div className="df-empty">
-                  Your first project will appear here. Start with an idea above.
-                </div>
+                <TableEmptyState
+                  title="Your next idea starts here"
+                  description={
+                    teacher
+                      ? "Create your first project, then share it with a classroom."
+                      : "Your first project will appear here. Start with an idea above."
+                  }
+                />
               )}
             </section>
           )}

@@ -1,3 +1,4 @@
+import { childPolicy } from "@/lib/child-policy";
 import { safetyEnabled, moderationConfigured } from "@/lib/safety-mode";
 import { demoMode } from "@/lib/demo-mode";
 import {
@@ -11,12 +12,13 @@ import { database } from "@/lib/database";
 export async function GET() {
   if (demoMode())
     return Response.json({
+      policy: childPolicy(),
       demo: true,
       user: null,
       safety: {
         enabled: safetyEnabled(),
-        moderationReady: true,
-        method: "local-rules",
+        moderationReady: moderationConfigured(),
+        method: "remote-under-13",
         classroomModerationReady: moderationConfigured(),
       },
     });
@@ -29,6 +31,7 @@ export async function GET() {
       [user.id],
     );
     return Response.json({
+      policy: childPolicy(),
       user: {
         id: user.id,
         role: rows[0].teacher ? "teacher" : "student",

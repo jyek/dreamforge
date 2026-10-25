@@ -1,8 +1,16 @@
+import { verifyApp, interactionSchema } from "./verification";
+import {
+  assertRun,
+  markEdit,
+  currentRun,
+  event,
+  ensureRunSnapshot,
+} from "./execution";
 import { tool } from "ai";
 import type { Vm } from "./project-runtime";
 import { z } from "zod";
 import { restartDevServer } from "./project-vm";
-import { APP_SESSION, VM_PORT, WORKDIR } from "./vars";
+import { WORKDIR } from "./vars";
 
 /**
  * Resolve a workdir-relative path to the absolute path the VM filesystem API
@@ -244,45 +252,9 @@ export const createTools = (vm: Vm) => {
 
   const checkAppTool = tool({
     description:
-      "Check that the app is running correctly by requesting the dev server and scanning its logs for compile or runtime errors. You MUST call this before telling the user a task is finished. If the status code is not 200 or the logs show errors, fix them before reporting completion.",
-    inputSchema: z.object({
-      path: z
-        .string()
-        .default("/")
-        .describe("The URL path to check (e.g. '/' or '/about')."),
-    }),
-    execute: async ({ path }) => {
-      const urlPath = path?.startsWith("/") ? path : `/${path ?? ""}`;
-      const result = await run(
-        `curl -s -o /dev/null -w '%{http_code}' http://localhost:${VM_PORT}${urlPath}`,
-      );
-      const statusCode = Number.parseInt(result.stdout.trim(), 10);
-
-      const logs = await readDevServerLogs();
-      const issueRegex =
-        /(error -|failed to compile|module not found|unhandled runtime error|referenceerror|typeerror|syntaxerror|cannot find module)/i;
-      const issues = logs
-        .split("\n")
-        .filter((line) => issueRegex.test(line))
-        .slice(-20);
-
-      const httpOk = statusCode >= 200 && statusCode < 400;
-      const ok = httpOk && issues.length === 0;
-
-      return {
-        ok,
-        statusCode: Number.isNaN(statusCode) ? null : statusCode,
-        url: `http://localhost:${VM_PORT}${urlPath}`,
-        issues,
-        ...(ok
-          ? {}
-          : {
-              error: httpOk
-                ? "App is reachable, but the dev server logs show issues."
-                : `App returned HTTP ${statusCode}. Investigate before reporting completion.`,
-            }),
-      };
-    },
+      "Collect revision-specific compiler, browser rendering, runtime-error and bounded button-interaction evidence.",
+    inputSchema: z.object({ interactions: interactionSchema }),
+    execute: async ({ interactions }) => verifyApp(vm, interactions),
   });
 
   const devServerLogsTool = tool({
@@ -317,7 +289,7 @@ export const createTools = (vm: Vm) => {
     },
   });
 
-  return {
+  const tools = {
     bashTool,
     readFileTool,
     writeFileTool,
@@ -332,4 +304,42 @@ export const createTools = (vm: Vm) => {
     devServerLogsTool,
     restartDevServerTool,
   };
+  let tail: Promise<unknown> = Promise.resolve();
+  for (const [name, value] of Object.entries(tools)) {
+    const execute = value.execute!;
+    value.execute = ((...args: Parameters<typeof execute>) => {
+      const next = tail.then(async () => {
+        const active = await assertRun();
+        await event(active, "tool.started", { name });
+        if (
+          ![
+            "readFileTool",
+            "listFilesTool",
+            "searchFilesTool",
+            "checkAppTool",
+            "devServerLogsTool",
+          ].includes(name)
+        ) {
+          await ensureRunSnapshot(active);
+          await markEdit(name);
+        }
+        try {
+          const result = await (
+            execute as unknown as (...values: unknown[]) => unknown
+          )(...args);
+          await event(active, "tool.completed", { name });
+          return result;
+        } catch (e) {
+          await event(active, "tool.failed", { name });
+          throw e;
+        }
+      });
+      const active = currentRun();
+      active?.pending.add(next);
+      void next.finally(() => active?.pending.delete(next)).catch(() => {});
+      tail = next.catch(() => {});
+      return next;
+    }) as typeof execute;
+  }
+  return tools;
 };

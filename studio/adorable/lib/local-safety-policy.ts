@@ -8,7 +8,7 @@ const rules: {category:string;severity:'high'|'critical';pattern:RegExp}[] = [
  {category:'bullying',severity:'high',pattern:/\b(?:bully|harass|humiliate|threaten)\s+(?:my\s+|a\s+|the\s+)?(?:classmate|teacher|student|friend|person|someone)\b/i},
  {category:'hate',severity:'high',pattern:/\b(?:racial\s+slurs?|hate\s+speech|white\s+supremacy|ethnic\s+cleansing)\b/i},
  {category:'prompt_manipulation',severity:'high',pattern:/\b(?:ignore|bypass|disable|override)\s+(?:(?:all|your|the|previous)\s+)*(?:safety|rules|instructions|restrictions|system\s+prompt)\b|\b(?:reveal|print|show)\s+(?:your\s+|the\s+)?system\s+prompt\b/i},
- {category:'malicious_code',severity:'high',pattern:/\b(?:malware|ransomware|keylogger|credential\s+steal(?:er|ing)|phishing\s+(?:page|site)|ddos)\b|\b(?:steal|exfiltrate)\s+(?:passwords?|cookies?|credentials?|tokens?)\b|\b(?:run|execute)\s+(?:a\s+)?(?:shell|bash|terminal)\s+command\b/i},
+ {category:'malicious_code',severity:'high',pattern:/\b(?:malware|ransomware|keylogger|credential\s+steal(?:er|ing)|phishing\s+(?:page|site)|ddos)\b|\b(?:steal|exfiltrate)\s+(?:passwords?|cookies?|credentials?|tokens?)\b/i},
  {category:'privacy',severity:'high',pattern:/\b(?:collect|reveal|publish|find|share)\s+(?:(?:my|their|student|students|classmate|classmates|home|real|full|a|the)\s+)*(?:addresses?|phone\s+numbers?|passwords?|api\s+keys?|private\s+(?:emails?|photos?))\b/i},
 ];
 export function localSafetyDecision(text:string):LocalDecision {

@@ -1,3 +1,5 @@
+import { resolveRuntimePreview, type RuntimePreview } from "./runtime-preview";
+import { runtimeSnapshotName } from "./runtime-snapshot-name";
 import { Runtime } from "withruntime";
 import type { Terminal } from "withruntime";
 import { database } from "./database";
@@ -53,7 +55,8 @@ const terminalPath = (slug: string | number) => {
 };
 class ProjectVm {
   constructor(readonly id: string) {}
-  private sandbox = () => runtimeSandbox(this.id);
+  private sandboxPromise?: ReturnType<typeof runtimeSandbox>;
+  private sandbox = () => (this.sandboxPromise ??= runtimeSandbox(this.id));
   fs = {
     readTextFile: async (path: string) =>
       (await this.sandbox()).files.readText(path),
@@ -71,7 +74,9 @@ class ProjectVm {
       (await this.sandbox()).files.remove(path, { recursive: true }),
   };
   async data() {
-    const info = (await this.sandbox()).info;
+    const sandbox = await this.sandbox();
+    await sandbox.refresh();
+    const info = sandbox.info;
     return {
       ...info,
       resources: {
@@ -83,6 +88,7 @@ class ProjectVm {
   }
   async start() {
     const sandbox = await this.sandbox();
+    await sandbox.refresh();
     if (sandbox.state === "stopped") await sandbox.restart();
     else if (sandbox.state !== "running") await sandbox.wake();
     return sandbox.info;
@@ -90,11 +96,30 @@ class ProjectVm {
   async pause() {
     return (await this.sandbox()).pause();
   }
-  async exec(input: string | { command: string; timeoutMs?: number }) {
+  async exec(
+    input:
+      | string
+      | { command: string; timeoutMs?: number; signal?: AbortSignal },
+  ) {
     const options = typeof input === "string" ? { command: input } : input;
-    const result = await (
-      await this.sandbox()
-    ).exec(options.command, { timeoutMs: options.timeoutMs });
+    const { currentRun } = await import("./execution");
+    const active = currentRun();
+    let result;
+    try {
+      result = await (
+        await this.sandbox()
+      ).exec(options.command, {
+        timeoutMs: options.timeoutMs,
+        signal: options.signal || active?.signal,
+      });
+    } catch (error) {
+      const details = (
+        error as { details?: { processId?: string; stopped?: boolean } }
+      ).details;
+      if (active && details?.processId && !details.stopped)
+        active.unsafeToUnlock = true;
+      throw error;
+    }
     return {
       stdout: result.stdout,
       stderr: result.stderr,
@@ -102,10 +127,23 @@ class ProjectVm {
     };
   }
   async snapshot(options: { displayName?: string }) {
-    const snapshot = await (
-      await this.sandbox()
-    ).snapshot({ name: options.displayName, retentionDays: 7 });
-    return { snapshotId: snapshot.id };
+    const sandbox = await this.sandbox();
+    await sandbox.refresh();
+    const autoWake = sandbox.info.autoWake !== false;
+    await sandbox.update({ autoWake: false });
+    try {
+      const snapshot = await sandbox.snapshot({
+        // Recovery starts a clean server; do not preserve running guest processes.
+        mode: "disk",
+        name: options.displayName
+          ? runtimeSnapshotName(options.displayName)
+          : undefined,
+        retentionDays: 7,
+      });
+      return { snapshotId: snapshot.id };
+    } finally {
+      await sandbox.update({ autoWake });
+    }
   }
   private async session(
     options: PtyOptions,
@@ -174,38 +212,46 @@ class ProjectVm {
 export const projectVm = (projectId: string): Vm => new ProjectVm(projectId);
 
 export async function runtimePreview(projectId: string, fresh = false) {
-  const { rows } = await database().query(
-    "select preview from adorable.runtime_bindings where project_id=$1",
-    [projectId],
-  );
-  const saved = rows[0]?.preview as
-    | {
-        url: string;
-        baseUrl: string;
-        token: string | null;
-        expiresAt: string | null;
-      }
-    | undefined;
-  if (
-    !fresh &&
-    saved &&
-    (!saved.expiresAt || Date.parse(saved.expiresAt) > Date.now() + 3600000)
-  )
-    return saved;
-  const sandbox = await runtimeSandbox(projectId);
-  // Free accounts require bearer links. Never expose the account API key.
-  const preview = await sandbox.previews.get(3000, 7 * 86400);
-  const result = {
-    url: preview.urlWithToken || preview.url,
-    baseUrl: preview.url,
-    token: preview.token,
-    expiresAt: preview.tokenExpiresAt,
-  };
-  await database().query(
-    "update adorable.runtime_bindings set preview=$2 where project_id=$1",
-    [projectId, JSON.stringify(result)],
-  );
-  return result;
+  return resolveRuntimePreview(fresh, {
+    readState: async () => {
+      const {
+        rows: [state],
+      } = await database().query(
+        `select b.preview, exists(
+          select 1 from adorable.project_execution p
+          join adorable.execution_runs r on r.id=p.active_run
+          where p.project_id=b.project_id and r.state='running' and r.snapshot_id is null
+          and exists(select 1 from adorable.execution_events e where e.run_id=r.id and e.kind='snapshot.started')
+        ) as capturing from adorable.runtime_bindings b where b.project_id=$1`,
+        [projectId],
+      );
+      return {
+        saved: state?.preview as RuntimePreview | null | undefined,
+        capturing: state?.capturing === true,
+      };
+    },
+    prepare: async () => {
+      const { prepareProjectRuntime } =
+        await import("./prepare-project-runtime");
+      await prepareProjectRuntime(projectId);
+    },
+    issue: async () => {
+      const sandbox = await runtimeSandbox(projectId);
+      // Free accounts require bearer links. Never expose the account API key.
+      const preview = await sandbox.previews.get(3000, 7 * 86400);
+      const result = {
+        url: preview.urlWithToken || preview.url,
+        baseUrl: preview.url,
+        token: preview.token,
+        expiresAt: preview.tokenExpiresAt,
+      };
+      await database().query(
+        "update adorable.runtime_bindings set preview=$2 where project_id=$1",
+        [projectId, JSON.stringify(result)],
+      );
+      return result;
+    },
+  });
 }
 
 export async function deleteRuntime(projectId: string) {

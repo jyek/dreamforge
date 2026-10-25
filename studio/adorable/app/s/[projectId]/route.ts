@@ -1,3 +1,5 @@
+import { safetyEnabled } from "@/lib/safety-mode";
+import { database } from "@/lib/database";
 import { runtimePreview } from "@/lib/project-runtime";
 import { readProjectMetadata } from "@/lib/project-storage";
 import { prodVm, startDevServer } from "@/lib/project-vm";
@@ -9,6 +11,19 @@ export async function GET(
   const { projectId } = await params;
   if (!/^vm-[a-z0-9]+$/.test(projectId))
     return new Response("Shared project not found.", { status: 404 });
+  if (safetyEnabled()) {
+    const {
+      rows: [share],
+    } = await database().query(
+      "select url from adorable.approved_shares where project_id=$1 order by created_at desc limit 1",
+      [projectId],
+    );
+    return share
+      ? Response.redirect(share.url, 307)
+      : new Response("This project needs teacher approval before sharing.", {
+          status: 404,
+        });
+  }
   const metadata = await readProjectMetadata(projectId).catch(() => null);
   if (!metadata?.liveReleaseId)
     return new Response("This project has not been shared yet.", {

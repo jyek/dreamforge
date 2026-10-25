@@ -1,144 +1,92 @@
-/**
- * Build the snapshot every Adorable project boots from.
- *
- * Boots a plain Ubuntu VM, clones the Next.js + shadcn template into the
- * workdir, installs its dependencies, starts the dev server and requests the
- * pages until Next has compiled them — then snapshots all of that.
- *
- * A snapshot captures memory as well as disk, so the running, already-compiled
- * dev server comes back with the VM. A project created from this snapshot is
- * serving its preview in well under a second, rather than spending ~10s on a
- * cold boot and first compile.
- *
- * Run once per template change:  npm run bootstrap
- */
+/** Build a clean Runtime starter once; new projects inherit dependencies and warm state. */
 import "dotenv/config";
-import { Freestyle } from "freestyle";
-import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
-import { activityCommand } from './activity-bridge.mjs';
-import { BLANK_PROJECT_COMMAND } from '../lib/blank-project.mjs';
-setDefaultAutoSelectFamilyAttemptTimeout(5000);
-
-const WORKDIR = "/workspace";
-const VM_PORT = 3000;
-/** Routes requested before snapshotting, so their compile is already done. */
-const WARM_PATHS = ["/"];
-/** Must match APP_SESSION in lib/vars.ts. */
-const APP_SESSION = "dev";
-const ADORABLE_DIR = "/adorable";
-const SNAPSHOT_SLUG = "adorable-base-small";
-const TEMPLATE_REPO =
-  "https://github.com/freestyle-sh/freestyle-base-nextjs-shadcn";
-
-const apiKey = process.env.FREESTYLE_API_KEY;
-if (!apiKey) {
-  console.error("FREESTYLE_API_KEY is not set.");
-  process.exit(1);
-}
-
-const freestyle = new Freestyle({ apiKey, baseUrl: process.env.FREESTYLE_BASE_URL });
-const started = Date.now();
-const log = (...args) =>
-  console.log(`[${((Date.now() - started) / 1000).toFixed(1)}s]`, ...args);
-
-const check = (label, result) => {
-  if (result.statusCode !== 0) {
-    throw new Error(
-      `${label} failed (exit ${result.statusCode}):\n${result.stderr || result.stdout}`,
-    );
-  }
-  return result;
-};
-
-// A slug names one snapshot, so rebuilding means retiring the previous build.
-const { snapshots } = await freestyle.vms.snapshots.list({ limit: 200 });
-for (const snapshot of snapshots.filter((s) => s.slug === SNAPSHOT_SLUG)) {
-  await freestyle.vms.snapshots.update(snapshot.id, { slug: "" });
-  log(`released slug from previous snapshot ${snapshot.id}`);
-}
-
-const { vm, vmId } = await freestyle.vms.create({
-  snapshotId: "freestyle/ubuntu-sm",
-  displayName: "adorable base snapshot build",
-  // The build VM is scaffolding: it deletes itself if anything here throws.
-  ttlSeconds: 3600,
-  firewall: {
-    rules: [{ action: "allow", source: {}, destination: { public: true } }],
-  },
+import fs from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { Runtime } from "withruntime";
+import {
+  BLANK_PROJECT_COMMAND,
+  TEMPLATE_COMPATIBILITY_COMMAND,
+} from "../lib/blank-project.mjs";
+import { activityCommand } from "./activity-bridge.mjs";
+import { PROJECT_IDLE_SECONDS } from "../lib/project-idle.mjs";
+const VERSION = "next-shadcn-v1";
+const COMMIT = "f41536d65ee65adce2b327c30e39cc368dd69595";
+const runtime = new Runtime({ waitForCapacityMs: 0 });
+const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
+const builder = await runtime.sandboxes.create({
+  name: `dreamforge-starter-build-${randomUUID()}`,
+  vcpu: 2,
+  memoryMiB: 4096,
+  diskMiB: 10240,
+  idlePauseSeconds: PROJECT_IDLE_SECONDS,
+  autoWake: true,
+  labels: { application: "dreamforge", role: "starter-build" },
 });
-log("booted build VM", vmId);
-
+const check = async (command, timeoutMs = 60000) => {
+  const r = await builder.exec(command, { timeoutMs });
+  if (r.exitCode !== 0)
+    throw Error(
+      `Starter build command failed: ${(r.stderr || r.stdout).slice(-1500)}`,
+    );
+  return r;
+};
 try {
-  const user = check("Detect user", await vm.exec({ command: "id -un" })).stdout.trim();
-  if (!/^[a-z_][a-z0-9_-]*[$]?$/.test(user)) throw new Error("Unexpected VM username");
-  check("Create writable directories", await vm.exec({
-    linuxUser: "root",
-    command: `mkdir -p ${WORKDIR} ${ADORABLE_DIR} && chown -R ${user}:${user} ${WORKDIR} ${ADORABLE_DIR}`,
-  }));
-  check(
-    "Clone",
-    await vm.exec({
-      command: `git clone --depth 1 ${TEMPLATE_REPO} ${WORKDIR} && rm -rf ${WORKDIR}/.git`,
-      timeoutMs: 300_000,
-    }),
+  await check(
+    `sudo mkdir -p /workspace /adorable/conversations /adorable/terminals && sudo chown -R $(id -u):$(id -g) /workspace /adorable`,
   );
-  log("cloned template");
-  check("Prepare blank app", await vm.exec({ command: BLANK_PROJECT_COMMAND }));
-
-  check(
-    "Install",
-    await vm.exec({
-      command: `cd ${WORKDIR} && npm install --no-audit --no-fund`,
-      timeoutMs: 300_000,
-    }),
+  await check(
+    `git clone https://github.com/freestyle-sh/freestyle-base-nextjs-shadcn /tmp/starter && cd /tmp/starter && git checkout ${COMMIT} && cp -a . /workspace/ && rm -rf /workspace/.git /tmp/starter`,
+    120000,
   );
-  log("installed dependencies");
-  check("Activity bridge", await vm.exec({command:activityCommand}));
-
-  check(
-    "Prepare",
-    await vm.exec({ command: `mkdir -p ${ADORABLE_DIR}/conversations` }),
+  await check(BLANK_PROJECT_COMMAND + "\n" + TEMPLATE_COMPATIBILITY_COMMAND);
+  await check("cd /workspace && npm ci --no-audit --no-fund", 240000);
+  // The upstream template lock predates the React/Next security patches.
+  // Resolve these exact patch releases once here, then freeze the resulting lock.
+  await check("cd /workspace && npm install --save-exact next@15.5.28 react@19.1.10 react-dom@19.1.10 --no-audit --no-fund", 240000);
+  await check(activityCommand);
+  await check("cd /workspace && npx tsc --noEmit --incremental false", 60000);
+  const lock = await builder.files.readText("/workspace/package-lock.json");
+  const manifest = {
+    version: VERSION,
+    templateCommit: COMMIT,
+    dependencies: {next: "15.5.28", react: "19.1.10", "react-dom": "19.1.10"},
+    lockHash: createHash("sha256").update(lock).digest("hex"),
+    createdAt: new Date().toISOString(),
+  };
+  await builder.files.write("/adorable/starter.json", JSON.stringify(manifest));
+  await builder.files.write("/adorable/developer-runtime-v1", "ready");
+  const process = await builder.spawn(
+    "cd /workspace && npm run dev -- --hostname 0.0.0.0 > /adorable/dev.log 2>&1",
+    { pty: { cols: 120, rows: 30 }, stdin: "pipe" },
   );
-
-  // Start the dev server under the name projects address it by. The name is
-  // captured in the snapshot along with the session, so a project restored
-  // from it finds the server already running rather than starting a second.
-  const session = await vm.pty.open({
-    slug: APP_SESSION,
-    exec: `cd ${WORKDIR} && npm run dev`,
-    replaceOnExit: true,
-    cols: 120,
-    rows: 30,
+  await builder.files.write(
+    "/adorable/terminals/dev.json",
+    JSON.stringify({ processId: process.id }),
+  );
+  await check(
+    "for attempt in $(seq 1 30); do if curl -fsS http://localhost:3000/ >/tmp/starter-page.html; then exit 0; fi; sleep 1; done; exit 1",
+    60000,
+  );
+  // No project conversations, credentials, preview tokens or learner content enter the base.
+  const snapshot = await builder.snapshot({
+    mode: "memory",
+    name: `dreamforge-${VERSION}-${Date.now()}`,
+    retentionDays: 365,
+    labels: { application: "dreamforge", role: "starter", version: VERSION },
   });
-  session.detach();
-  log(`dev server started (session "${session.slug}")`);
-
-  // Warm it: the first request is what makes Next compile a route, and that
-  // compile is most of a new project's wait. Doing it here means every project
-  // inherits the result.
-  for (const path of WARM_PATHS) {
-    let served = false;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const { stdout } = await vm.exec({
-        command: `curl -s -o /dev/null -w '%{http_code}' http://localhost:${VM_PORT}${path}`,
-        timeoutMs: 60_000,
-      }).catch(() => ({stdout: ""}));
-      if (stdout?.trim() === "200") {
-        served = true;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-    if (!served) throw new Error(`Dev server never served ${path}`);
-    log(`warmed ${path}`);
-  }
-
-  const { snapshotId } = await vm.snapshot({
-    slug: SNAPSHOT_SLUG,
-    displayName: "Adorable small base (2 vCPU / 4 GiB, Next.js + shadcn)",
-  });
-  log(`snapshot ready: ${snapshotId} (slug "${SNAPSHOT_SLUG}")`);
+  const result = {
+    ...manifest,
+    snapshotId: snapshot.id,
+    mode: snapshot.mode,
+    builderId: builder.id,
+  };
+  await fs.mkdir(".deployment", { recursive: true });
+  await fs.writeFile(
+    ".deployment/prepared-starter.json",
+    JSON.stringify(result, null, 2),
+    { mode: 0o600 },
+  );
+  console.log(JSON.stringify(result));
 } finally {
-  await freestyle.vms.delete(vmId).catch(() => {});
-  log("deleted build VM");
+  await builder.delete();
 }

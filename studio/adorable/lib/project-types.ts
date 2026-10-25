@@ -23,6 +23,8 @@ export type ProjectConversationSummary = {
  */
 export type ProjectMetadata = {
   version: 3;
+  /** Explicit opt-in for disposable E2E projects. */
+  e2eRunId?: string;
   name: string;
   createdAt: string;
   /**
@@ -42,6 +44,7 @@ export type ProjectMetadata = {
 };
 
 export type ProjectItem = {
+  shellAllowed?: boolean;
   readOnly?: boolean;
   id: string;
   name: string;

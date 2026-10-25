@@ -35,7 +35,7 @@ test("long text plus image is counted separately and reaches the model as an ima
 test("image-only requests work; unsupported models and oversize text fail clearly", () => {
   const only = { id: "i", role: "user" as const, parts: [image] };
   assert.ok(demoChatInput(only, "glm").prompt);
-  for (const choice of ["auto", "free", "qwen"] as const)
+  for (const choice of ["auto", "free"] as const)
     assert.throws(
       () => demoChatInput(message("short"), choice),
       /Choose DeepSeek/,
@@ -88,4 +88,11 @@ test("vision routing preserves image payload and explicit model selection", asyn
   });
   assert.equal(body.model, "deepseek/deepseek-v4.1-flash");
   assert.equal(body.messages[0].content[1].image_url.url, image.url);
+});
+
+test("image count, MIME matching and non-image attachments are bounded", () => {
+  const only = { id: "images", role: "user" as const, parts: [image] };
+  assert.throws(() => demoChatInput({ ...only, parts: [image, image, image, image] }, "glm"), /three images/);
+  assert.throws(() => demoChatInput({ ...only, parts: [{ ...image, mediaType: "image/jpeg" }] }, "glm"), /PNG/);
+  assert.throws(() => demoChatInput({ ...only, parts: [{ ...image, mediaType: "text/plain", url: "data:text/plain;base64,AA==" }] }, "glm"), /PNG/);
 });

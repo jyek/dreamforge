@@ -1,3 +1,5 @@
+import { browserPreviewUrl } from "@/lib/preview-access";
+import { safetyEnabled } from "@/lib/safety-mode";
 import { getProfile, platformEnabled, checkOrigin } from "@/lib/platform-auth";
 import { classroomAccess } from "@/lib/classroom-data";
 import { database } from "@/lib/database";
@@ -27,7 +29,7 @@ export async function POST(
       { error: "Project not found in this classroom." },
       { status: 404 },
     );
-  if (rows[0].metadata.staticProductionUrl)
+  if (!safetyEnabled() && rows[0].metadata.staticProductionUrl)
     return Response.json({ url: rows[0].metadata.staticProductionUrl });
   try {
     await touchRuntime(projectId);
@@ -43,7 +45,9 @@ export async function POST(
       ))
     )
       return Response.json({ starting: true }, { status: 202 });
-    return Response.json({ url: preview.url });
+    return Response.json({
+      url: safetyEnabled() ? browserPreviewUrl(projectId) : preview.url,
+    });
   } catch {
     return Response.json(
       { error: "Could not open the project preview. Please try again." },

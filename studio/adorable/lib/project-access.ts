@@ -1,3 +1,4 @@
+import { safetyEnabled } from "./safety-mode";
 import { platformEnabled, platformProjectAccess } from "./platform-auth";
 import { demoMode } from "./demo-mode";
 import { listProjectVms } from "./project-vm";
@@ -6,6 +7,7 @@ import { usesDatabaseStorage, readProjectMetadata } from "./project-storage";
 export const authorizeProject = async (projectId: string, readOnly = false) => {
   if (platformEnabled()) return platformProjectAccess(projectId, readOnly);
   if (demoMode()) {
+    if (safetyEnabled()) return null;
     if (usesDatabaseStorage()) {
       if (!/^vm-[a-z0-9]+$/.test(projectId)) return null;
       try {

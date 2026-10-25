@@ -1,3 +1,4 @@
+import { PROJECT_IDLE_SECONDS } from "./project-idle.mjs";
 import { after } from "next/server";
 import { randomUUID } from "crypto";
 import type { Vm } from "./project-runtime";
@@ -246,7 +247,7 @@ export const rollbackToRelease = async (
     const restored = await runtime().sandboxes.create({
       snapshot: release.snapshotId,
       name: `dreamforge-rollback-${randomUUID()}`,
-      idlePauseSeconds: 300,
+      idlePauseSeconds: PROJECT_IDLE_SECONDS,
     });
     const vmId = `vm-${randomUUID().replaceAll("-", "")}`;
     await bindRuntime(vmId, restored.id);

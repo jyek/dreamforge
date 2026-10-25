@@ -1,4 +1,5 @@
 "use client";
+import { PROJECT_IDLE_SECONDS } from "@/lib/project-idle.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Status = "starting" | "ready" | "idle" | "error";
@@ -57,6 +58,7 @@ export function useProjectActivity(
       setError("");
       changeStatus("starting");
       const deadline = Date.now() + 90000;
+      let retryDelay = 250;
       try {
         while (!controller.signal.aborted && Date.now() < deadline) {
           try {
@@ -81,9 +83,10 @@ export function useProjectActivity(
               controller.signal.removeEventListener("abort", done);
               resolve();
             };
-            const timer = setTimeout(done, 1500);
+            const timer = setTimeout(done, retryDelay);
             controller.signal.addEventListener("abort", done, { once: true });
           });
+          retryDelay = Math.min(1500, retryDelay * 2);
         }
         if (!controller.signal.aborted) {
           setError(
@@ -103,7 +106,8 @@ export function useProjectActivity(
     const message = (event: MessageEvent) => {
       if (
         event.source === iframeRef.current?.contentWindow &&
-        event.origin === new URL(previewUrl).origin &&
+        (event.origin === new URL(previewUrl).origin ||
+          (previewUrl.includes("/preview/") && event.origin === "null")) &&
         event.data?.type === "adorable:preview-activity"
       )
         activity();
@@ -116,7 +120,7 @@ export function useProjectActivity(
     const timer = setInterval(() => {
       if (runningRef.current) lastActivity = Date.now();
       if (inFlight || currentStatus === "error") return;
-      if (Date.now() - lastActivity >= 5 * 60 * 1000) {
+      if (Date.now() - lastActivity >= PROJECT_IDLE_SECONDS * 1000) {
         changeStatus("idle");
         return;
       }
@@ -148,6 +152,48 @@ export function useProjectActivity(
     };
   }, [projectId, previewUrl, iframeRef]);
 
+  const [revisionState, setRevisionState] = useState<{
+    projectId: string;
+    revision: number;
+    activeRun: string | null;
+  } | null>(null);
+  const renderedRevision = useRef<{
+    projectId: string;
+    revision: number;
+  } | null>(null);
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const next = (event as CustomEvent<NonNullable<typeof revisionState>>)
+        .detail;
+      if (next?.projectId === projectId && Number.isSafeInteger(next.revision))
+        setRevisionState(next);
+    };
+    window.addEventListener("adorable:project-revision", changed);
+    return () =>
+      window.removeEventListener("adorable:project-revision", changed);
+  }, [projectId]);
+  useEffect(() => {
+    if (!revisionState || revisionState.projectId !== projectId) return;
+    if (renderedRevision.current?.projectId !== projectId) {
+      renderedRevision.current = {
+        projectId,
+        revision: revisionState.revision,
+      };
+      return;
+    }
+    if (
+      !running &&
+      !revisionState.activeRun &&
+      renderedRevision.current.revision !== revisionState.revision
+    ) {
+      renderedRevision.current = {
+        projectId,
+        revision: revisionState.revision,
+      };
+      if (previewUrl.includes("/preview/") && iframeRef.current)
+        iframeRef.current.src = previewUrl;
+    }
+  }, [revisionState, running, projectId, previewUrl, iframeRef]);
   return {
     idle: status === "idle",
     starting: status === "starting",

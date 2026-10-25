@@ -1,3 +1,6 @@
+import { projectCreationFailure } from "@/lib/project-creation-response";
+import { publicGithubRepository } from "@/lib/project-repository";
+import { browserPreviewUrl } from "@/lib/preview-access";
 import { getProfile, platformEnabled, checkOrigin } from "@/lib/platform-auth";
 import { safetyEnabled } from "@/lib/safety-mode";
 import { demoMode } from "@/lib/demo-mode";
@@ -25,12 +28,15 @@ const toProjectItem = async (
 ): Promise<ProjectItem> => ({
   id,
   readOnly,
+  shellAllowed: !readOnly,
   name: metadata.name,
-  previewUrl:
-    (await runtimePreview(id).catch(() => null))?.url ||
-    `https://${metadata.previewDomain}`,
-  productionUrl:
-    metadata.staticProductionUrl || `https://${metadata.productionDomain}`,
+  previewUrl: safetyEnabled()
+    ? browserPreviewUrl(id)
+    : (await runtimePreview(id).catch(() => null))?.url ||
+      `https://${metadata.previewDomain}`,
+  productionUrl: safetyEnabled()
+    ? new URL(`/s/${id}`, browserPreviewUrl(id)).toString()
+    : metadata.staticProductionUrl || `https://${metadata.productionDomain}`,
   hosting: metadata.staticProductionUrl ? "static" : "server",
   prodVmId: metadata.prodVmId,
   conversations: metadata.conversations,
@@ -41,6 +47,14 @@ const toProjectItem = async (
 export const maxDuration = 300;
 
 export async function GET(req: Request) {
+  if (safetyEnabled() && demoMode() && !platformEnabled())
+    return NextResponse.json(
+      {
+        projects: [],
+        error: "Enable account login for protected learning workspaces.",
+      },
+      { status: 401 },
+    );
   if (platformEnabled()) {
     const user = await getProfile();
     const requested = new URL(req.url).searchParams.get("projectId");
@@ -95,6 +109,28 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  try {
+    return await createProject(req);
+  } catch (error) {
+    const failure = projectCreationFailure(error);
+    console.error("project.creation.failed", {
+      code: (error as { code?: string })?.code || "unavailable",
+    });
+    return NextResponse.json(
+      { error: failure.error },
+      { status: failure.status },
+    );
+  }
+}
+async function createProject(req: Request) {
+  if (safetyEnabled() && demoMode() && !platformEnabled())
+    return NextResponse.json(
+      {
+        error:
+          "Enable account login before creating protected learning workspaces.",
+      },
+      { status: 401 },
+    );
   const platformUser = platformEnabled() ? await getProfile() : null;
   if (platformEnabled()) {
     if (!checkOrigin(req) || !platformUser)
@@ -131,64 +167,72 @@ export async function POST(req: Request) {
         { error: "Give your project a name using 1–80 characters." },
         { status: 400 },
       );
-    const repository =
-      typeof payload.githubRepoName === "string"
-        ? payload.githubRepoName
-            .trim()
-            .replace(/^https?:\/\/github\.com\//, "")
-            .replace(/\.git$/, "")
-        : "";
-    if (repository && safetyEnabled())
+    let repository;
+    try {
+      repository = publicGithubRepository(payload.githubRepoName);
+    } catch (error) {
       return NextResponse.json(
-        {
-          error:
-            "Repository import is unavailable while safety checks are enabled.",
-        },
-        { status: 403 },
-      );
-    if (repository && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository))
-      return NextResponse.json(
-        { error: "Use a public GitHub repository in owner/repository format." },
+        { error: (error as Error).message },
         { status: 400 },
       );
+    }
     const name =
       typeof payload.name === "string"
         ? payload.name.trim().slice(0, 80) || "Untitled Project"
         : "Untitled Project";
     const { projectId, previewDomain, productionDomain } =
-      await createProjectVms(
+      await createProjectVms(name, repository);
+    try {
+      await writeProjectMetadata(projectId, {
+        version: 3,
+        ...(platformUser &&
+        /^e2e_[a-f0-9]{12}$/.test(platformUser.username) &&
+        /^E2E(?: |$)/i.test(name) &&
+        typeof payload.e2eRunId === "string" &&
+        /^[a-f0-9-]{36}$/i.test(payload.e2eRunId)
+          ? { e2eRunId: payload.e2eRunId }
+          : {}),
         name,
-        repository ? `https://github.com/${repository}` : undefined,
+        createdAt: new Date().toISOString(),
+        prodVmId: null,
+        previewDomain,
+        productionDomain,
+        conversations: [],
+        releases: [],
+        liveReleaseId: null,
+      });
+      if (platformUser)
+        await database().query(
+          "update adorable.projects set owner_id=$2,is_example=false where vm_id=$1",
+          [projectId, platformUser.id],
+        );
+      const conversationId = randomUUID();
+      const next = await createConversation(
+        projectId,
+        conversationId,
+        typeof payload.conversationTitle === "string"
+          ? payload.conversationTitle
+          : undefined,
       );
-    await writeProjectMetadata(projectId, {
-      version: 3,
-      name,
-      createdAt: new Date().toISOString(),
-      prodVmId: null,
-      previewDomain,
-      productionDomain,
-      conversations: [],
-      releases: [],
-      liveReleaseId: null,
-    });
-    if (platformUser)
-      await database().query(
-        "update adorable.projects set owner_id=$2,is_example=false where vm_id=$1",
-        [projectId, platformUser.id],
-      );
-    const conversationId = randomUUID();
-    const next = await createConversation(
-      projectId,
-      conversationId,
-      typeof payload.conversationTitle === "string"
-        ? payload.conversationTitle
-        : undefined,
-    );
-    return NextResponse.json({
-      id: projectId,
-      conversationId,
-      project: await toProjectItem(projectId, next),
-    });
+      return NextResponse.json({
+        id: projectId,
+        conversationId,
+        project: await toProjectItem(projectId, next),
+      });
+    } catch (error) {
+      try {
+        await deleteRuntime(projectId);
+        await database().query("delete from adorable.projects where vm_id=$1", [
+          projectId,
+        ]);
+      } catch (cleanupError) {
+        console.error("project.creation.cleanup.failed", {
+          projectId,
+          code: (cleanupError as { code?: string })?.code || "unavailable",
+        });
+      }
+      throw error;
+    }
   }
   const user = await getStudentSession();
   if (!user)
@@ -200,11 +244,15 @@ export async function POST(req: Request) {
     githubRepoName?: string;
   };
 
-  if (payload.githubRepoName)
+  let repository;
+  try {
+    repository = publicGithubRepository(payload.githubRepoName);
+  } catch (error) {
     return NextResponse.json(
-      { error: "Repository import requires teacher review." },
-      { status: 403 },
+      { error: (error as Error).message },
+      { status: 400 },
     );
+  }
   const { rows: classrooms } = await database().query(
     `select c.id,c.owner_id,
     coalesce(s.ai_enabled,true) as ai_enabled,s.access_start,s.access_end from classrooms c

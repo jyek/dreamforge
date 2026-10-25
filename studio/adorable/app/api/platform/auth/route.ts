@@ -1,3 +1,4 @@
+import { childPolicy } from "@/lib/child-policy";
 import { database } from "@/lib/database";
 import {
   saveLoginSession,
@@ -17,6 +18,7 @@ const fail = (error: string, status = 400) =>
   Response.json({ error }, { status });
 export async function GET() {
   return Response.json({
+    policy: childPolicy(),
     enabled: platformEnabled(),
     user: platformEnabled() ? await getProfile() : null,
   });

@@ -1,4 +1,3 @@
-import { safetyEnabled } from "@/lib/safety-mode";
 import { NextResponse } from "next/server";
 import { authorizeProject } from "@/lib/project-access";
 import {
@@ -8,6 +7,7 @@ import {
   writeToTerminal,
 } from "@/lib/terminal-bridge";
 import { APP_SESSION, WORKDIR } from "@/lib/vars";
+import { invalidateManualEdit, ExecutionError } from "@/lib/execution";
 
 /** A terminal name the browser may ask for: the dev server, or an ad-hoc shell. */
 const parseSession = (raw: string | null) => {
@@ -25,7 +25,6 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
-  if (safetyEnabled()) return NextResponse.json({ error: "Terminal access is unavailable while safety checks are enabled." }, { status: 403 });
   const { projectId } = await params;
   if (!(await authorizeProject(projectId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -91,7 +90,6 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
-  if (safetyEnabled()) return NextResponse.json({ error: "Terminal access is unavailable while safety checks are enabled." }, { status: 403 });
   const { projectId } = await params;
   if (!(await authorizeProject(projectId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -113,6 +111,16 @@ export async function POST(
     );
   }
 
+  if (typeof payload.data === "string" || payload.signal) {
+    try {
+      await invalidateManualEdit(projectId);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof ExecutionError ? error.message : "Terminal input is unavailable." },
+        { status: error instanceof ExecutionError ? error.status : 503 },
+      );
+    }
+  }
   if (typeof payload.data === "string") {
     await writeToTerminal(projectId, slug, payload.data);
   }
