@@ -5,6 +5,9 @@ import {
 import { database } from "@/lib/database";
 import Link from "next/link";
 import { platformEnabled } from "@/lib/platform-auth";
+// Project examples come from the live database, not the build environment.
+export const dynamic = "force-dynamic";
+
 export default async function Examples() {
   const { rows } = await database().query(
     platformEnabled()
