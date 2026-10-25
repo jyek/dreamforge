@@ -39,6 +39,7 @@ export function VmTerminal({
     const cleanups: Array<() => void> = [];
 
     let reconnect=()=>{};
+    let reportError = (_message: string) => {};
     let pending=Promise.resolve();
     const post=(body:Record<string,unknown>)=>{
       pending=pending.then(async()=>{
@@ -46,7 +47,11 @@ export function VmTerminal({
         try {
           const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session,...body}),keepalive:true});
           if(response.ok&&!disposed)reconnect();
-        }catch{}
+          else if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            reportError(data.error || "Terminal input could not reach the workspace.");
+          }
+        }catch{reportError("Terminal input could not reach the workspace.");}
       });
       return pending;
     };
@@ -71,6 +76,9 @@ export function VmTerminal({
       terminal.loadAddon(fitAddon);
       terminal.open(container);
       cleanups.push(() => terminal.dispose());
+      reportError = (message) => {
+        if (!disposed) terminal.writeln(`\r\n${message.replace(/[\x00-\x1f\x7f]/g, " ")}\r\n`);
+      };
 
       // Keep the guest's window size in step with the element's.
       let resizeTimer: number | undefined;
@@ -106,8 +114,17 @@ export function VmTerminal({
         events=new EventSource(`${endpoint}?session=${encodeURIComponent(session)}`);
         // Every connection replays guest scrollback, including automatic
         // reconnects before the Vercel function deadline.
-        events.onopen=()=>terminal.reset();
+        events.onopen=()=>{terminal.reset();terminal.writeln("Connecting to workspace terminal…");};
         events.onmessage=(event)=>terminal.write(decodeChunk(event.data));
+        events.addEventListener("terminal-ready", () => {
+          if (!disposed) terminal.writeln("\r\nConnected to workspace terminal.");
+        });
+        events.addEventListener("terminal-error", (event) => {
+          events?.close();
+          try { reportError(JSON.parse((event as MessageEvent).data).error); }
+          catch { reportError("Could not connect to the workspace terminal."); }
+        });
+        events.onerror=()=>reportError("Terminal connection lost. Reconnecting…");
       };
       reconnect();
       cleanups.push(()=>events?.close());

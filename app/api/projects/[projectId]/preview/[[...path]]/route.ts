@@ -1,4 +1,4 @@
-import { fetchPreviewWithRecovery } from "@/lib/runtime-preview";
+import { fetchPreviewWithRecovery, previewPageFailure } from "@/lib/runtime-preview";
 import { authorizeProject } from "@/lib/project-access";
 import { runtimePreview } from "@/lib/project-runtime";
 import {
@@ -41,12 +41,13 @@ export async function GET(
     const upstream = await fetchPreviewWithRecovery(request, async () => {
       preview = await runtimePreview(projectId, true);
     });
+    const failure = previewPageFailure(upstream);
+    if (failure) {
+      await upstream.body?.cancel();
+      return new Response(failure.message, { status: failure.status });
+    }
     const html = await upstream.text();
     if (html.length > 4000000) throw Error("Preview too large");
-    if (!upstream.headers.get("content-type")?.includes("text/html"))
-      return new Response("This entry point only serves app pages.", {
-        status: 415,
-      });
     return new Response(
       rewritePreview(html, projectId, assetCapability(projectId), true),
       {

@@ -1,3 +1,11 @@
+/** Avoid guest operations while the provider is still shutting down the VM. */
+export function assertWorkspaceAvailable(state: string) {
+  if (state === "stopping")
+    throw Object.assign(Error("Workspace is still stopping."), {
+      code: "WORKSPACE_STOPPING",
+    });
+}
+
 /** A cold boot loses guest processes; a resumed VM reuses its named server. */
 export async function wakeVm(
   vm: { data: () => Promise<{ state: string }>; start: () => Promise<unknown> },
@@ -45,7 +53,10 @@ export async function previewResponding(
     });
     await response.body?.cancel();
     // Keep real app errors (including Next's compile-error UI) visible.
-    return ![502, 503, 504].includes(response.status);
+    return (
+      response.headers.get("content-type")?.includes("text/html") === true &&
+      ![401, 403, 409, 425, 429, 502, 503, 504].includes(response.status)
+    );
   } catch {
     return false;
   }
@@ -53,6 +64,15 @@ export async function previewResponding(
 
 export function runtimeFailure(error: unknown) {
   const failure = error as { code?: string; message?: string } | null;
+  if (failure?.code === "WORKSPACE_STOPPING")
+    return {
+      status: 503,
+      body: {
+        state: "blocked",
+        ready: false,
+        error: "The workspace is still stopping. Preview, files and terminal are unavailable until project hosting completes recovery. Please contact DreamForge support if this persists.",
+      },
+    };
   if (failure?.code === "operation_failed" || failure?.code === "host_unknown")
     return {
       status: 503,

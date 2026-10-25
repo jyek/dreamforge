@@ -1,6 +1,7 @@
 import { runtimeSandbox } from "./project-runtime";
 import { devVm, restartDevServer, startDevServer } from "./project-vm";
 import { database } from "./database";
+import { assertWorkspaceAvailable } from "./runtime-readiness";
 
 const preparing = new Map<string, Promise<void>>();
 
@@ -14,7 +15,8 @@ export function prepareProjectRuntime(projectId: string): Promise<void> {
 }
 
 async function prepare(projectId: string) {
-  const sandbox = await runtimeSandbox(projectId);
+  const sandbox = await runtimeSandbox(projectId, { timeoutMs: 10000 });
+  assertWorkspaceAvailable(sandbox.state);
   const policy = await sandbox.network.get();
   if (!policy.internet || policy.allow.length || policy.deny.length)
     await sandbox.network.on();

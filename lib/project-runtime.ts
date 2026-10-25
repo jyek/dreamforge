@@ -3,6 +3,7 @@ import { runtimeSnapshotName } from "./runtime-snapshot-name";
 import { Runtime } from "withruntime";
 import type { Terminal } from "withruntime";
 import { database } from "./database";
+import { assertWorkspaceAvailable } from "./runtime-readiness";
 
 export type Vm = ProjectVm;
 export type PtySession = {
@@ -153,6 +154,7 @@ class ProjectVm {
     create: boolean,
   ): Promise<PtySession> {
     const sandbox = await this.sandbox();
+    assertWorkspaceAvailable(sandbox.state);
     const slug = options.slug || options.session || "shell";
     const path = terminalPath(slug);
     let processId: string | undefined;

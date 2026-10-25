@@ -8,6 +8,8 @@ import {
 } from "@/lib/terminal-bridge";
 import { APP_SESSION, WORKDIR } from "@/lib/vars";
 import { invalidateManualEdit, ExecutionError } from "@/lib/execution";
+import { runtimeFailure } from "@/lib/runtime-readiness";
+import { terminalFailureEvent } from "@/lib/terminal-stream";
 
 /** A terminal name the browser may ask for: the dev server, or an ad-hoc shell. */
 const parseSession = (raw: string | null) => {
@@ -56,22 +58,30 @@ export async function GET(
 
       let closed=false;
       let unsubscribe=()=>{};
+      const fail = (error: unknown) => {
+        if (closed) return;
+        controller.enqueue(encoder.encode(terminalFailureEvent(error)));
+        cleanup();
+      };
       // Flush immediately, even when an idle PTY has no output to replay.
       controller.enqueue(encoder.encode(": connected\n\n"));
       const timer=setTimeout(() => cleanup(), 240_000);
+      const connecting=setTimeout(() => fail(Error("Terminal connection timed out")), 12000);
       const heartbeat=setInterval(()=>{if(!closed)controller.enqueue(encoder.encode(": keepalive\n\n"));},15_000);
       cleanup=()=>{
         if(closed)return;closed=true;
-        clearTimeout(timer);clearInterval(heartbeat);unsubscribe();
+        clearTimeout(timer);clearTimeout(connecting);clearInterval(heartbeat);unsubscribe();
         req.signal.removeEventListener("abort",cleanup);
         try {controller.close();}catch{}
       };
       req.signal.addEventListener("abort",cleanup,{once:true});
       if(req.signal.aborted)cleanup();
       void subscribeToTerminal(projectId,slug,commandFor(slug),send).then(subscription=>{
+        clearTimeout(connecting);
         unsubscribe=subscription;
         if(closed)unsubscribe();
-      }).catch(error=>{console.error("Terminal connection failed",error);cleanup();});
+        else controller.enqueue(encoder.encode("event: terminal-ready\ndata: {}\n\n"));
+      }).catch(fail);
     },
     cancel() { cleanup(); },
   });
@@ -121,6 +131,7 @@ export async function POST(
       );
     }
   }
+  try {
   if (typeof payload.data === "string") {
     await writeToTerminal(projectId, slug, payload.data);
   }
@@ -134,4 +145,8 @@ export async function POST(
   }
 
   return NextResponse.json({ ok: true });
+  } catch (error) {
+    const failure = runtimeFailure(error);
+    return NextResponse.json({ error: failure.body.error }, { status: failure.status });
+  }
 }

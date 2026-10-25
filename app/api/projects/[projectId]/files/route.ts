@@ -3,6 +3,7 @@ import { authorizeProject } from "@/lib/project-access";
 import { devVm } from "@/lib/project-vm";
 import { WORKDIR } from "@/lib/vars";
 import { snapshotInProgress } from "@/lib/execution";
+import { runtimeFailure } from "@/lib/runtime-readiness";
 
 const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
 const readable = (file: string) =>
@@ -84,10 +85,11 @@ export async function GET(
       { file, content },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    const failure = runtimeFailure(error);
     return Response.json(
-      { error: "Could not load project files. Please try again." },
-      { status: 503 },
+      { error: failure.body.state === "blocked" ? failure.body.error : "Could not load project files. Please try again." },
+      { status: failure.status },
     );
   }
 }

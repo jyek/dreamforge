@@ -1,7 +1,7 @@
 import { requestSandboxCreation } from "./runtime-provisioning";
 import { database } from "./database";
 import { prepareProjectRuntime } from "./prepare-project-runtime";
-import { resumeProjectRuntime } from "./runtime-readiness";
+import { assertWorkspaceAvailable, resumeProjectRuntime } from "./runtime-readiness";
 import { randomUUID } from "crypto";
 import type { Vm } from "./project-runtime";
 import {
@@ -47,6 +47,7 @@ export async function restartDevServer(vm: Vm) {
 export async function restoreProjectServer(projectId: string): Promise<void> {
   const signal = AbortSignal.timeout(8000);
   const sandbox = await runtimeSandbox(projectId, { signal });
+  assertWorkspaceAvailable(sandbox.state);
   await resumeProjectRuntime(
     sandbox,
     () => startDevServer(devVm(projectId)),

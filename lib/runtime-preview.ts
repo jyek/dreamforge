@@ -5,6 +5,13 @@ export type RuntimePreview = {
   token: string | null;
   expiresAt: string | null;
 };
+
+export function previewPageFailure(response: Response) {
+  if (response.headers.get("content-type")?.includes("text/html")) return null;
+  return response.ok
+    ? { status: 415, message: "The app did not return an HTML page at this address." }
+    : { status: 503, message: "Project hosting is unavailable, so the preview could not load. Reopen the workspace to check its recovery status." };
+}
 export async function resolveRuntimePreview(
   fresh: boolean,
   services: {

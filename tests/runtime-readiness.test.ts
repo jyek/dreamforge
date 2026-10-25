@@ -55,7 +55,7 @@ for (const status of [200, 404, 500, 502, 503, 504]) {
   assert.equal(
     await previewResponding(
       "https://preview.example",
-      async () => new Response("", { status }),
+      async () => new Response("", { status, headers: { "Content-Type": "text/html" } }),
     ),
     ![502, 503, 504].includes(status),
   );
