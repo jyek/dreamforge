@@ -36,6 +36,8 @@ jobs:
           sudo apt-get install --yes postgresql
           echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
       - name: Test quota accounting and execution recovery
+        env:
+          TEST_BROWSER_EXECUTABLE: /usr/bin/google-chrome
         run: npm run test:database
       - name: Build production app
         run: npm run build
