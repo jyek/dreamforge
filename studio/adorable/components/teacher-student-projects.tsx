@@ -1,4 +1,7 @@
 "use client";
+import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
+import { StudentReviewTable } from "./student-review-table";
+import { NoClassroomProjects } from "./no-classroom-projects";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +19,7 @@ import {
 type Project = {
   vm_id: string;
   owner_id: string;
+  owner_name?: string;
   name: string;
   conversation_id: string | null;
   prompt_count: number;
@@ -84,16 +88,27 @@ export function TeacherStudentProjects({
       section={classId ? "classrooms" : "students"}
       headerAction={
         classId && data?.availableProjects ? (
-          <ClassProjectAssignments
-            classId={classId}
-            projects={data.availableProjects}
-            onChanged={async () => {
-              const r = await fetch(`/api/platform/classes/${classId}`);
-              const d = await r.json();
-              if (!r.ok) throw Error(d.error);
-              setData(d);
-            }}
-          />
+          <div className="df-inline">
+            <ClassroomTeachersDialog
+              classId={classId}
+              onChanged={async () => {
+                const r = await fetch(`/api/platform/classes/${classId}`);
+                const d = await r.json();
+                if (!r.ok) throw Error(d.error);
+                setData(d);
+              }}
+            />
+            <ClassProjectAssignments
+              classId={classId}
+              projects={data.availableProjects}
+              onChanged={async () => {
+                const r = await fetch(`/api/platform/classes/${classId}`);
+                const d = await r.json();
+                if (!r.ok) throw Error(d.error);
+                setData(d);
+              }}
+            />
+          </div>
         ) : undefined
       }
       onSectionChange={(s) => router.push(`/${s}`)}
@@ -150,109 +165,107 @@ export function TeacherStudentProjects({
               />
             </label>
           )}
-          <div
-            className="df-card df-guidance-table df-student-project-table"
-            data-empty={!shown.length && !teachingProjects.length}
+          <StudentReviewTable
+            className="df-student-project-table"
+            empty={!shown.length && !teachingProjects.length}
           >
-            <div className="df-table-scroll">
-              <table className="df-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Project</th>
-                    <th>Prompts</th>
-                    <th>Safety alerts</th>
-                    <th>Explore</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teachingProjects.map((project) => (
-                    <tr key={project.vm_id}>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Project</th>
+                <th>Prompts</th>
+                <th>Safety alerts</th>
+                <th>Explore</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teachingProjects.map((project) => (
+                <tr key={project.vm_id}>
+                  <td>
+                    <strong>{project.owner_name || teacherName}</strong>
+                    <div className="df-muted">Teacher</div>
+                  </td>
+                  <td>{project.name}</td>
+                  <td>{project.prompt_count}</td>
+                  <td>{project.guidance_count}</td>
+                  <td>
+                    <Link
+                      className="df-button secondary small"
+                      href={`/${project.vm_id}${project.conversation_id ? `/${project.conversation_id}` : ""}`}
+                    >
+                      View project
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {shown.flatMap((student) => {
+                const projects = data.projects.filter(
+                  (p) => p.owner_id === student.id,
+                );
+                return (projects.length ? projects : [null]).map(
+                  (project, index) => (
+                    <tr key={`${student.id}-${project?.vm_id || "empty"}`}>
+                      {index === 0 && (
+                        <td rowSpan={Math.max(1, projects.length)}>
+                          <div className="df-guidance-student">
+                            <strong>{student.display_name}</strong>
+                            <span className="df-muted">
+                              @{student.username}
+                            </span>
+                          </div>
+                        </td>
+                      )}
                       <td>
-                        <strong>{teacherName}</strong>
-                        <div className="df-muted">Teacher</div>
+                        {project?.name ||
+                          (classId ? (
+                            <NoClassroomProjects />
+                          ) : (
+                            <span className="df-muted">No projects yet</span>
+                          ))}
                       </td>
-                      <td>{project.name}</td>
-                      <td>{project.prompt_count}</td>
-                      <td>{project.guidance_count}</td>
+                      <td>{project?.prompt_count || 0}</td>
+                      <td>{project?.guidance_count || 0}</td>
                       <td>
-                        <Link
-                          className="df-button secondary small"
-                          href={`/${project.vm_id}${project.conversation_id ? `/${project.conversation_id}` : ""}`}
-                        >
-                          View project
-                        </Link>
+                        {project && (
+                          <div className="df-inline">
+                            <Link
+                              className="df-button secondary small"
+                              href={`/${project.vm_id}${project.conversation_id ? `/${project.conversation_id}` : ""}`}
+                            >
+                              View project
+                            </Link>
+                            <button
+                              className="df-button secondary small"
+                              onClick={() => setSelection({ student, project })}
+                            >
+                              View safety
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))}
-                  {shown.flatMap((student) => {
-                    const projects = data.projects.filter(
-                      (p) => p.owner_id === student.id,
-                    );
-                    return (projects.length ? projects : [null]).map(
-                      (project, index) => (
-                        <tr key={`${student.id}-${project?.vm_id || "empty"}`}>
-                          {index === 0 && (
-                            <td rowSpan={Math.max(1, projects.length)}>
-                              <strong>{student.display_name}</strong>
-                              <div className="df-muted">
-                                @{student.username}
-                              </div>
-                            </td>
-                          )}
-                          <td>
-                            {project?.name || (
-                              <span className="df-muted">No projects yet</span>
-                            )}
-                          </td>
-                          <td>{project?.prompt_count || 0}</td>
-                          <td>{project?.guidance_count || 0}</td>
-                          <td>
-                            {project && (
-                              <div className="df-inline">
-                                <Link
-                                  className="df-button secondary small"
-                                  href={`/${project.vm_id}${project.conversation_id ? `/${project.conversation_id}` : ""}`}
-                                >
-                                  View project
-                                </Link>
-                                <button
-                                  className="df-button secondary small"
-                                  onClick={() =>
-                                    setSelection({ student, project })
-                                  }
-                                >
-                                  View safety
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ),
-                    );
-                  })}
-                  {!shown.length && !teachingProjects.length && (
-                    <tr>
-                      <td colSpan={5}>
-                        <TableEmptyState
-                          title={
-                            search
-                              ? "No matching students"
-                              : "Projects will appear here"
-                          }
-                          description={
-                            search
-                              ? "Try a different name."
-                              : "When students create projects, you can explore their work here."
-                          }
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  ),
+                );
+              })}
+              {!shown.length && !teachingProjects.length && (
+                <tr>
+                  <td colSpan={5}>
+                    <TableEmptyState
+                      illustration={search ? "search" : "projects"}
+                      title={
+                        search ? "No matching students" : "No projects yet"
+                      }
+                      description={
+                        search
+                          ? "Try a different name."
+                          : "When students create projects, you can explore their work here."
+                      }
+                    />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </StudentReviewTable>
         </>
       )}
     </PlatformDashboardLayout>

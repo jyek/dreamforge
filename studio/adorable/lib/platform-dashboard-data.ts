@@ -1,3 +1,7 @@
+import {
+  classroomTeacherSQL,
+  teacherStudentAccessSQL,
+} from "./classroom-permissions";
 import { paymentsEnabled } from "./topup-packages";
 import { database } from "./database";
 import type { Profile } from "./platform-auth";
@@ -5,7 +9,7 @@ export async function loadDashboardData(user: Profile, section?: string) {
   const db = database();
   const { rows: classes } = await db.query(
     user.role === "teacher"
-      ? "select id,name,invite_code from adorable.classes where teacher_id=$1 order by created_at"
+      ? `select c.id,c.name,c.invite_code,(c.teacher_id=$1) as can_manage from adorable.classes c where ${classroomTeacherSQL("c.id")} order by c.created_at`
       : "select c.id,c.name,pr.display_name as teacher_name from adorable.classes c join adorable.profiles pr on pr.id=c.teacher_id join adorable.class_members m on m.class_id=c.id where m.child_id=$1 order by c.created_at",
     [user.id],
   );
@@ -35,7 +39,7 @@ export async function loadDashboardData(user: Profile, section?: string) {
   const { rows: children } =
     user.role === "teacher"
       ? await db.query(
-          `select distinct pr.id,pr.display_name,pr.username,a.token_limit,a.used_tokens,a.reserved_tokens,a.input_tokens,a.output_tokens,a.estimated_cost_usd from adorable.profiles pr join adorable.teacher_builders b on b.child_id=pr.id left join adorable.token_accounts a on a.child_id=pr.id where b.teacher_id=$1`,
+          `select distinct pr.id,pr.display_name,pr.username,a.token_limit,a.used_tokens,a.reserved_tokens,a.input_tokens,a.output_tokens,a.estimated_cost_usd from adorable.profiles pr left join adorable.token_accounts a on a.child_id=pr.id where ${teacherStudentAccessSQL("pr.id")}`,
           [user.id],
         )
       : { rows: [] };
@@ -49,7 +53,7 @@ export async function loadDashboardData(user: Profile, section?: string) {
   const { rows: unconfirmed } =
     user.role === "teacher"
       ? await db.query(
-          `select r.id,r.reserved_tokens,pr.display_name from adorable.usage_runs r join adorable.profiles pr on pr.id=r.child_id where r.state='uncertain' and exists(select 1 from adorable.teacher_builders b where b.child_id=r.child_id and b.teacher_id=$1)`,
+          `select r.id,r.reserved_tokens,pr.display_name from adorable.usage_runs r join adorable.profiles pr on pr.id=r.child_id where r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")}`,
           [user.id],
         )
       : await db.query(

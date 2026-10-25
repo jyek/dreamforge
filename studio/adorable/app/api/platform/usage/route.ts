@@ -1,3 +1,4 @@
+import { teacherStudentAccessSQL } from "@/lib/classroom-permissions";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled, checkOrigin } from "@/lib/platform-auth";
 export async function POST(req: Request) {
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
   try {
     await db.query("begin");
     const { rows } = await db.query(
-      `select r.* from adorable.usage_runs r where r.id=$2 and r.state='uncertain' and exists(select 1 from adorable.teacher_builders b where b.child_id=r.child_id and b.teacher_id=$1) for update`,
+      `select r.* from adorable.usage_runs r where r.id=$2 and r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")} for update`,
       [user.id, body.id],
     );
     if (!rows[0]) {

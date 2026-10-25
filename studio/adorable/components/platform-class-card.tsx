@@ -21,6 +21,7 @@ export function PlatformClassCard({
     name: string;
     invite_code?: string;
     teacher_name?: string;
+    can_manage?: boolean;
   };
   teacher: boolean;
   onChanged: () => Promise<void>;
@@ -100,69 +101,71 @@ export function PlatformClassCard({
         <span className="df-project-icon">
           <School size={23} aria-hidden="true" />
         </span>
-        <div ref={menuRef} className="df-class-menu-wrap">
-          <button
-            className="df-class-menu-trigger"
-            aria-label={`Options for ${classroom.name}`}
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            <MoreVertical size={20} aria-hidden="true" />
-          </button>
-          {menuOpen && (
-            <div
-              role="menu"
-              aria-label="Class options"
-              className="df-class-menu"
-              onKeyDown={(e) => {
-                if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key))
-                  return;
-                e.preventDefault();
-                const items = Array.from(
-                  e.currentTarget.querySelectorAll("button"),
-                );
-                const current = items.indexOf(
-                  document.activeElement as HTMLButtonElement,
-                );
-                const next =
-                  e.key === "Home"
-                    ? 0
-                    : e.key === "End"
-                      ? items.length - 1
-                      : (current +
-                          (e.key === "ArrowDown" ? 1 : -1) +
-                          items.length) %
-                        items.length;
-                items[next]?.focus();
-              }}
+        {classroom.can_manage !== false && (
+          <div ref={menuRef} className="df-class-menu-wrap">
+            <button
+              className="df-class-menu-trigger"
+              aria-label={`Options for ${classroom.name}`}
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              onClick={() => setMenuOpen(!menuOpen)}
             >
-              <button
-                role="menuitem"
-                autoFocus
-                onClick={() => {
-                  setMenuOpen(false);
-                  setName(classroom.name);
-                  setEditing(true);
-                  setError("");
+              <MoreVertical size={20} aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                aria-label="Class options"
+                className="df-class-menu"
+                onKeyDown={(e) => {
+                  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key))
+                    return;
+                  e.preventDefault();
+                  const items = Array.from(
+                    e.currentTarget.querySelectorAll("button"),
+                  );
+                  const current = items.indexOf(
+                    document.activeElement as HTMLButtonElement,
+                  );
+                  const next =
+                    e.key === "Home"
+                      ? 0
+                      : e.key === "End"
+                        ? items.length - 1
+                        : (current +
+                            (e.key === "ArrowDown" ? 1 : -1) +
+                            items.length) %
+                          items.length;
+                  items[next]?.focus();
                 }}
               >
-                Rename
-              </button>
-              <button
-                role="menuitem"
-                className="df-class-menu-delete"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setConfirm(true);
-                  setError("");
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  role="menuitem"
+                  autoFocus
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setName(classroom.name);
+                    setEditing(true);
+                    setError("");
+                  }}
+                >
+                  Rename
+                </button>
+                <button
+                  role="menuitem"
+                  className="df-class-menu-delete"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setConfirm(true);
+                    setError("");
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {editing ? (
         <form className="df-form" onSubmit={rename}>

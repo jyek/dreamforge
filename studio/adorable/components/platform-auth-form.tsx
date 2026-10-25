@@ -1,17 +1,21 @@
 "use client";
 import { InlineSpinner } from "./dream-loading";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { DreamForgeBrand, DreamForgeArt } from "./dreamforge-brand";
 export function PlatformAuthForm({
   signup = false,
   teacherInvite = "",
+  returnTo = "",
 }: {
   signup?: boolean;
   teacherInvite?: string;
+  returnTo?: string;
 }) {
   const [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -29,7 +33,11 @@ export function PlatformAuthForm({
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
-      window.location.assign("/home");
+      window.location.assign(
+        /^\/classrooms\/invite\/[A-Za-z0-9_-]{20,100}$/.test(returnTo)
+          ? returnTo
+          : "/home",
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -82,7 +90,12 @@ export function PlatformAuthForm({
                 : "Start building today. You can join a class now or later."
               : "Your next big idea is waiting for you."}
           </p>
-          <form className="df-form" onSubmit={submit}>
+          <form
+            className="df-form"
+            method="post"
+            action="/api/platform/auth"
+            onSubmit={submit}
+          >
             {signup ? (
               <>
                 <label>
@@ -165,7 +178,7 @@ export function PlatformAuthForm({
                 {error}
               </p>
             )}
-            <button className="df-button" disabled={busy}>
+            <button className="df-button" disabled={busy || !ready}>
               {busy && <InlineSpinner className="size-4" />}
               {busy
                 ? "Opening your creative corner…"

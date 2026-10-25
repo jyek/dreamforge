@@ -1,4 +1,9 @@
 import { safetyEnabled } from "./safety-mode";
+import {
+  classroomTeacherSQL,
+  sharedTeachingProjectSQL,
+  teacherStudentAccessSQL,
+} from "./classroom-permissions";
 import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
 import { database } from "./database";
@@ -25,7 +30,7 @@ export const tokenHash = (token: string) =>
 export const inviteToken = () => randomBytes(24).toString("base64url");
 export async function canReadChild(teacherId: string, childId: string) {
   const { rowCount } = await database().query(
-    "select 1 from adorable.teacher_builders where teacher_id=$1 and child_id=$2",
+    `select 1 where ${teacherStudentAccessSQL("$2")}`,
     [teacherId, childId],
   );
   return !!rowCount;
@@ -47,8 +52,15 @@ export async function platformProjectAccess(
   if (row.owner_id === profile.id) return row.metadata;
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
-      `select 1 from adorable.class_projects pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and c.teacher_id=$3`,
+      `select 1 from adorable.class_projects pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,
       [projectId, profile.id, row.owner_id],
+    );
+    if (rowCount) return row.metadata;
+  }
+  if (readOnly && profile.role === "teacher") {
+    const { rowCount } = await database().query(
+      `select 1 where ${sharedTeachingProjectSQL("$1", "$2", "$3")}`,
+      [projectId, row.owner_id, profile.id],
     );
     if (rowCount) return row.metadata;
   }

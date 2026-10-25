@@ -1,6 +1,7 @@
+import { teacherStudentAccessSQL } from "@/lib/classroom-permissions";
 import { database } from "@/lib/database";
 import { checkOrigin, getProfile, platformEnabled } from "@/lib/platform-auth";
-const scope = `exists(select 1 from adorable.teacher_builders b where b.child_id=r.child_id and b.teacher_id=$1)`;
+const scope = `${teacherStudentAccessSQL("r.child_id")}`;
 export async function GET(req: Request) {
   const user = platformEnabled() ? await getProfile() : null;
   if (user?.role !== "teacher")
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
       count(r.id) filter(where r.decision<>'allow' and r.reviewed_at is null)::int as pending_count
       from adorable.projects p join adorable.profiles pr on pr.id=p.owner_id
       left join adorable.prompt_reviews r on r.vm_id=p.vm_id
-      where exists(select 1 from adorable.teacher_builders b where b.child_id=p.owner_id and b.teacher_id=$1)
+      where ${teacherStudentAccessSQL("p.owner_id")}
       group by p.vm_id,pr.display_name order by max(r.created_at) desc nulls last,p.updated_at desc`,
       [user.id],
     );

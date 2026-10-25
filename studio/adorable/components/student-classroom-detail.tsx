@@ -8,6 +8,7 @@ import {
   type AssignableProject,
 } from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
+import { ClassroomAvatar, classroomAvatarShapes } from "./classroom-avatar";
 import { SimpleLoading } from "./dream-loading";
 type Project = {
   vm_id: string;
@@ -17,7 +18,8 @@ type Project = {
   conversation_id: string | null;
 };
 type Data = {
-  classroom: { name: string; teacher_name: string };
+  classroom: { name: string; teacher_name: string; teacher_id?: string };
+  teachers?: { id: string; display_name: string; is_owner: boolean }[];
   students: { id: string; display_name: string }[];
   projects: Project[];
   availableProjects: AssignableProject[];
@@ -42,6 +44,17 @@ export function StudentClassroomDetail({
     setData(d);
   }
   const shown = data.projects.filter((p) => !student || p.owner_id === student);
+  const teachers = data.teachers || [
+    {
+      id: data.classroom.teacher_id || data.classroom.teacher_name,
+      display_name: data.classroom.teacher_name,
+      is_owner: true,
+    },
+  ];
+  const avatarShapes = classroomAvatarShapes([
+    ...teachers.map((t) => t.id),
+    ...data.students.map((s) => s.id),
+  ]);
   return (
     <PlatformDashboardLayout
       teacher={false}
@@ -68,9 +81,26 @@ export function StudentClassroomDetail({
           {data.projects.length === 1 ? "project" : "projects"}
         </span>
       </div>
-      <p className="df-muted">
-        Teacher: <strong>{data.classroom.teacher_name}</strong>
-      </p>
+      <section className="df-class-teaching-team" aria-label="Class teachers">
+        <h3>{teachers.length === 1 ? "Your teacher" : "Your teachers"}</h3>
+        <div>
+          {teachers.map((teacher) => (
+            <div className="df-class-teacher-person" key={teacher.id}>
+              <ClassroomAvatar
+                identity={teacher.id}
+                silhouette={avatarShapes[teacher.id]}
+                role="teacher"
+              />
+              <div>
+                <strong>{teacher.display_name}</strong>
+                <span className="df-muted">
+                  {teacher.is_owner ? "Classroom owner" : "Co-teacher"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
       {preview ? (
         <>
           <button
@@ -88,10 +118,20 @@ export function StudentClassroomDetail({
             <div>
               {data.students.length ? (
                 data.students.map((s) => (
-                  <span className="df-class-student-chip" key={s.id}>
-                    {s.display_name}
-                    {s.id === user.id ? " · You" : ""}
-                  </span>
+                  <div
+                    className="df-classmate"
+                    key={s.id}
+                    data-self={s.id === user.id}
+                  >
+                    <ClassroomAvatar
+                      identity={s.id}
+                      silhouette={avatarShapes[s.id]}
+                    />
+                    <strong title={s.display_name}>{s.display_name}</strong>
+                    {s.id === user.id && (
+                      <span className="df-classmate-you">You</span>
+                    )}
+                  </div>
                 ))
               ) : (
                 <p className="df-muted">The dream team is still gathering.</p>
@@ -148,6 +188,7 @@ export function StudentClassroomDetail({
           {!shown.length && (
             <div className="df-card df-class-empty">
               <TableEmptyState
+                illustration="classrooms"
                 title="A classroom full of possibilities"
                 description={
                   student
