@@ -8,8 +8,5 @@
     "app/api/**/route.ts": {
       "maxDuration": 300
     }
-  },
-  "alias": [
-    "dreamforge.vercel.app"
-  ]
+  }
 }
