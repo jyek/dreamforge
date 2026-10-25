@@ -67,7 +67,7 @@ export const streamLlmResponse = async ({
   modelOverride,
 }: StreamLlmResponseParams): Promise<StreamLlmResponseResult> => {
   system +=
-    "\nOlder tool payloads are omitted from prior turns to keep context small. Read the current project files before changing them; never assume an old file listing is current.\nWhen the user asks you to build or change the app, carry out the changes with the tools in this turn. A plan, file inspection, or promise to implement later is not completion. Continue from successful tool results without asking the user to say continue. Before ending, either summarize the implemented result and checks, or explicitly explain the blocker and what remains incomplete. For questions, answer directly without unnecessary edits.";
+    "\nOlder tool payloads are omitted from prior turns to keep context small. Read the current project files before changing them; never assume an old file listing is current.\nKeep each code write small: start with a working scaffold, split large games into small modules, and add features with focused patches. Never put an entire large game into one tool call. When the user asks you to build or change the app, carry out the changes with the tools in this turn. A plan, file inspection, or promise to implement later is not completion. Continue from successful tool results without asking the user to say continue. Before ending, either summarize the implemented result and checks, or explicitly explain the blocker and what remains incomplete. For questions, answer directly without unnecessary edits.";
   const provider = getProviderName(providerOverride);
   const modelMessages = normalizeModelHistory(
     compactPastToolHistory(await convertToModelMessages(messages)),
@@ -129,7 +129,21 @@ export const streamLlmResponse = async ({
     const result = streamText({
       abortSignal,
       system,
-      model: withEmptyResponseRetry(routedModel),
+      model: withEmptyResponseRetry(routedModel, async ({ usage, prompt }) => {
+        // Settle the first call and reserve the recovery separately. A retry
+        // cannot bypass the wallet or Stop, and its tokens are never counted twice.
+        const tokens = usage as {
+          inputTokens?: { total?: number };
+          outputTokens?: { total?: number };
+        };
+        await afterStep?.({
+          inputTokens: tokens.inputTokens?.total,
+          outputTokens: tokens.outputTokens?.total,
+          modelId: routing?.state.usedModel || modelName,
+        });
+        await beforeStep?.(prompt);
+        return Boolean(afterStep);
+      }),
       messages: modelMessages,
       maxOutputTokens: Number(process.env["LLM_MAX_OUTPUT_TOKENS"] || 4096),
       tools,

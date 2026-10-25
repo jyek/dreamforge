@@ -81,6 +81,9 @@ export async function managedChat(
             8000,
           );
           let failed = false;
+          let sawFinish = false;
+          let finishReason: string | undefined;
+          let outcome: string | undefined;
           let tail = "";
           const decoder = new TextDecoder();
           try {
@@ -124,12 +127,33 @@ export async function managedChat(
                 if (!line.startsWith("data: {")) continue;
                 try {
                   const part = JSON.parse(line.slice(6));
+                  if (part.type === "finish") {
+                    sawFinish = true;
+                    finishReason = part.finishReason;
+                  }
+                  if (part.type === "data-run-outcome")
+                    outcome = part.data?.status;
                   if (part.type === "error" || part.type === "abort")
+                    failed = true;
+                  if (
+                    (part.type === "finish" &&
+                      ["length", "error", "content-filter"].includes(
+                        part.finishReason,
+                      )) ||
+                    (part.type === "data-run-outcome" &&
+                      part.data?.status === "incomplete")
+                  )
                     failed = true;
                 } catch {}
               }
               controller.enqueue(chunk.value);
             }
+            await event(active, "generation.finished", {
+              finishReason: finishReason || "unknown",
+              outcome: outcome || (sawFinish ? "unknown" : "incomplete"),
+              sawFinish,
+            });
+            failed ||= !sawFinish;
             await finish(
               active.signal.aborted
                 ? "cancelled"

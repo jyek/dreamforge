@@ -1,10 +1,20 @@
 import type { createOpenAI } from "@ai-sdk/openai";
 type Model = ReturnType<ReturnType<typeof createOpenAI>["chat"]>;
+type Retry = {
+  reason: "empty" | "truncated-tool";
+  usage: unknown;
+  prompt: Parameters<Model["doStream"]>[0]["prompt"];
+};
 
-/** Retry only an empty, normally finished provider call. Previous tool results
- * stay in the prompt; executed tools are never replayed. Real output streams
- * immediately, and errors, truncation and cancellation are not retried. */
-export function withEmptyResponseRetry(model: Model): Model {
+/** At most one recovery across the run. Only retry a truncated tool if no
+ * complete tool call was emitted: executing a tool must never be replayed.
+ * Buffer tool argument fragments until complete so discarded JSON never becomes
+ * a dangling UI tool call. Text remains streamed immediately. */
+export function withEmptyResponseRetry(
+  model: Model,
+  beforeRetry?: (retry: Retry) => Promise<boolean | void>,
+): Model {
+  let recovered = false;
   return new Proxy(model, {
     get(target, key) {
       if (key === "doStream")
@@ -12,67 +22,101 @@ export function withEmptyResponseRetry(model: Model): Model {
           const initial = await target.doStream(options);
           async function* events() {
             let previousUsage: unknown;
+            let accounted = false;
+            let recovery: Retry["reason"] = "empty";
             for (let attempt = 0; attempt < 2; attempt++) {
+              options.abortSignal?.throwIfAborted();
+              const prompt: Retry["prompt"] = [
+                {
+                  role: "system" as const,
+                  content:
+                    recovery === "truncated-tool"
+                      ? "The previous tool arguments were cut off at the response limit and were NOT executed. Do not repeat the large file. Write a small complete scaffold (under 100 lines), then implement the remaining features through small files or patches in later steps. Do not claim the unfinished write succeeded."
+                      : "Your previous response was empty. Continue using the existing tool results, or clearly explain why you cannot finish. Return visible text or a tool call.",
+                },
+                ...options.prompt,
+              ];
               const result =
                 attempt === 0
                   ? initial
-                  : await target.doStream({
-                      ...options,
-                      prompt: [
-                        {
-                          role: "system",
-                          content:
-                            "Your previous response was empty. Continue the requested task using the existing tool results, or clearly explain why you cannot finish. Return visible text or a tool call.",
-                        },
-                        ...options.prompt,
-                      ],
-                    });
+                  : await target.doStream({ ...options, prompt });
               const reader = result.stream.getReader();
-              const pending: Awaited<
-                ReturnType<typeof reader.read>
-              >["value"][] = [];
-              let visible = false;
-              let retry = false;
+              type Part = NonNullable<
+                Awaited<ReturnType<typeof reader.read>>["value"]
+              >;
+              const pending: Part[] = [],
+                toolInput: Part[] = [];
+              let visible = false,
+                completeTool = false,
+                failed = false,
+                retry = false;
               try {
                 while (true) {
                   const item = await reader.read();
                   if (item.done) break;
                   const part = item.value;
                   if (
-                    part.type === "error" ||
-                    part.type === "tool-call" ||
                     part.type === "tool-input-start" ||
-                    (part.type === "text-delta" && part.delta.trim())
-                  )
-                    visible = true;
-                  if (
-                    part.type === "finish" &&
-                    !visible &&
-                    attempt === 0 &&
-                    !options.abortSignal?.aborted &&
-                    part.finishReason.unified === "stop"
+                    part.type === "tool-input-delta" ||
+                    part.type === "tool-input-end"
                   ) {
-                    previousUsage = part.usage;
-                    retry = true;
+                    toolInput.push(part);
+                    continue;
                   }
-                  if (
-                    part.type === "finish" &&
-                    attempt === 1 &&
-                    previousUsage
-                  ) {
-                    part.usage = sumUsage(
-                      previousUsage,
-                      part.usage,
-                    ) as typeof part.usage;
+                  if (part.type === "tool-call") {
+                    completeTool = true;
+                    visible = true;
+                    for (const queued of pending.splice(0)) yield queued;
+                    for (const queued of toolInput.splice(0)) yield queued;
+                  }
+                  if (part.type === "error") {
+                    failed = true;
+                    visible = true;
+                  }
+                  if (part.type === "text-delta" && part.delta.trim())
+                    visible = true;
+                  if (part.type === "finish") {
+                    const reason = part.finishReason.unified;
+                    const truncated =
+                      reason === "length" &&
+                      toolInput.length > 0 &&
+                      !completeTool;
+                    if (
+                      attempt === 0 &&
+                      !recovered &&
+                      !failed &&
+                      !options.abortSignal?.aborted &&
+                      (truncated || (!visible && reason === "stop"))
+                    ) {
+                      recovered = true;
+                      previousUsage = part.usage;
+                      recovery = truncated ? "truncated-tool" : "empty";
+                      accounted =
+                        (await beforeRetry?.({
+                          reason: recovery,
+                          usage: part.usage,
+                          prompt: options.prompt,
+                        })) === true;
+                      options.abortSignal?.throwIfAborted();
+                      retry = true;
+                      break;
+                    }
+                    if (attempt === 1 && previousUsage && !accounted)
+                      part.usage = sumUsage(
+                        previousUsage,
+                        part.usage,
+                      ) as typeof part.usage;
+                    for (const queued of toolInput.splice(0))
+                      pending.push(queued);
                   }
                   if (visible || attempt === 1) {
-                    for (const queued of pending.splice(0))
-                      if (queued) yield queued;
+                    for (const queued of pending.splice(0)) yield queued;
                     yield part;
                   } else pending.push(part);
                 }
                 if (!retry) {
-                  for (const part of pending) if (part) yield part;
+                  for (const queued of pending) yield queued;
+                  for (const queued of toolInput) yield queued;
                   return;
                 }
               } finally {

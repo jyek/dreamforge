@@ -299,7 +299,7 @@ async function handleChat(req: Request) {
                 "Your request could not finish. Please try again."
               );
             },
-            onFinish: async ({ messages: final, isAborted }) => {
+            onFinish: async ({ messages: final, isAborted, finishReason }) => {
               if (platformReservation) {
                 await settleUsage(platformReservation);
                 platformReservation = null;
@@ -307,6 +307,7 @@ async function handleChat(req: Request) {
               const completion = ensureFinalResponse(
                 final,
                 streamError || isAborted,
+                finishReason,
               );
               completionText = completion.text;
               const safe = redactPayload(completion.messages) as UIMessage[];
@@ -324,6 +325,7 @@ async function handleChat(req: Request) {
             },
           }),
           () => completionText,
+          () => (completionText ? "incomplete" : "completed"),
         );
         return uiStreamResponse(
           safeProgressStream(
@@ -386,8 +388,12 @@ async function handleChat(req: Request) {
         onError: (error) =>
           modelErrorMessage(error) ||
           "Your request could not finish. Please try again.",
-        onFinish: async ({ messages: final, isAborted }) => {
-          const completion = ensureFinalResponse(final);
+        onFinish: async ({ messages: final, isAborted, finishReason }) => {
+          const completion = ensureFinalResponse(
+            final,
+            isAborted,
+            finishReason,
+          );
           completionText = completion.text;
           await saveConversationMessages(
             payload.projectId,
@@ -396,7 +402,13 @@ async function handleChat(req: Request) {
           );
         },
       });
-      return uiStreamResponse(withFinalText(stream, () => completionText));
+      return uiStreamResponse(
+        withFinalText(
+          stream,
+          () => completionText,
+          () => (completionText ? "incomplete" : "completed"),
+        ),
+      );
     } catch (error) {
       if (platformReservation)
         await settleUsage(platformReservation).catch(() => {});
@@ -565,10 +577,11 @@ async function handleChat(req: Request) {
             ? error.message
             : "Your request could not finish. Please try again.";
         },
-        onFinish: async ({ messages: final, isAborted }) => {
+        onFinish: async ({ messages: final, isAborted, finishReason }) => {
           const completion = ensureFinalResponse(
             final,
             streamError || isAborted,
+            finishReason,
           );
           completionText = completion.text;
           final = completion.messages;
@@ -587,6 +600,7 @@ async function handleChat(req: Request) {
         },
       }),
       () => completionText,
+      () => (completionText ? "incomplete" : "completed"),
     );
     return uiStreamResponse(
       safeProgressStream(

@@ -94,3 +94,98 @@ test("visible text streams before the provider finishes", async () => {
   assert.equal((await reader.read()).value?.type, "finish");
   assert.equal((await reader.read()).done, true);
 });
+
+test("truncated arguments recover once without leaking or replaying the discarded tool", async () => {
+  const m = mock([
+    [
+      { type: "text-delta", id: "t", delta: "Writing now." },
+      { type: "tool-input-start", id: "discarded", toolName: "write" },
+      {
+        type: "tool-input-delta",
+        id: "discarded",
+        delta: '{"content":"unfinished',
+      },
+      finish("length"),
+    ],
+    [
+      { type: "tool-input-start", id: "small", toolName: "write" },
+      { type: "tool-input-delta", id: "small", delta: '{"content":"small"}' },
+      { type: "tool-input-end", id: "small" },
+      {
+        type: "tool-call",
+        toolCallId: "small",
+        toolName: "write",
+        input: '{"content":"small"}',
+      },
+      finish("tool-calls"),
+    ],
+  ]);
+  const out = await collect(withEmptyResponseRetry(m.model));
+  assert.equal(m.calls, 2);
+  assert(!out.some((p) => p.id === "discarded"));
+  assert.equal(out.filter((p) => p.type === "tool-call").length, 1);
+  assert.match(m.prompts[1][0].content, /NOT executed/);
+  assert.equal(out.at(-1).usage.outputTokens.total, 4);
+});
+
+test("a completed tool call prevents replay even if a second tool is truncated", async () => {
+  const m = mock([
+    [
+      { type: "tool-call", toolCallId: "executed" },
+      { type: "tool-input-start", id: "unfinished", toolName: "write" },
+      finish("length"),
+    ],
+  ]);
+  await collect(withEmptyResponseRetry(m.model));
+  assert.equal(m.calls, 1);
+});
+
+test("recovery respects a rejected reservation and a stopped run", async () => {
+  for (const cancel of [false, true]) {
+    const m = mock([
+      [
+        { type: "tool-input-start", id: "one", toolName: "write" },
+        finish("length"),
+      ],
+    ]);
+    const controller = new AbortController();
+    const r = await withEmptyResponseRetry(m.model, async () => {
+      if (cancel) controller.abort();
+      else throw Error("Insufficient balance");
+    }).doStream({ prompt: [], abortSignal: controller.signal } as any);
+    await assert.rejects(async () => {
+      const reader = r.stream.getReader();
+      while (!(await reader.read()).done) {}
+    });
+    assert.equal(m.calls, 1);
+  }
+});
+
+test("settled retry usage is not charged again with the recovered step", async () => {
+  const m = mock([
+    [finish()],
+    [{ type: "text-delta", delta: "Done" }, finish()],
+  ]);
+  let settlements = 0;
+  const out = await collect(
+    withEmptyResponseRetry(m.model, async ({ usage }) => {
+      assert.equal((usage as any).outputTokens.total, 2);
+      settlements++;
+      return true;
+    }),
+  );
+  assert.equal(settlements, 1);
+  assert.equal(out.at(-1).usage.outputTokens.total, 2);
+});
+
+test("the recovery budget is shared across model steps in one run", async () => {
+  const m = mock([
+    [finish()],
+    [{ type: "text-delta", delta: "Recovered" }, finish()],
+    [finish()],
+  ]);
+  const wrapped = withEmptyResponseRetry(m.model);
+  await collect(wrapped);
+  await collect(wrapped);
+  assert.equal(m.calls, 3, "A later step must not start another recovery");
+});

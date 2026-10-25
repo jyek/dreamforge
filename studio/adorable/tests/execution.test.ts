@@ -565,3 +565,111 @@ test("file reads work without a snapshot; first source write takes exactly one",
   });
   await finishRun(run, "completed");
 });
+
+test("ended streams with truncated, incomplete or missing completion are never recorded completed", async () => {
+  const { managedChat } = await import("../lib/managed-chat");
+  const keys = [
+    "DREAMFORGE_AUTH_ENABLED",
+    "STUDENT_LOGIN_ENABLED",
+    "SAFETY_ENABLED",
+  ];
+  const saved = keys.map((k) => process.env[k]);
+  try {
+    keys.forEach((k) => {
+      process.env[k] = "false";
+    });
+    const cases = [
+      'data: {"type":"finish","finishReason":"length"}\n\n',
+      'data: {"type":"data-run-outcome","data":{"status":"incomplete"}}\n\ndata: {"type":"finish","finishReason":"stop"}\n\n',
+      'data: {"type":"text-start","id":"unfinished"}\n\n',
+    ];
+    for (let i = 0; i < cases.length; i++) {
+      const projectId = `vm-incomplete${i}`;
+      const response = await managedChat(
+        new Request("https://app.test/api/chat", {
+          method: "POST",
+          headers: {
+            origin: "https://app.test",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            projectId,
+            conversationId: randomUUID(),
+            revision: 0,
+            messages: [],
+          }),
+        }),
+        async () => new Response(cases[i] + "data: [DONE]\n\n"),
+        { authorize: async () => true, identity: async () => true },
+      );
+      await response.text();
+      const state = await executionState(projectId);
+      assert.equal(state.runs[0].state, "failed");
+      assert.equal(state.activeRun, null);
+    }
+  } finally {
+    keys.forEach((k, i) => {
+      if (saved[i] === undefined) delete process.env[k];
+      else process.env[k] = saved[i];
+    });
+  }
+});
+
+test("screenshot infrastructure failure preserves observed browser and button evidence", async () => {
+  const run = await begin("vm-screenshot-failure");
+  const saved = process.env.VERIFICATION_BROWSER_WS;
+  process.env.VERIFICATION_BROWSER_WS = "fixture";
+  let closed = 0;
+  const page = {
+    setDefaultTimeout() {},
+    on() {},
+    goto: async () => ({ status: () => 200 }),
+    locator: () => ({ innerText: async () => "Counter 0" }),
+    getByRole: () => ({ click: async () => {} }),
+    getByText: () => ({ waitFor: async () => {} }),
+    screenshot: async () => {
+      throw Error("Private browser infrastructure detail");
+    },
+  };
+  const browser = {
+    newContext: async () => ({
+      newPage: async () => page,
+      close: async () => {
+        closed++;
+      },
+    }),
+    close: async () => {
+      closed++;
+    },
+  };
+  try {
+    const result = await executionContext.run(run, () =>
+      verifyApp(
+        { exec: async () => ({ statusCode: 0 }) } as unknown as Vm,
+        [{ button: "Add one", expectedText: "1" }],
+        {
+          connect: async () =>
+            browser as unknown as import("playwright-core").Browser,
+          preview: async () => ({
+            url: "http://fixture",
+            baseUrl: "http://fixture",
+            token: null,
+            expiresAt: null,
+          }),
+        },
+      ),
+    );
+    assert.equal(result.pageLoaded, true);
+    assert.equal(result.rendering, "passed");
+    assert.equal(result.interactions[0].passed, true);
+    assert.equal(result.screenshotStatus, "unavailable");
+    assert.equal(result.screenshotHash, null);
+    assert.equal(result.unavailable, null);
+    assert.equal(result.ok, true);
+    assert.equal(closed, 2);
+  } finally {
+    if (saved === undefined) delete process.env.VERIFICATION_BROWSER_WS;
+    else process.env.VERIFICATION_BROWSER_WS = saved;
+    await finishRun(run, "completed");
+  }
+});

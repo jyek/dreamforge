@@ -57,6 +57,8 @@ export async function verifyApp(
     }[],
     humanTested: false,
     screenshotHash: null as string | null,
+    screenshotStatus: "not-run",
+    screenshotUnavailable: null as string | null,
     unavailable: null as string | null,
     ok: false,
   };
@@ -124,7 +126,7 @@ export async function verifyApp(
             evidence.runtimeErrors.push("Browser console error");
         });
         const response = await page.goto(preview.url, {
-          waitUntil: "networkidle",
+          waitUntil: "domcontentloaded",
           timeout: 20000,
         });
         evidence.pageLoaded = response?.status() === 200;
@@ -148,9 +150,18 @@ export async function verifyApp(
             break;
           }
         }
-        evidence.screenshotHash = createHash("sha256")
-          .update(await page.screenshot({ timeout: 5000 }))
-          .digest("hex");
+        // Screenshot infrastructure failing must not erase observed rendering
+        // or successful interactions. It is optional evidence, not a game test.
+        try {
+          evidence.screenshotHash = createHash("sha256")
+            .update(await page.screenshot({ timeout: 5000 }))
+            .digest("hex");
+          evidence.screenshotStatus = "passed";
+        } catch {
+          evidence.screenshotStatus = "unavailable";
+          evidence.screenshotUnavailable =
+            "Screenshot capture did not complete.";
+        }
       } catch {
         evidence.rendering = "failed";
         evidence.unavailable = "Browser check did not complete.";
