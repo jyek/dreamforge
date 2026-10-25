@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   previewResponding,
   runtimeFailure,
   wakeVm,
 } from "../lib/runtime-readiness";
 
+test("wake lifecycle, quota failures and preview readiness", async () => {
 for (const state of ["paused", "stopped", "running", "starting", "pausing"]) {
   const calls: string[] = [];
   await wakeVm(
@@ -69,3 +71,5 @@ assert.equal(
 console.log(
   "PASS: paused and cold-boot server recovery, quota blockers, readiness checks and visible app errors",
 );
+
+});
