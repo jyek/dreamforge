@@ -6,7 +6,25 @@ import {
   previewAssetPath,
   rewritePreview,
   previewCsp,
+  browserPreviewUrl,
 } from "../lib/preview-access";
+test("authenticated preview links follow the current domain after a domain change", () => {
+  const previous = process.env.DREAMFORGE_SITE_URL;
+  process.env.DREAMFORGE_SITE_URL = "https://retired.vercel.app";
+  try {
+    assert.equal(
+      browserPreviewUrl("vm-fixture", "https://dreamforge2.vercel.app/api/projects?projectId=vm-fixture"),
+      "https://dreamforge2.vercel.app/api/projects/vm-fixture/preview/",
+    );
+    assert.equal(
+      browserPreviewUrl("vm-fixture", "http://localhost:3000/api/projects"),
+      "http://localhost:3000/api/projects/vm-fixture/preview/",
+    );
+  } finally {
+    if (previous === undefined) delete process.env.DREAMFORGE_SITE_URL;
+    else process.env.DREAMFORGE_SITE_URL = previous;
+  }
+});
 test("asset capabilities are project-scoped, tamper-resistant and never authorize HTML or APIs", () => {
   const previous = process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.SUPABASE_SERVICE_ROLE_KEY = "fixture-secret";

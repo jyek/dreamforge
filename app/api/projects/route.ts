@@ -30,17 +30,18 @@ const toProjectItem = async (
   id: string,
   metadata: ProjectMetadata,
   readOnly = false,
+  requestUrl?: string,
 ): Promise<ProjectItem> => ({
   id,
   readOnly,
   shellAllowed: !readOnly,
   name: metadata.name,
   previewUrl: safetyEnabled()
-    ? browserPreviewUrl(id)
+    ? browserPreviewUrl(id, requestUrl)
     : (await runtimePreview(id).catch(() => null))?.url ||
       `https://${metadata.previewDomain}`,
   productionUrl: safetyEnabled()
-    ? new URL(`/s/${id}`, browserPreviewUrl(id)).toString()
+    ? new URL(`/s/${id}`, browserPreviewUrl(id, requestUrl)).toString()
     : metadata.staticProductionUrl || `https://${metadata.productionDomain}`,
   hosting: metadata.staticProductionUrl ? "static" : "server",
   prodVmId: metadata.prodVmId,
@@ -74,6 +75,7 @@ export async function GET(req: Request) {
             row.vm_id,
             row.metadata,
             row.is_example || row.owner_id !== user?.id,
+            req.url,
           ),
         ),
       ),
@@ -84,7 +86,7 @@ export async function GET(req: Request) {
       const stored = await listStoredProjects();
       return NextResponse.json({
         projects: await Promise.all(
-          stored.map((row) => toProjectItem(row.vm_id, row.metadata)),
+          stored.map((row) => toProjectItem(row.vm_id, row.metadata, false, req.url)),
         ),
         demo: true,
       });
@@ -92,7 +94,7 @@ export async function GET(req: Request) {
     const vms = await listProjectVms();
     const projects = await Promise.all(
       vms.map(async (vm) =>
-        toProjectItem(vm.id, await readProjectMetadata(vm.id)),
+        toProjectItem(vm.id, await readProjectMetadata(vm.id), false, req.url),
       ),
     );
     return NextResponse.json({ projects, demo: true });
@@ -107,7 +109,7 @@ export async function GET(req: Request) {
   );
   const projects = await Promise.all(
     rows.map(async (row) =>
-      toProjectItem(row.vm_id, await readProjectMetadata(row.vm_id)),
+      toProjectItem(row.vm_id, await readProjectMetadata(row.vm_id), false, req.url),
     ),
   );
   return NextResponse.json({ projects });
@@ -222,7 +224,7 @@ async function createProject(req: Request) {
       return NextResponse.json({
         id: projectId,
         conversationId,
-        project: await toProjectItem(projectId, next),
+        project: await toProjectItem(projectId, next, false, req.url),
       });
     } catch (error) {
       try {
@@ -347,6 +349,6 @@ async function createProject(req: Request) {
   return NextResponse.json({
     id: projectId,
     conversationId,
-    project: await toProjectItem(projectId, next),
+    project: await toProjectItem(projectId, next, false, req.url),
   });
 }

@@ -2,8 +2,9 @@ import { PROJECT_CONTENT_POLICY } from "./project-content-policy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 export const previewEntryPath = (project: string) =>
   `/api/projects/${project}/preview/`;
-export function browserPreviewUrl(project: string) {
+export function browserPreviewUrl(project: string, requestUrl?: string) {
   const origin =
+    (requestUrl ? new URL(requestUrl).origin : undefined) ||
     process.env.DREAMFORGE_SITE_URL ||
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`

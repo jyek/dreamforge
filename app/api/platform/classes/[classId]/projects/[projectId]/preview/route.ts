@@ -47,7 +47,7 @@ export async function POST(
     )
       return Response.json({ starting: true }, { status: 202 });
     return Response.json({
-      url: safetyEnabled() ? browserPreviewUrl(projectId) : preview.url,
+      url: safetyEnabled() ? browserPreviewUrl(projectId, req.url) : preview.url,
     });
   } catch {
     return Response.json(
