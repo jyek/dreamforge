@@ -25,9 +25,7 @@ import {
   SearchIcon,
   CodeIcon,
   MonitorIcon,
-  PlusIcon,
   RotateCwIcon,
-  XIcon,
 } from "lucide-react";
 import { useProjectActivity } from "@/components/assistant-ui/use-project-activity";
 import { ProjectCode } from "@/components/assistant-ui/project-code";
@@ -48,17 +46,6 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarState } from "@/lib/use-sidebar-state";
-
-type TerminalTab = {
-  id: string;
-  label: string;
-  /** The named PTY session on the VM this tab is attached to. */
-  session: string;
-  closable: boolean;
-};
-
-/** The session the project's app server runs in. Matches APP_SESSION in lib/vars.ts. */
-const APP_SESSION = "dev";
 
 type OptimisticMetadataDetail = {
   projectId: string;
@@ -712,52 +699,11 @@ function AppPreview({
       setView("preview");
     }
   }, [activity.ready, activity.generation]);
-  const [extraTerminals, setExtraTerminals] = useState<TerminalTab[]>([]);
-  const [activeTab, setActiveTab] = useState("dev-server");
-  const [counter, setCounter] = useState(1);
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
   useEffect(() => {
     setIframeLoaded(false);
   }, [project.previewUrl]);
-
-  /**
-   * Terminal sessions are named on the VM, so a tab's name is all the state a
-   * new terminal needs: the guest creates the shell on first connect and keeps
-   * it alive afterwards.
-   */
-  const addTerminal = useCallback(() => {
-    const id = `terminal-${counter}`;
-    setExtraTerminals((previous) => [
-      ...previous,
-      {
-        id,
-        label: `Terminal ${counter}`,
-        session: `shell-${counter}`,
-        closable: true,
-      },
-    ]);
-    setActiveTab(id);
-    setCounter((current) => current + 1);
-  }, [counter]);
-
-  const closeTerminal = useCallback(
-    (id: string) => {
-      setExtraTerminals((previous) => previous.filter((tab) => tab.id !== id));
-      if (activeTab === id) setActiveTab("dev-server");
-    },
-    [activeTab],
-  );
-
-  const allTabs: TerminalTab[] = [
-    {
-      id: "dev-server",
-      label: "Dev Server",
-      session: APP_SESSION,
-      closable: false,
-    },
-    ...extraTerminals,
-  ];
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -922,63 +868,11 @@ function AppPreview({
             aria-label="Terminal"
             className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
           >
-            <div className="flex shrink-0 items-center gap-0 border-y bg-slate-100 px-1">
-              {allTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group flex items-center gap-1 px-2 py-1.5 text-xs transition-colors ${
-                    activeTab === tab.id
-                      ? "border-b-2 border-foreground bg-slate-100 text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {tab.closable && (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closeTerminal(tab.id);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          closeTerminal(tab.id);
-                        }
-                      }}
-                      className="ml-0.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted"
-                    >
-                      <XIcon className="size-3" />
-                    </span>
-                  )}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={addTerminal}
-                className="ml-1 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                title="New terminal"
-              >
-                <PlusIcon className="size-3.5" />
-              </button>
-            </div>
-
-            <div className="relative min-h-0 flex-1 bg-white">
-              {allTabs.map((tab) => (
-                <VmTerminal
-                  key={tab.id}
-                  projectId={project.id}
-                  session={tab.session}
-                  className="absolute inset-0 h-full w-full p-1"
-                  // Kept mounted so a background terminal keeps receiving output.
-                  style={{ display: activeTab === tab.id ? "block" : "none" }}
-                />
-              ))}
-            </div>
+            <VmTerminal
+              projectId={project.id}
+              session="shell-1"
+              className="min-h-0 flex-1 p-1"
+            />
           </div>
         )}
     </div>
