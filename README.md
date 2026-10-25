@@ -1,46 +1,54 @@
-# Dreamforge
+# DreamForge
 
-Interactive teacher, student and school prototypes. No sign-in is required. Use the role switcher or direct URLs:
+DreamForge helps students build apps and games with AI and gives teachers classroom, project and safety oversight. This repository contains the production Next.js application at its root.
 
-- `?role=teacher`: classrooms, student projects, course assignment and prompt review.
-- `?role=student`: lessons, project studio, submission and teacher feedback.
-- `?role=school`: people, classrooms, learning reports and sample safety preferences.
+## Develop
 
-```bash
-npm install
-npm run dev
-```
+Use Node.js 22 or newer, and run all commands from the repository root:
 
-`npm run build` creates `dist/`. Sample edits are stored in `dreamforge-prototype-v1` in the browser. Reset sample data restores the examples. No prototype action reads or writes Supabase or sends invitations.
-
-The Supabase-backed implementation is retained in `src/live-app.js` and `src/backend.js` for future activation; it is not imported by the prototype. The existing Supabase schema and security tests remain in `supabase/`.
-
-### Expanded role prototype
-
-- School A: 20 teachers, classroom/roster configuration, safety coverage and teacher-block counts, project/token reporting, sample subscription + usage billing, top-ups and classroom limits.
-- Teacher: classroom and course creation, student configuration, shared teams, start/pause/stop, screen limits, broadcasts, voting, token reserves, prompt intervention, project verification review and messages.
-- Student: personal/shared projects, class gallery, sample building, safety blocks, token alerts, verification → teacher approval → publishing → parent preview sharing, and teacher messages.
-
-Use the top role switch to follow one flow across all three perspectives. Reset sample data restores the demo. All edits and approval records are browser-local; billing, moderation, generation, publishing and messaging are simulated. Seeded projects have shareable sample preview URLs; newly created projects do not transfer between browsers.
-
-Validation: `node --test tests/prototype.test.js` and `npm run build`. Domain tests cover relationships, zero-cost safety blocks, budget enforcement, teacher intervention and version-specific publication approval.
-
-## Coding studio
-
-`studio/` contains the customized Adorable coding harness, based on the MIT-licensed [freestyle-sh/Adorable](https://github.com/freestyle-sh/Adorable) repository. Its upstream license is retained in `studio/LICENSE`. The Dreamforge dashboard at the repository root and the studio have separate package/deployment configurations.
-
-The studio is live at https://dreamforge.vercel.app. It uses Next.js on Vercel, Supabase for project/conversation data, Freestyle for isolated coding workspaces, and OpenRouter for coding models. It includes independent public-demo safety checks, screened progress streaming, a model picker with Cohere-free-to-Qwen quota fallback, highlighted source views, VM inactivity handling, and static publishing support (gated while safety is enabled).
-
-New studio projects start with a blank page and a prepared Next.js/Tailwind/shadcn foundation. The agent creates the app and its design from the user's request; reusable components are available without including sample screens or branding. Auto uses Cohere's free model first and falls back to Qwen3 Coder 30B A3B Instruct when free quota is exhausted. Manual selections are sent with each request, and response labels identify the model actually used.
-
-```bash
-cd studio
+```sh
 npm ci
-cp adorable/.env.example adorable/.env
-# Configure private environment variables before starting.
+cp .env.example .env.local
+# Configure the private server environment before starting.
 npm run dev
 ```
 
-For Vercel, use `studio/adorable` as the project root. See `studio/adorable/docs/vercel-deployment.md` and `studio/adorable/docs/student-harness.md` for deployment and safety implementation details. CLI maintenance scripts that refer to paths on the original developer machine must be adapted for your environment. The static game hosting worker is in `hosting/static-games/`. Local demo safety uses keyword rules; full semantic moderation and artifact scanning are not implemented.
+The web interface and API run on Next.js. Supabase stores accounts, classrooms, project metadata and conversations; Runtime hosts generated project environments; the configured model provider performs coding and moderation.
 
-Credentials, deployment receipts, VM data, generated builds and local screenshots are excluded from source control.
+## Validate
+
+```sh
+npm run test:prompting
+npm run test:safety-execution
+npm run build
+```
+
+The execution tests require PostgreSQL command-line tools and Chrome (or `TEST_BROWSER_EXECUTABLE`). Live E2E tests use a dedicated disposable account, consume configured provider/runtime allowance, and automatically remove test projects and snapshots. See [E2E instructions](docs/e2e/prompting.md).
+
+## Deploy on Vercel
+
+Import `jyek/dreamforge`, select **Next.js**, and use the **repository root**. Leave Root Directory empty; do not enter a studio subfolder. Set the production branch to `main`, configure production environment variables, then deploy. See [deployment setup](docs/vercel-deployment.md).
+
+## Repository layout
+
+- `app/`: Next.js pages and server API routes.
+- `components/`, `hooks/`: student and teacher interfaces.
+- `lib/`: coding harness, runtime integration, safety, storage and verification.
+- `scripts/`: runtime, account, migration and E2E maintenance commands.
+- `supabase/`: production SQL migrations and database checks.
+- `tests/`: harness, safety, execution and browser regressions.
+- `public/`: DreamForge branding and static assets.
+- `hosting/static-games/`: optional static game hosting worker, separate from Vercel.
+- `docs/`: current setup and implementation notes; historical deployment notes are under `docs/history/`.
+
+The earlier Vite prototype is archived outside this repository. It is not part of the production build.
+
+## Existing data compatibility
+
+Existing Supabase tables use the `adorable` schema, and stored Runtime snapshots use `/adorable` for internal project state. Those persisted identifiers are retained so the refactor does not require moving live student data or rebuilding saved environments. They are not the application's name or deployment root. Historical migrations and provider resource identifiers must not be renamed with a global search-and-replace.
+
+Keep credentials, deployment receipts and generated test reports in ignored local files. Do not publish `.env*` files or embed provider/service credentials in generated projects.
+
+## Attribution
+
+DreamForge's original coding harness was adapted from the MIT-licensed [Freestyle Adorable project](https://github.com/freestyle-sh/Adorable). Its upstream license is retained in [LICENSE](LICENSE).
