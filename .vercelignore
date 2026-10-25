@@ -4,7 +4,6 @@
 .next
 node_modules
 docs
-tests
 
 .e2e-results
 .agents
