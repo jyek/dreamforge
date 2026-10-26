@@ -21,5 +21,5 @@ try {
  await assert.rejects(()=>saveConversationMessages(id,randomUUID(),messages),/Conversation not found/);
  await assert.rejects(()=>readConversationMessages(id,'../secret'),/Invalid conversation/);
  console.log('PASS concurrent conversations, atomic metadata/chat saves, invalid conversation rejection');
- const {rows}=await database().query("select tablename,rowsecurity from pg_tables where schemaname='adorable'");assert(rows.every(r=>r.rowsecurity));console.log('PASS RLS enabled on all Adorable storage tables');
-}finally{await database().query('delete from adorable.projects where vm_id=$1',[id]);await database().end();}
+ const {rows}=await database().query("select tablename,rowsecurity from pg_tables where schemaname=any(current_schemas(false))");assert(rows.length>0);assert(rows.every(r=>r.rowsecurity));console.log('PASS RLS enabled on all DreamForge storage tables');
+}finally{await database().query('delete from projects where vm_id=$1',[id]);await database().end();}

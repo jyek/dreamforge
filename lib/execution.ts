@@ -26,7 +26,7 @@ export const executionContext = new AsyncLocalStorage<Run>();
 export const currentRun = () => executionContext.getStore();
 export async function event(run: Run, kind: string, data: unknown = {}) {
   await database().query(
-    "insert into adorable.execution_events(run_id,kind,data) values($1,$2,$3)",
+    "insert into execution_events(run_id,kind,data) values($1,$2,$3)",
     [run.id, kind, JSON.stringify(data)],
   );
 }
@@ -44,13 +44,13 @@ export async function beginRun(
   try {
     await db.query("begin");
     await db.query(
-      "insert into adorable.project_execution(project_id) values($1) on conflict do nothing",
+      "insert into project_execution(project_id) values($1) on conflict do nothing",
       [projectId],
     );
     const {
       rows: [state],
     } = await db.query(
-      "select * from adorable.project_execution where project_id=$1 for update",
+      "select * from project_execution where project_id=$1 for update",
       [projectId],
     );
     // Expired workers keep their lock: a teacher must recover the snapshot before another edit.
@@ -64,11 +64,11 @@ export async function beginRun(
         "Project changed. Reload its revision before sending again.",
       );
     await db.query(
-      "insert into adorable.execution_runs(id,project_id,conversation_id,state,base_revision) values($1,$2,$3,'running',$4)",
+      "insert into execution_runs(id,project_id,conversation_id,state,base_revision) values($1,$2,$3,'running',$4)",
       [id, projectId, conversationId, base],
     );
     await db.query(
-      "update adorable.project_execution set active_run=$2 where project_id=$1",
+      "update project_execution set active_run=$2 where project_id=$1",
       [projectId, id],
     );
     await db.query("commit");
@@ -130,7 +130,7 @@ export function ensureRunSnapshot(run = currentRun()): Promise<void> {
             });
           })();
       await database().query(
-        "update adorable.execution_runs set snapshot_id=$2 where id=$1",
+        "update execution_runs set snapshot_id=$2 where id=$1",
         [run.id, snapshot.snapshotId],
       );
       await event(run, "snapshot.saved", { revision: run.revision });
@@ -152,7 +152,7 @@ export function ensureRunSnapshot(run = currentRun()): Promise<void> {
 }
 export async function snapshotInProgress(projectId: string) {
   const { rows } = await database().query(
-    "select 1 from adorable.project_execution p join adorable.execution_runs r on r.id=p.active_run where p.project_id=$1 and r.state='running' and r.snapshot_id is null and exists(select 1 from adorable.execution_events e where e.run_id=r.id and e.kind='snapshot.started')",
+    "select 1 from project_execution p join execution_runs r on r.id=p.active_run where p.project_id=$1 and r.state='running' and r.snapshot_id is null and exists(select 1 from execution_events e where e.run_id=r.id and e.kind='snapshot.started')",
     [projectId],
   );
   return rows.length > 0;
@@ -161,11 +161,11 @@ export async function snapshotInProgress(projectId: string) {
 /** Terminal input may change files; invalidate evidence before accepting it. */
 export async function invalidateManualEdit(projectId: string) {
   await database().query(
-    "insert into adorable.project_execution(project_id) values($1) on conflict do nothing",
+    "insert into project_execution(project_id) values($1) on conflict do nothing",
     [projectId],
   );
   const { rowCount } = await database().query(
-    "update adorable.project_execution set revision=revision+1,verification=null,updated_at=now() where project_id=$1 and active_run is null",
+    "update project_execution set revision=revision+1,verification=null,updated_at=now() where project_id=$1 and active_run is null",
     [projectId],
   );
   if (!rowCount)
@@ -177,7 +177,7 @@ export async function assertRun(run = currentRun()) {
   if (!run) throw new ExecutionError("A managed run is required.");
   run.signal.throwIfAborted();
   const { rows } = await database().query(
-    "select 1 from adorable.execution_runs r join adorable.project_execution p on p.active_run=r.id where r.id=$1 and r.state='running' and not r.cancel_requested and r.deadline>now()",
+    "select 1 from execution_runs r join project_execution p on p.active_run=r.id where r.id=$1 and r.state='running' and not r.cancel_requested and r.deadline>now()",
     [run.id],
   );
   if (!rows.length) {
@@ -191,7 +191,7 @@ export async function markEdit(file: string) {
   const run = await assertRun();
   await ensureRunSnapshot(run);
   const { rows } = await database().query(
-    "update adorable.project_execution set revision=revision+1,verification=null,updated_at=now() where project_id=$1 and active_run=$2 and revision=$3 returning revision",
+    "update project_execution set revision=revision+1,verification=null,updated_at=now() where project_id=$1 and active_run=$2 and revision=$3 returning revision",
     [run.projectId, run.id, run.revision],
   );
   if (!rows.length) throw new ExecutionError("Revision conflict.");
@@ -207,12 +207,12 @@ export async function finishRun(
   try {
     await db.query("begin");
     const { rows } = await db.query(
-      "update adorable.execution_runs set state=case when cancel_requested and $2 <> 'interrupted' then 'cancelled' else $2 end,finished_at=now() where id=$1 and state='running' returning state",
+      "update execution_runs set state=case when cancel_requested and $2 <> 'interrupted' then 'cancelled' else $2 end,finished_at=now() where id=$1 and state='running' returning state",
       [run.id, run.unsafeToUnlock ? "interrupted" : state],
     );
     if (rows.length) {
       await db.query(
-        "insert into adorable.execution_events(run_id,kind,data) values($1,$2,$3)",
+        "insert into execution_events(run_id,kind,data) values($1,$2,$3)",
         [
           run.id,
           `run.${rows[0].state}`,
@@ -221,7 +221,7 @@ export async function finishRun(
       );
       if (!run.unsafeToUnlock)
         await db.query(
-          "update adorable.project_execution set active_run=null where project_id=$1 and active_run=$2",
+          "update project_execution set active_run=null where project_id=$1 and active_run=$2",
           [run.projectId, run.id],
         );
     }
@@ -237,15 +237,15 @@ export async function executionState(projectId: string) {
   const {
     rows: [state],
   } = await database().query(
-    "select revision,active_run,verification from adorable.project_execution where project_id=$1",
+    "select revision,active_run,verification from project_execution where project_id=$1",
     [projectId],
   );
   const { rows: runs } = await database().query(
-    "select id,state,base_revision,snapshot_id,deadline,cancel_requested from adorable.execution_runs where project_id=$1 order by created_at desc limit 10",
+    "select id,state,base_revision,snapshot_id,deadline,cancel_requested from execution_runs where project_id=$1 order by created_at desc limit 10",
     [projectId],
   );
   const { rows: events } = await database().query(
-    "select e.id,e.run_id,e.kind,e.data,e.created_at from adorable.execution_events e join adorable.execution_runs r on r.id=e.run_id where r.project_id=$1 order by e.id desc limit 100",
+    "select e.id,e.run_id,e.kind,e.data,e.created_at from execution_events e join execution_runs r on r.id=e.run_id where r.project_id=$1 order by e.id desc limit 100",
     [projectId],
   );
   return {

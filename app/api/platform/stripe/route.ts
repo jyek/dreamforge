@@ -44,12 +44,12 @@ export async function POST(req: Request) {
   try {
     await db.query("begin");
     const { rows } = await db.query(
-      "insert into adorable.payments(stripe_session_id,child_id,amount_sgd_cents,tokens) values($1,$2,$3,$4) on conflict do nothing returning child_id",
+      "insert into payments(stripe_session_id,child_id,amount_sgd_cents,tokens) values($1,$2,$3,$4) on conflict do nothing returning child_id",
       [session.id, session.metadata.child_id, pack.amount, pack.tokens],
     );
     if (rows[0]) {
       const result = await db.query(
-        "update adorable.token_accounts set token_limit=token_limit+$2 where child_id=$1",
+        "update token_accounts set token_limit=token_limit+$2 where child_id=$1",
         [rows[0].child_id, pack.tokens],
       );
       if (!result.rowCount) throw Error("Missing token account");

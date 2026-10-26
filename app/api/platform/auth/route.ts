@@ -38,7 +38,7 @@ export async function PATCH(req: Request) {
   if (!name || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name))
     return fail("Use a display name with 1–60 characters.");
   await database().query(
-    "update adorable.profiles set display_name=$2 where id=$1",
+    "update profiles set display_name=$2 where id=$1",
     [user.id, name],
   );
   return Response.json({ ok: true, name });
@@ -92,12 +92,12 @@ export async function POST(req: Request) {
       await db.query("begin");
       const invitation = teacher
         ? await db.query(
-            "select token_hash,classroom_id,created_by from adorable.teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
+            "select token_hash,classroom_id,created_by from teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
             [tokenHash(body.teacherInvite)],
           )
         : code
           ? await db.query(
-              "select id from adorable.classes where invite_code=$1 for share",
+              "select id from classes where invite_code=$1 for share",
               [code],
             )
           : { rows: [] };
@@ -129,13 +129,13 @@ export async function POST(req: Request) {
       }
       authId = result.id;
       await db.query(
-        "insert into adorable.profiles(id,username,display_name,auth_email,role) values($1,$2,$3,$4,$5)",
+        "insert into profiles(id,username,display_name,auth_email,role) values($1,$2,$3,$4,$5)",
         [authId, username, name, email, teacher ? "teacher" : "child"],
       );
       if (teacher) {
         if (invitation.rows[0].classroom_id)
           await db.query(
-            "insert into adorable.class_teachers(class_id,teacher_id,added_by) values($1,$2,$3)",
+            "insert into class_teachers(class_id,teacher_id,added_by) values($1,$2,$3)",
             [
               invitation.rows[0].classroom_id,
               authId,
@@ -143,17 +143,17 @@ export async function POST(req: Request) {
             ],
           );
         await db.query(
-          "update adorable.teacher_invites set used_by=$2,used_at=now() where token_hash=$1",
+          "update teacher_invites set used_by=$2,used_at=now() where token_hash=$1",
           [tokenHash(body.teacherInvite), authId],
         );
       } else {
         if (code)
           await db.query(
-            "insert into adorable.class_members(class_id,child_id) values($1,$2)",
+            "insert into class_members(class_id,child_id) values($1,$2)",
             [invitation.rows[0].id, authId],
           );
         await db.query(
-          "insert into adorable.token_accounts(child_id) values($1)",
+          "insert into token_accounts(child_id) values($1)",
           [authId],
         );
       }
@@ -178,7 +178,7 @@ export async function POST(req: Request) {
     if (!login || login.length > 254)
       return fail("Enter your username or email.");
     const { rows } = await database().query(
-      "select auth_email from adorable.profiles where username=$1 or auth_email=$1",
+      "select auth_email from profiles where username=$1 or auth_email=$1",
       [login],
     );
     // Always perform a password exchange, even for an unknown username.

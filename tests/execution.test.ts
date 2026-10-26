@@ -1,3 +1,4 @@
+import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
 import assert from "node:assert/strict";
 import { test, after } from "node:test";
 import pg from "pg";
@@ -21,7 +22,7 @@ import {
 } from "../lib/verification";
 import { studentTools } from "../lib/student-tools";
 import type { Vm } from "../lib/project-runtime";
-const pool = new pg.Pool({ connectionString: process.env.TEST_DATABASE_URL });
+const pool = new pg.Pool({options: APPLICATION_DATABASE_OPTIONS, connectionString: process.env.TEST_DATABASE_URL });
 (globalThis as unknown as { dreamforgePool: pg.Pool }).dreamforgePool = pool;
 after(() => pool.end());
 const begin = (
@@ -81,7 +82,7 @@ test("concurrent API workers get one durable project edit lock", async () => {
 test("writes invalidate verification before filesystem changes and reject stale revisions", async () => {
   const run = await begin("vm-revisions");
   await pool.query(
-    "update adorable.project_execution set verification=$2 where project_id=$1",
+    "update project_execution set verification=$2 where project_id=$1",
     [run.projectId, { revision: 0, ok: true, humanTested: true }],
   );
   await executionContext.run(run, () => markEdit("app/page.tsx"));
@@ -96,7 +97,7 @@ test("writes invalidate verification before filesystem changes and reject stale 
 test("Stop is durable and prevents subsequent tool writes", async () => {
   const run = await begin("vm-cancel");
   await pool.query(
-    "update adorable.execution_runs set cancel_requested=true where id=$1",
+    "update execution_runs set cancel_requested=true where id=$1",
     [run.id],
   );
   await assert.rejects(() =>
@@ -125,7 +126,7 @@ test("a disconnected stream cannot release the lock while a tool is still runnin
 test("expired workers require explicit recovery; a timeout cannot silently permit concurrent edits", async () => {
   const run = await begin("vm-expired");
   await pool.query(
-    "update adorable.execution_runs set deadline=now()-interval '1 minute' where id=$1",
+    "update execution_runs set deadline=now()-interval '1 minute' where id=$1",
     [run.id],
   );
   await assert.rejects(() => assertRun(run));
@@ -232,7 +233,7 @@ test("browser roles cannot read execution events, snapshots or teacher approval 
         "approved_shares",
       ])
         await assert.rejects(
-          () => db.query(`select * from adorable.${table}`),
+          () => db.query(`select * from dreamforge.${table}`),
           /permission denied/,
         );
       await db.query("reset role");
@@ -365,7 +366,7 @@ test("manual terminal edits invalidate evidence and cannot overlap an AI run", a
   const first = await begin(project);
   await finishRun(first, "completed");
   await pool.query(
-    "update adorable.project_execution set verification=$2 where project_id=$1",
+    "update project_execution set verification=$2 where project_id=$1",
     [project, JSON.stringify({ revision: 0, ok: true })],
   );
   await invalidateManualEdit(project);

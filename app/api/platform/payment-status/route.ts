@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   )
     return Response.json({ error: "Invalid payment link." }, { status: 400 });
   const { rows } = await database().query(
-    `select p.tokens from adorable.topup_requests t left join adorable.payments p on p.child_id=t.child_id and p.stripe_session_id=$2 where t.token_hash=$1 and t.expires_at>now()`,
+    `select p.tokens from topup_requests t left join payments p on p.child_id=t.child_id and p.stripe_session_id=$2 where t.token_hash=$1 and t.expires_at>now()`,
     [tokenHash(token), session],
   );
   if (!rows.length)

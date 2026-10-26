@@ -1,3 +1,4 @@
+import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
 import fs from 'node:fs/promises';
 import { isDeepStrictEqual } from 'node:util';
 import dotenv from 'dotenv';
@@ -5,7 +6,7 @@ import { Pool } from 'pg';
 import { Freestyle } from 'freestyle';
 const env=dotenv.parse(await fs.readFile('.env'));
 const freestyle=new Freestyle({apiKey:env.FREESTYLE_API_KEY,baseUrl:env.FREESTYLE_BASE_URL});
-const pool=new Pool({connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:true,ca:await fs.readFile('config/supabase-ca.crt','utf8')},max:1});
+const pool=new Pool({options: APPLICATION_DATABASE_OPTIONS,connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:true,ca:await fs.readFile('config/supabase-ca.crt','utf8')},max:1});
 const receipt=JSON.parse(await fs.readFile('.deployment/backend.json'));
 const backend=freestyle.vms.ref(receipt.vmId);
 try{
@@ -16,11 +17,11 @@ try{
  for(const vm of vms){
   const legacy=await freestyle.vms.ref(vm.id).fs.readTextFile('/adorable/project.json').then(JSON.parse).catch(()=>null);
   if(!legacy)continue;
-  const {rows}=await pool.query('select metadata from adorable.projects where vm_id=$1',[vm.id]);
+  const {rows}=await pool.query('select metadata from projects where vm_id=$1',[vm.id]);
   if(!rows[0]||!isDeepStrictEqual(legacy,rows[0].metadata))throw Error(`Metadata changed since migration for ${vm.id}; sync before retirement`);
   for(const c of legacy.conversations){
    const messages=JSON.parse(await freestyle.vms.ref(vm.id).fs.readTextFile(`/adorable/conversations/${c.id}.json`));
-   const {rows:stored}=await pool.query('select messages from adorable.conversations where vm_id=$1 and id=$2',[vm.id,c.id]);
+   const {rows:stored}=await pool.query('select messages from conversations where vm_id=$1 and id=$2',[vm.id,c.id]);
    if(!isDeepStrictEqual(messages,stored[0]?.messages))throw Error(`Conversation changed since migration for ${vm.id}; sync before retirement`);
   }
   checked++;

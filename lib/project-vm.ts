@@ -158,7 +158,7 @@ export async function createProjectVms(
     });
     if (!prepared) await prepareProjectRuntime(projectId);
     await database().query(
-      "update adorable.runtime_bindings set preview=$2 where project_id=$1",
+      "update runtime_bindings set preview=$2 where project_id=$1",
       [
         projectId,
         JSON.stringify({

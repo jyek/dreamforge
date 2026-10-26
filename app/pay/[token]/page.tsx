@@ -14,7 +14,7 @@ export default async function Pay({
   if (!platformEnabled()) notFound();
   const { token } = await params;
   const { rows } = await database().query(
-    "select 1 from adorable.topup_requests where token_hash=$1 and expires_at>now()",
+    "select 1 from topup_requests where token_hash=$1 and expires_at>now()",
     [tokenHash(token)],
   );
   if (!rows[0]) notFound();

@@ -20,7 +20,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   const session = await getStudentSession();
   if (!session) return null;
   const { rows } = await database().query(
-    "select id,username,display_name,role from adorable.profiles where id=$1",
+    "select id,username,display_name,role from profiles where id=$1",
     [session.id],
   );
   return rows[0] || null;
@@ -41,7 +41,7 @@ export async function platformProjectAccess(
 ) {
   const profile = await getProfile();
   const { rows } = await database().query(
-    `select metadata,owner_id,is_example from adorable.projects where vm_id=$1`,
+    `select metadata,owner_id,is_example from projects where vm_id=$1`,
     [projectId],
   );
   const row = rows[0];
@@ -52,7 +52,7 @@ export async function platformProjectAccess(
   if (row.owner_id === profile.id) return row.metadata;
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
-      `select 1 from adorable.class_projects pc join adorable.classes c on c.id=pc.class_id join adorable.class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,
+      `select 1 from class_projects pc join classes c on c.id=pc.class_id join class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,
       [projectId, profile.id, row.owner_id],
     );
     if (rowCount) return row.metadata;
@@ -89,7 +89,7 @@ export async function limitAuth(req: Request) {
     ip.split(",")[0] + ":" + Math.floor(Date.now() / 600000),
   );
   const { rows } = await database().query(
-    `insert into adorable.auth_attempts(bucket,expires_at) values($1,now()+interval '10 minutes') on conflict(bucket) do update set attempts=adorable.auth_attempts.attempts+1 returning attempts`,
+    `insert into auth_attempts(bucket,expires_at) values($1,now()+interval '10 minutes') on conflict(bucket) do update set attempts=auth_attempts.attempts+1 returning attempts`,
     [bucket],
   );
   return rows[0].attempts <= 20;

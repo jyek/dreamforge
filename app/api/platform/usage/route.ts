@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   try {
     await db.query("begin");
     const { rows } = await db.query(
-      `select r.* from adorable.usage_runs r where r.id=$2 and r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")} for update`,
+      `select r.* from usage_runs r where r.id=$2 and r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")} for update`,
       [user.id, body.id],
     );
     if (!rows[0]) {
@@ -26,11 +26,11 @@ export async function POST(req: Request) {
       );
     }
     await db.query(
-      "update adorable.token_accounts set reserved_tokens=reserved_tokens-$2 where child_id=$1",
+      "update token_accounts set reserved_tokens=reserved_tokens-$2 where child_id=$1",
       [rows[0].child_id, rows[0].reserved_tokens],
     );
     await db.query(
-      "update adorable.usage_runs set state='released',released_by=$2 where id=$1",
+      "update usage_runs set state='released',released_by=$2 where id=$1",
       [body.id, user.id],
     );
     await db.query("commit");

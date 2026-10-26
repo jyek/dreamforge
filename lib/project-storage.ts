@@ -23,7 +23,7 @@ export const readProjectMetadata = async (
   projectId: string,
 ): Promise<ProjectMetadata> => {
   if (usesDatabaseStorage()) {
-    const { rows } = await database().query("select metadata from adorable.projects where vm_id=$1", [projectId]);
+    const { rows } = await database().query("select metadata from projects where vm_id=$1", [projectId]);
     if (!rows[0]) throw new Error("Project not found");
     return rows[0].metadata;
   }
@@ -36,10 +36,10 @@ export const writeProjectMetadata = async (
   metadata: ProjectMetadata,
 ) => {
   if (usesDatabaseStorage()) {
-    await database().query("insert into adorable.projects(vm_id,metadata) values($1,$2) on conflict(vm_id) do update set metadata=excluded.metadata,updated_at=now()", [projectId, JSON.stringify(metadata)]);
+    await database().query("insert into projects(vm_id,metadata) values($1,$2) on conflict(vm_id) do update set metadata=excluded.metadata,updated_at=now()", [projectId, JSON.stringify(metadata)]);
     // A created workspace must rest even if its creator closes the browser
     // before the first activity request reaches Vercel.
-    await database().query("insert into adorable.runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do nothing", [projectId]);
+    await database().query("insert into runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do nothing", [projectId]);
     return metadata;
   }
   await devVm(projectId).fs.writeTextFile(
@@ -56,7 +56,7 @@ const updateProjectMetadata = async (
 ) => {
   if (usesDatabaseStorage()) return withProjectLock(projectId, async (db, current) => {
     const next = update(current);
-    await db.query("update adorable.projects set metadata=$2,updated_at=now() where vm_id=$1", [projectId, JSON.stringify(next)]);
+    await db.query("update projects set metadata=$2,updated_at=now() where vm_id=$1", [projectId, JSON.stringify(next)]);
     return next;
   });
   const current = await readProjectMetadata(projectId);
@@ -68,7 +68,7 @@ async function withProjectLock<T>(projectId: string, work: (db: PoolClient, meta
   const db = await database().connect();
   try {
     await db.query("begin");
-    const { rows } = await db.query("select metadata from adorable.projects where vm_id=$1 for update", [projectId]);
+    const { rows } = await db.query("select metadata from projects where vm_id=$1 for update", [projectId]);
     if (!rows[0]) throw new Error("Project not found");
     const result = await work(db, rows[0].metadata);
     await db.query("commit");
@@ -77,7 +77,7 @@ async function withProjectLock<T>(projectId: string, work: (db: PoolClient, meta
 }
 
 export async function listStoredProjects() {
-  const { rows } = await database().query("select vm_id,metadata from adorable.projects order by updated_at desc");
+  const { rows } = await database().query("select vm_id,metadata from projects order by updated_at desc");
   return rows as { vm_id: string; metadata: ProjectMetadata }[];
 }
 
@@ -101,8 +101,8 @@ export const createConversation = async (
   const now = new Date().toISOString();
   if (usesDatabaseStorage()) return withProjectLock(projectId, async (db, current) => {
     const next = {...current, conversations: [{id: conversationId, title: initialTitle?.trim().replace(/\s+/g, " ").slice(0,60) || `Conversation ${current.conversations.length + 1}`, createdAt: now, updatedAt: now}, ...current.conversations]};
-    await db.query("insert into adorable.conversations(vm_id,id,messages) values($1,$2,'[]')", [projectId, conversationId]);
-    await db.query("update adorable.projects set metadata=$2,updated_at=now() where vm_id=$1", [projectId, JSON.stringify(next)]);
+    await db.query("insert into conversations(vm_id,id,messages) values($1,$2,'[]')", [projectId, conversationId]);
+    await db.query("update projects set metadata=$2,updated_at=now() where vm_id=$1", [projectId, JSON.stringify(next)]);
     return next;
   });
 
@@ -133,7 +133,7 @@ export const readConversationMessages = async (
 ): Promise<UIMessage[]> => {
   conversationPath(conversationId);
   if (usesDatabaseStorage()) {
-    const { rows } = await database().query("select messages from adorable.conversations where vm_id=$1 and id=$2", [projectId, conversationId]);
+    const { rows } = await database().query("select messages from conversations where vm_id=$1 and id=$2", [projectId, conversationId]);
     if (!rows[0]) throw new Error("Conversation not found");
     return ensureFinalResponse(rows[0].messages).messages;
   }
@@ -155,8 +155,8 @@ export const saveConversationMessages = async (
     if (!existing) throw new Error("Conversation not found");
     const summary = {...existing, title: deriveConversationTitle(messages, existing.title), updatedAt: now};
     const next = {...current, conversations: [summary, ...current.conversations.filter(entry => entry.id !== conversationId)]};
-    await db.query("update adorable.conversations set messages=$3,updated_at=now() where vm_id=$1 and id=$2", [projectId, conversationId, JSON.stringify(messages)]);
-    await db.query("update adorable.projects set metadata=$2,updated_at=now() where vm_id=$1", [projectId, JSON.stringify(next)]);
+    await db.query("update conversations set messages=$3,updated_at=now() where vm_id=$1 and id=$2", [projectId, conversationId, JSON.stringify(messages)]);
+    await db.query("update projects set metadata=$2,updated_at=now() where vm_id=$1", [projectId, JSON.stringify(next)]);
     return next;
   });
 

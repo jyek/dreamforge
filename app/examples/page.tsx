@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function Examples() {
   const { rows } = await database().query(
     platformEnabled()
-      ? "select vm_id,metadata from adorable.projects where is_example order by updated_at desc"
-      : "select vm_id,metadata from adorable.projects order by updated_at desc",
+      ? "select vm_id,metadata from projects where is_example order by updated_at desc"
+      : "select vm_id,metadata from projects order by updated_at desc",
   );
   return (
     <main className="df-page">

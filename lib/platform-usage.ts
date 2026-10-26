@@ -1,5 +1,5 @@
 import { TOKEN_LIMIT_MESSAGE } from "./trusted-errors";
-import { QuotaError } from "./token-quota";
+import { QuotaError } from "./quota-error";
 import { database } from "./database";
 // Price caps sent to OpenRouter, not a promise of exact provider billing.
 export function estimatedCost(model: string, input: number, output: number) {
@@ -21,12 +21,12 @@ export async function reserveUsage(
   try {
     await db.query("begin");
     const { rowCount } = await db.query(
-      "update adorable.token_accounts set reserved_tokens=reserved_tokens+$2 where child_id=$1 and used_tokens+reserved_tokens+$2<=token_limit",
+      "update token_accounts set reserved_tokens=reserved_tokens+$2 where child_id=$1 and used_tokens+reserved_tokens+$2<=token_limit",
       [child, bound],
     );
     if (!rowCount) throw new QuotaError(TOKEN_LIMIT_MESSAGE);
     const { rows } = await db.query(
-      "insert into adorable.usage_runs(child_id,vm_id,reserved_tokens) values($1,$2,$3) returning id",
+      "insert into usage_runs(child_id,vm_id,reserved_tokens) values($1,$2,$3) returning id",
       [child, project, bound],
     );
     await db.query("commit");
@@ -48,7 +48,7 @@ export async function settleUsage(
   try {
     await db.query("begin");
     const { rows } = await db.query(
-      "select * from adorable.usage_runs where id=$1 and state='reserved' for update",
+      "select * from usage_runs where id=$1 and state='reserved' for update",
       [id],
     );
     const run = rows[0];
@@ -60,7 +60,7 @@ export async function settleUsage(
     const tokens = uncertain ? 0 : input! + output!;
     const cost = uncertain ? null : estimatedCost(model || "", input!, output!);
     await db.query(
-      "update adorable.token_accounts set reserved_tokens=reserved_tokens-$2,used_tokens=used_tokens+$3,input_tokens=input_tokens+$4,output_tokens=output_tokens+$5,estimated_cost_usd=estimated_cost_usd+$6 where child_id=$1",
+      "update token_accounts set reserved_tokens=reserved_tokens-$2,used_tokens=used_tokens+$3,input_tokens=input_tokens+$4,output_tokens=output_tokens+$5,estimated_cost_usd=estimated_cost_usd+$6 where child_id=$1",
       [
         run.child_id,
         uncertain ? 0 : run.reserved_tokens,
@@ -71,7 +71,7 @@ export async function settleUsage(
       ],
     );
     await db.query(
-      "update adorable.usage_runs set model=$2,input_tokens=$3,output_tokens=$4,estimated_cost_usd=$5,state=$6,settled_at=now() where id=$1",
+      "update usage_runs set model=$2,input_tokens=$3,output_tokens=$4,estimated_cost_usd=$5,state=$6,settled_at=now() where id=$1",
       [
         id,
         model || null,
@@ -94,11 +94,11 @@ export async function settleUsage(
  * Unknown usage remains reserved and is labelled uncertain for teacher review. */
 export async function reconcileExpiredUsage() {
   const { rows } = await database().query(
-    "select id from adorable.usage_runs where state='reserved' and created_at<now()-interval '15 minutes' limit 100",
+    "select id from usage_runs where state='reserved' and created_at<now()-interval '15 minutes' limit 100",
   );
   for (const run of rows) await settleUsage(run.id);
   await database().query(
-    "delete from adorable.auth_attempts where expires_at<now()",
+    "delete from auth_attempts where expires_at<now()",
   );
 }
 

@@ -31,8 +31,8 @@ await run(`mkdir -p /app/runtime-state && chown ${user}:${user} /app/runtime-sta
 await vm.fs.writeFile('/app/runtime.env',Object.entries(runtime).map(([k,v])=>`${k}=${v}`).join('\n')+'\n');
 await run('chmod 600 /app/runtime.env',true);
 const node=await run('command -v node');
-await vm.fs.writeFile('/app/adorable.service',`[Unit]\nDescription=DreamForge application\nAfter=network.target\n[Service]\nType=simple\nUser=${user}\nWorkingDirectory=/app/adorable\nEnvironmentFile=/app/runtime.env\nExecStart=${node} /app/adorable/server.js\nRestart=always\nRestartSec=3\n[Install]\nWantedBy=multi-user.target\n`);
-await run('cp /app/adorable.service /etc/systemd/system/adorable.service && systemctl daemon-reload && systemctl enable adorable && systemctl restart adorable',true);
+await vm.fs.writeFile('/app/service',`[Unit]\nDescription=DreamForge application\nAfter=network.target\n[Service]\nType=simple\nUser=${user}\nWorkingDirectory=/app/adorable\nEnvironmentFile=/app/runtime.env\nExecStart=${node} /app/adorable/server.js\nRestart=always\nRestartSec=3\n[Install]\nWantedBy=multi-user.target\n`);
+await run('cp /app/service /etc/systemd/system/service && systemctl daemon-reload && systemctl enable adorable && systemctl restart adorable',true);
 console.log('Application service started');
 if(!receipt.mapped){await client.tls.rules.create({action:'allow',domain:receipt.domain,source:{public:true},destination:{vmId:receipt.vmId,port:3000}});receipt.mapped=true;await fs.writeFile(receiptPath,JSON.stringify(receipt),{mode:0o600});}
 console.log('Backend HTTPS',`https://${receipt.domain}`);

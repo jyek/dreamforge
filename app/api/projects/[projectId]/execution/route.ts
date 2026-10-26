@@ -15,7 +15,7 @@ export async function GET(
     const {
       rows: [state],
     } = await database().query(
-      "select revision,active_run from adorable.project_execution where project_id=$1",
+      "select revision,active_run from project_execution where project_id=$1",
       [projectId],
     );
     return Response.json(
@@ -63,14 +63,14 @@ export async function POST(
   if (body.action === "stop") {
     // Keep the lock until the worker acknowledges cancellation. Disconnecting the UI is not Stop.
     await database().query(
-      "update adorable.execution_runs set cancel_requested=true where project_id=$1 and state='running'",
+      "update execution_runs set cancel_requested=true where project_id=$1 and state='running'",
       [projectId],
     );
     return Response.json({ state: "cancellation-requested" }, { status: 202 });
   }
   if (body.action === "human-tested" && Number.isSafeInteger(body.revision)) {
     const { rowCount } = await database().query(
-      `update adorable.project_execution set verification=coalesce(verification,'{}'::jsonb)||jsonb_build_object('revision',revision,'humanTested',true,'humanTestedAt',now()) where project_id=$1 and revision=$2 and active_run is null`,
+      `update project_execution set verification=coalesce(verification,'{}'::jsonb)||jsonb_build_object('revision',revision,'humanTested',true,'humanTestedAt',now()) where project_id=$1 and revision=$2 and active_run is null`,
       [projectId, body.revision],
     );
     return Response.json({ ok: !!rowCount }, { status: rowCount ? 200 : 409 });

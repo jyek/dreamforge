@@ -1,7 +1,5 @@
 import { authorizeProject } from "./project-access";
 import { checkOrigin, getProfile, platformEnabled } from "./platform-auth";
-import { getStudentSession } from "./student-session";
-import { demoMode } from "./demo-mode";
 import { assertChildGeneration } from "./child-policy";
 import {
   beginRun,
@@ -15,12 +13,7 @@ import { SafetyError } from "./kids-safety";
 
 const defaultServices = {
   authorize: async (project: string) => !!(await authorizeProject(project)),
-  identity: async () =>
-    !!(platformEnabled()
-      ? await getProfile()
-      : demoMode()
-        ? null
-        : await getStudentSession()),
+  identity: async () => !!(platformEnabled() ? await getProfile() : null),
 };
 export async function managedChat(
   req: Request,

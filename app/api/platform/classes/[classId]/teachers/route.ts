@@ -22,13 +22,13 @@ export async function GET(
   if (!classroom)
     return Response.json({ error: "Classroom not found." }, { status: 404 });
   const { rows: teachers } = await database().query(
-    `select pr.id,pr.display_name,pr.username,(pr.id=c.teacher_id) as is_owner from adorable.classes c join adorable.profiles pr on pr.id=c.teacher_id or exists(select 1 from adorable.class_teachers t where t.class_id=c.id and t.teacher_id=pr.id) where c.id=$1 order by (pr.id=c.teacher_id) desc,lower(pr.display_name)`,
+    `select pr.id,pr.display_name,pr.username,(pr.id=c.teacher_id) as is_owner from classes c join profiles pr on pr.id=c.teacher_id or exists(select 1 from class_teachers t where t.class_id=c.id and t.teacher_id=pr.id) where c.id=$1 order by (pr.id=c.teacher_id) desc,lower(pr.display_name)`,
     [classId],
   );
   const canManage = classroom.teacher_id === user.id;
   const { rows: invitations } = canManage
     ? await database().query(
-        "select token_hash as id,expires_at from adorable.teacher_invites where classroom_id=$1 and used_at is null and expires_at>now() order by expires_at",
+        "select token_hash as id,expires_at from teacher_invites where classroom_id=$1 and used_at is null and expires_at>now() order by expires_at",
         [classId],
       )
     : { rows: [] };
@@ -44,7 +44,7 @@ export async function POST(
     return Response.json({ error: "Not allowed." }, { status: 403 });
   const token = inviteToken();
   const { rowCount } = await database().query(
-    "insert into adorable.teacher_invites(token_hash,created_by,classroom_id) select $1,$2,c.id from adorable.classes c where c.id=$3 and c.teacher_id=$2",
+    "insert into teacher_invites(token_hash,created_by,classroom_id) select $1,$2,c.id from classes c where c.id=$3 and c.teacher_id=$2",
     [tokenHash(token), user.id, classId],
   );
   if (!rowCount)
@@ -69,7 +69,7 @@ export async function DELETE(
   try {
     await db.query("begin");
     const { rowCount } = await db.query(
-      "select 1 from adorable.classes where id=$1 and teacher_id=$2 for update",
+      "select 1 from classes where id=$1 and teacher_id=$2 for update",
       [classId, user.id],
     );
     if (!rowCount) {
@@ -85,7 +85,7 @@ export async function DELETE(
       body.teacherId !== user.id
     )
       await db.query(
-        "delete from adorable.class_teachers where class_id=$1 and teacher_id=$2",
+        "delete from class_teachers where class_id=$1 and teacher_id=$2",
         [classId, body.teacherId],
       );
     else if (
@@ -93,7 +93,7 @@ export async function DELETE(
       /^[a-f0-9]{64}$/.test(body.inviteId)
     )
       await db.query(
-        "delete from adorable.teacher_invites where classroom_id=$1 and token_hash=$2 and used_at is null",
+        "delete from teacher_invites where classroom_id=$1 and token_hash=$2 and used_at is null",
         [classId, body.inviteId],
       );
     else {

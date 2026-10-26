@@ -28,7 +28,7 @@ await fs.mkdir(backupRoot, { recursive: true, mode: 0o700 });
 const results: unknown[] = [];
 try {
   const { rows } = await database().query(
-    "select vm_id,metadata from adorable.projects order by updated_at desc",
+    "select vm_id,metadata from projects order by updated_at desc",
   );
   await fs.writeFile(
     path.join(backupRoot, "projects.json"),
@@ -36,7 +36,7 @@ try {
     { mode: 0o600 },
   );
   const chats = await database().query(
-    "select vm_id,id,messages from adorable.conversations order by vm_id,id",
+    "select vm_id,id,messages from conversations order by vm_id,id",
   );
   await fs.writeFile(
     path.join(backupRoot, "conversations.json"),
@@ -46,7 +46,7 @@ try {
   for (const row of rows) {
     const id = row.vm_id;
     const saved = await database().query(
-      "select sandbox_id from adorable.runtime_bindings where project_id=$1",
+      "select sandbox_id from runtime_bindings where project_id=$1",
       [id],
     );
     if (saved.rowCount) {

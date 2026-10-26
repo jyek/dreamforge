@@ -14,13 +14,13 @@ export async function GET(
     );
   const db = database();
   const { rowCount } = await db.query(
-    "select 1 from adorable.projects where vm_id=$1 and owner_id=$2 and not is_example",
+    "select 1 from projects where vm_id=$1 and owner_id=$2 and not is_example",
     [projectId, user.id],
   );
   if (!rowCount)
     return Response.json({ error: "Project not found." }, { status: 404 });
   const { rows } = await db.query(
-    `select c.id,c.name,exists(select 1 from adorable.class_projects pc where pc.class_id=c.id and pc.vm_id=$2) as attached from adorable.classes c where ${classroomTeacherSQL("c.id")} order by c.created_at`,
+    `select c.id,c.name,exists(select 1 from class_projects pc where pc.class_id=c.id and pc.vm_id=$2) as attached from classes c where ${classroomTeacherSQL("c.id")} order by c.created_at`,
     [user.id, projectId],
   );
   return Response.json({ classes: rows });
@@ -52,7 +52,7 @@ export async function PUT(
   try {
     await db.query("begin");
     const { rowCount } = await db.query(
-      "select 1 from adorable.projects where vm_id=$1 and owner_id=$2 and not is_example for update",
+      "select 1 from projects where vm_id=$1 and owner_id=$2 and not is_example for update",
       [projectId, user.id],
     );
     if (!rowCount) {
@@ -60,7 +60,7 @@ export async function PUT(
       return Response.json({ error: "Project not found." }, { status: 404 });
     }
     const classes = await db.query(
-      `select c.id from adorable.classes c where ${classroomTeacherSQL("c.id")} and c.id=any($2::uuid[]) for share`,
+      `select c.id from classes c where ${classroomTeacherSQL("c.id")} and c.id=any($2::uuid[]) for share`,
       [user.id, unique],
     );
     if (classes.rows.length !== unique.length) {
@@ -70,11 +70,11 @@ export async function PUT(
         { status: 403 },
       );
     }
-    await db.query("delete from adorable.class_projects where vm_id=$1", [
+    await db.query("delete from class_projects where vm_id=$1", [
       projectId,
     ]);
     await db.query(
-      "insert into adorable.class_projects(vm_id,class_id,assigned_by) select $1,unnest($2::uuid[]),$3",
+      "insert into class_projects(vm_id,class_id,assigned_by) select $1,unnest($2::uuid[]),$3",
       [projectId, unique, user.id],
     );
     await db.query("commit");

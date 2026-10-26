@@ -21,7 +21,7 @@ export async function runtimeSandbox(
   options: { timeoutMs?: number; signal?: AbortSignal } = {},
 ) {
   const { rows } = await database().query(
-    "select sandbox_id from adorable.runtime_bindings where project_id=$1",
+    "select sandbox_id from runtime_bindings where project_id=$1",
     [projectId],
   );
   if (!rows[0]) {
@@ -37,7 +37,7 @@ export async function runtimeSandbox(
 
 export async function bindRuntime(projectId: string, sandboxId: string) {
   await database().query(
-    "insert into adorable.runtime_bindings(project_id,sandbox_id) values($1,$2)",
+    "insert into runtime_bindings(project_id,sandbox_id) values($1,$2)",
     [projectId, sandboxId],
   );
 }
@@ -240,11 +240,11 @@ export async function runtimePreview(projectId: string, fresh = false) {
         rows: [state],
       } = await database().query(
         `select b.preview, exists(
-          select 1 from adorable.project_execution p
-          join adorable.execution_runs r on r.id=p.active_run
+          select 1 from project_execution p
+          join execution_runs r on r.id=p.active_run
           where p.project_id=b.project_id and r.state='running' and r.snapshot_id is null
-          and exists(select 1 from adorable.execution_events e where e.run_id=r.id and e.kind='snapshot.started')
-        ) as capturing from adorable.runtime_bindings b where b.project_id=$1`,
+          and exists(select 1 from execution_events e where e.run_id=r.id and e.kind='snapshot.started')
+        ) as capturing from runtime_bindings b where b.project_id=$1`,
         [projectId],
       );
       return {
@@ -268,7 +268,7 @@ export async function runtimePreview(projectId: string, fresh = false) {
         expiresAt: preview.tokenExpiresAt,
       };
       await database().query(
-        "update adorable.runtime_bindings set preview=$2 where project_id=$1",
+        "update runtime_bindings set preview=$2 where project_id=$1",
         [projectId, JSON.stringify(result)],
       );
       return result;
@@ -278,13 +278,13 @@ export async function runtimePreview(projectId: string, fresh = false) {
 
 export async function deleteRuntime(projectId: string) {
   const { rows } = await database().query(
-    "select sandbox_id from adorable.runtime_bindings where project_id=$1",
+    "select sandbox_id from runtime_bindings where project_id=$1",
     [projectId],
   );
   if (!rows[0]) return; // An unmigrated legacy VM stays archived.
   await runtime().sandboxes.delete(rows[0].sandbox_id);
   await database().query(
-    "delete from adorable.runtime_bindings where project_id=$1",
+    "delete from runtime_bindings where project_id=$1",
     [projectId],
   );
 }

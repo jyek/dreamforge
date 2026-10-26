@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (body.action === "inviteTeacher" && user.role === "teacher") {
     const token = inviteToken();
     await database().query(
-      "insert into adorable.teacher_invites(token_hash,created_by) values($1,$2)",
+      "insert into teacher_invites(token_hash,created_by) values($1,$2)",
       [tokenHash(token), user.id],
     );
     return Response.json({
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Name your class." }, { status: 400 });
     const code = inviteToken().slice(0, 12).toUpperCase();
     const { rows } = await database().query(
-      "insert into adorable.classes(teacher_id,name,invite_code) values($1,$2,$3) returning id,name,invite_code",
+      "insert into classes(teacher_id,name,invite_code) values($1,$2,$3) returning id,name,invite_code",
       [user.id, name, code],
     );
     return Response.json({ class: rows[0] });
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   const code =
     typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
   const { rows } = await database().query(
-    "select id from adorable.classes where invite_code=$1",
+    "select id from classes where invite_code=$1",
     [code],
   );
   if (!rows[0])
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   await database().query(
-    "insert into adorable.class_members(class_id,child_id) values($1,$2) on conflict do nothing",
+    "insert into class_members(class_id,child_id) values($1,$2) on conflict do nothing",
     [rows[0].id, user.id],
   );
   return Response.json({ ok: true });
@@ -74,8 +74,8 @@ async function manageClass(req: Request, remove = false) {
   try {
     const query = {
       text: remove
-        ? "delete from adorable.classes where id=$1 and teacher_id=$2"
-        : "update adorable.classes set name=$3 where id=$1 and teacher_id=$2",
+        ? "delete from classes where id=$1 and teacher_id=$2"
+        : "update classes set name=$3 where id=$1 and teacher_id=$2",
       values: remove ? [body.id, user.id] : [body.id, user.id, name],
       query_timeout: 15000,
     };

@@ -19,20 +19,20 @@ export async function recoverSnapshot(
     const {
       rows: [state],
     } = await db.query(
-      "select * from adorable.project_execution where project_id=$1 for update",
+      "select * from project_execution where project_id=$1 for update",
       [projectId],
     );
     const {
       rows: [target],
     } = await db.query(
-      "select snapshot_id from adorable.execution_runs where id=$1 and project_id=$2",
+      "select snapshot_id from execution_runs where id=$1 and project_id=$2",
       [runId, projectId],
     );
     if (!target?.snapshot_id) throw Error("Recovery snapshot is unavailable.");
     snapshot = target.snapshot_id;
     if (state?.active_run) {
       const { rowCount } = await db.query(
-        "update adorable.execution_runs set state='interrupted',finished_at=now(),cancel_requested=true where id=$1 and deadline<now()",
+        "update execution_runs set state='interrupted',finished_at=now(),cancel_requested=true where id=$1 and deadline<now()",
         [state.active_run],
       );
       if (!rowCount)
@@ -40,11 +40,11 @@ export async function recoverSnapshot(
           "Stop the current run and wait for it to finish before recovering.",
         );
       await db.query(
-        "update adorable.project_execution set active_run=null where project_id=$1",
+        "update project_execution set active_run=null where project_id=$1",
         [projectId],
       );
       await db.query(
-        "insert into adorable.execution_events(run_id,kind) values($1,'run.interrupted')",
+        "insert into execution_events(run_id,kind) values($1,'run.interrupted')",
         [state.active_run],
       );
     }
@@ -74,7 +74,7 @@ export async function recoverSnapshot(
       await previous.stop();
       await markEdit("[snapshot recovery]");
       await database().query(
-        "update adorable.runtime_bindings set sandbox_id=$2,preview=null where project_id=$1",
+        "update runtime_bindings set sandbox_id=$2,preview=null where project_id=$1",
         [projectId, restored.id],
       );
       await restored.previews.create(3000, {

@@ -179,7 +179,7 @@ export async function verifyApp(
     verificationPassed(evidence) &&
     evidence.interactions.length === interactions.length;
   const { rowCount } = await database().query(
-    "update adorable.project_execution set verification=$3 where project_id=$1 and active_run=$2 and revision=$4",
+    "update project_execution set verification=$3 where project_id=$1 and active_run=$2 and revision=$4",
     [run.projectId, run.id, JSON.stringify(evidence), revision],
   );
   if (!rowCount) throw Error("Verification became stale.");

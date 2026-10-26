@@ -4,7 +4,6 @@ import {
   ModerationServiceError,
 } from "./moderation-request";
 import { reserveUsage, settleUsage } from "./platform-usage";
-import { reserveTokens, settleTokens } from "./token-quota";
 import { platformEnabled } from "./platform-auth";
 import { database } from "./database";
 import { currentRun } from "./execution";
@@ -26,11 +25,15 @@ export async function builtinModeration(
     const active = currentRun();
     if (!active) throw Error("A managed moderation run is required");
     const bound = Buffer.byteLength(text) + Buffer.byteLength(policy) + 6144;
-    if (platform) {
+    if (!platform)
+      throw Error(
+        "DreamForge account login is required for managed moderation",
+      );
+    {
       const {
         rows: [project],
       } = await database().query(
-        "select owner_id from adorable.projects where vm_id=$1",
+        "select owner_id from projects where vm_id=$1",
         [active.projectId],
       );
       if (!project?.owner_id) throw Error("A funded project owner is required");
@@ -39,37 +42,13 @@ export async function builtinModeration(
         active.projectId,
         bound,
       );
-    } else {
-      const {
-        rows: [project],
-      } = await database().query(
-        "select coalesce(s.daily_token_limit,200000) as daily_limit from harness_projects h join projects p on p.id=h.project_id left join classroom_harness_settings s on s.classroom_id=p.classroom_id where h.vm_id=$1",
-        [active.projectId],
-      );
-      if (!userId || !project)
-        throw Error("A funded classroom account is required");
-      reservation = await reserveTokens(
-        userId,
-        projectId,
-        bound,
-        Number(project.daily_limit),
-        "openai/gpt-oss-safeguard-20b",
-      );
     }
   }
   const settle = async (input?: number, output?: number) => {
     if (reservation) {
       const id = reservation;
       reservation = undefined;
-      if (platform)
-        await settleUsage(id, input, output, "openai/gpt-oss-safeguard-20b");
-      else
-        await settleTokens(
-          id,
-          input || 0,
-          output || 0,
-          input === undefined || output === undefined,
-        );
+      await settleUsage(id, input, output, "openai/gpt-oss-safeguard-20b");
     }
   };
   try {

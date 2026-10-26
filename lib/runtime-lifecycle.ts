@@ -46,7 +46,7 @@ const persist = () => {
 export async function recordRuntimeActivity(projectId: string) {
   if (usesDatabaseStorage()) {
     await database().query(
-      "insert into adorable.runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do update set last_activity=now(),paused_at=null",
+      "insert into runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do update set last_activity=now(),paused_at=null",
       [projectId],
     );
   } else {
@@ -63,7 +63,7 @@ export async function touchRuntime(projectId: string) {
     try {
       await db.query("begin");
       await db.query(
-        "insert into adorable.runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do update set last_activity=now(),paused_at=null",
+        "insert into runtime_leases(vm_id,last_activity) values($1,now()) on conflict(vm_id) do update set last_activity=now(),paused_at=null",
         [projectId],
       );
       const vm = devVm(projectId);
@@ -89,12 +89,12 @@ export async function holdRuntime(projectId: string) {
   if (usesDatabaseStorage()) {
     // A bounded durable lease survives function shutdown, but cannot hold a VM forever.
     await database().query(
-      "update adorable.runtime_leases set hold_until=now()+interval '6 minutes' where vm_id=$1",
+      "update runtime_leases set hold_until=now()+interval '6 minutes' where vm_id=$1",
       [projectId],
     );
     return async () => {
       await database().query(
-        "update adorable.runtime_leases set hold_until=null,last_activity=now() where vm_id=$1",
+        "update runtime_leases set hold_until=null,last_activity=now() where vm_id=$1",
         [projectId],
       );
     };
@@ -111,10 +111,10 @@ export async function pauseInactiveRuntimes(now = Date.now()) {
     const db = await database().connect();
     try {
       await db.query("begin");
-      await db.query(`update adorable.projects p set metadata=jsonb_set(p.metadata,'{releases}',(select jsonb_agg(case when r->>'state'='publishing' and (r->>'createdAt')::timestamptz < now()-interval '6 minutes' then r || '{"state":"failed","error":"Publishing timed out. Try again."}'::jsonb else r end order by ord) from jsonb_array_elements(p.metadata->'releases') with ordinality as items(r,ord))),updated_at=now()
+      await db.query(`update projects p set metadata=jsonb_set(p.metadata,'{releases}',(select jsonb_agg(case when r->>'state'='publishing' and (r->>'createdAt')::timestamptz < now()-interval '6 minutes' then r || '{"state":"failed","error":"Publishing timed out. Try again."}'::jsonb else r end order by ord) from jsonb_array_elements(p.metadata->'releases') with ordinality as items(r,ord))),updated_at=now()
     where exists(select 1 from jsonb_array_elements(p.metadata->'releases') r where r->>'state'='publishing' and (r->>'createdAt')::timestamptz < now()-interval '6 minutes')`);
       const { rows } = await db.query(
-        `select vm_id from adorable.runtime_leases where last_activity < to_timestamp($1/1000.0)-($2 * interval '1 second') and paused_at is null and (hold_until is null or hold_until < now()) and not exists(select 1 from adorable.project_execution p where p.project_id=vm_id and p.active_run is not null) order by last_activity limit 10 for update skip locked`,
+        `select vm_id from runtime_leases where last_activity < to_timestamp($1/1000.0)-($2 * interval '1 second') and paused_at is null and (hold_until is null or hold_until < now()) and not exists(select 1 from project_execution p where p.project_id=vm_id and p.active_run is not null) order by last_activity limit 10 for update skip locked`,
         [now, PROJECT_IDLE_SECONDS],
       );
       for (const row of rows) {
@@ -122,7 +122,7 @@ export async function pauseInactiveRuntimes(now = Date.now()) {
         const info = await vm.data();
         if (info.state === "running") await vm.pause();
         await db.query(
-          "update adorable.runtime_leases set paused_at=now() where vm_id=$1",
+          "update runtime_leases set paused_at=now() where vm_id=$1",
           [row.vm_id],
         );
       }

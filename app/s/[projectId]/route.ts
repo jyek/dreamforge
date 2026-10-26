@@ -15,7 +15,7 @@ export async function GET(
     const {
       rows: [share],
     } = await database().query(
-      "select url from adorable.approved_shares where project_id=$1 order by created_at desc limit 1",
+      "select url from approved_shares where project_id=$1 order by created_at desc limit 1",
       [projectId],
     );
     return share

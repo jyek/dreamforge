@@ -40,7 +40,7 @@ async function teacher(n: string) {
   const token = randomBytes(24).toString("hex");
   invites.push(hash(token));
   await db.query(
-    "insert into adorable.teacher_invites(token_hash) values($1)",
+    "insert into teacher_invites(token_hash) values($1)",
     [hash(token)],
   );
   const result = await call("/api/platform/auth", {
@@ -72,7 +72,7 @@ try {
   assert.equal(
     (
       await db.query(
-        "select count(*)::int as n from adorable.class_members where child_id=$1",
+        "select count(*)::int as n from class_members where child_id=$1",
         [soloUser.id],
       )
     ).rows[0].n,
@@ -82,7 +82,7 @@ try {
     Number(
       (
         await db.query(
-          "select token_limit from adorable.token_accounts where child_id=$1",
+          "select token_limit from token_accounts where child_id=$1",
           [soloUser.id],
         )
       ).rows[0].token_limit,
@@ -183,15 +183,15 @@ try {
     liveReleaseId: null,
   };
   await db.query(
-    "insert into adorable.projects(vm_id,metadata,owner_id) values($1,$2,$3)",
+    "insert into projects(vm_id,metadata,owner_id) values($1,$2,$3)",
     [id, JSON.stringify(metadata), child.id],
   );
   await db.query(
-    "insert into adorable.conversations(vm_id,id,messages) values($1,$2,$3)",
+    "insert into conversations(vm_id,id,messages) values($1,$2,$3)",
     [id, conversation, "[]"],
   );
   await db.query(
-    "insert into adorable.prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,'Test prompt','allow','{}','low')",
+    "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,'Test prompt','allow','{}','low')",
     [id, child.id, conversation],
   );
   assert.equal(
@@ -291,7 +291,7 @@ try {
   await settleUsage(run, 2000, 1000, "qwen/qwen3-coder-30b-a3b-instruct");
   await settleUsage(run, 2000, 1000, "qwen/qwen3-coder-30b-a3b-instruct");
   const balance = (
-    await db.query("select * from adorable.token_accounts where child_id=$1", [
+    await db.query("select * from token_accounts where child_id=$1", [
       child.id,
     ])
   ).rows[0];
@@ -323,7 +323,7 @@ try {
   const secondProject = "vm-" + randomBytes(16).toString("hex");
   projects.push(secondProject);
   await db.query(
-    "insert into adorable.projects(vm_id,metadata,owner_id) values($1,$2,$3)",
+    "insert into projects(vm_id,metadata,owner_id) values($1,$2,$3)",
     [
       secondProject,
       JSON.stringify({ ...metadata, name: "Another builder project" }),
@@ -331,7 +331,7 @@ try {
     ],
   );
   await db.query(
-    "insert into adorable.prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,'Please review this example prompt','review','{privacy}','low')",
+    "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,'Please review this example prompt','review','{privacy}','low')",
     [secondProject, child.id, conversation],
   );
   const groups = (
@@ -387,7 +387,7 @@ try {
     Number(
       (
         await db.query(
-          "select used_tokens from adorable.token_accounts where child_id=$1",
+          "select used_tokens from token_accounts where child_id=$1",
           [child.id],
         )
       ).rows[0].used_tokens,
@@ -397,7 +397,7 @@ try {
   assert.equal(
     (
       await db.query(
-        "select count(*)::int as n from adorable.profiles where id=$1",
+        "select count(*)::int as n from profiles where id=$1",
         [child.id],
       )
     ).rows[0].n,
@@ -441,23 +441,23 @@ try {
 } finally {
   if (!process.argv.includes("--keep")) {
     for (const id of projects) {
-      await db.query("delete from adorable.prompt_reviews where vm_id=$1", [
+      await db.query("delete from prompt_reviews where vm_id=$1", [
         id,
       ]);
-      await db.query("delete from adorable.usage_runs where vm_id=$1", [id]);
-      await db.query("delete from adorable.projects where vm_id=$1", [id]);
+      await db.query("delete from usage_runs where vm_id=$1", [id]);
+      await db.query("delete from projects where vm_id=$1", [id]);
     }
     for (const id of classes)
-      await db.query("delete from adorable.classes where id=$1", [id]);
+      await db.query("delete from classes where id=$1", [id]);
     for (const user of accounts) {
-      await db.query("delete from adorable.topup_requests where child_id=$1", [
+      await db.query("delete from topup_requests where child_id=$1", [
         user.id,
       ]);
-      await db.query("delete from adorable.token_accounts where child_id=$1", [
+      await db.query("delete from token_accounts where child_id=$1", [
         user.id,
       ]);
       await db.query(
-        "delete from adorable.teacher_invites where used_by=$1 or created_by=$1",
+        "delete from teacher_invites where used_by=$1 or created_by=$1",
         [user.id],
       );
       await fetch(
@@ -473,7 +473,7 @@ try {
     }
     for (const hash of invites)
       await db.query(
-        "delete from adorable.teacher_invites where token_hash=$1",
+        "delete from teacher_invites where token_hash=$1",
         [hash],
       );
   }
