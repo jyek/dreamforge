@@ -46,8 +46,7 @@ export function VmTerminal({
         if(disposed)return;
         try {
           const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session,...body}),keepalive:true});
-          if(response.ok&&!disposed)reconnect();
-          else if (!response.ok) {
+          if (!response.ok) {
             const data = await response.json().catch(() => ({}));
             reportError(data.error || "Terminal input could not reach the workspace.");
           }
@@ -68,6 +67,7 @@ export function VmTerminal({
         fontFamily:
           'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
         cursorBlink: true,
+        disableStdin: true,
         convertEol: true,
         theme: { background: "#ffffff", foreground: "#334155" },
       });
@@ -81,12 +81,15 @@ export function VmTerminal({
       };
 
       // Keep the guest's window size in step with the element's.
+      let terminalConnected = false;
       let resizeTimer: number | undefined;
       const syncSize = () => {
         fitAddon.fit();
         window.clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(
-          () => void post({ cols: terminal.cols, rows: terminal.rows }),
+          () => {
+            if (terminalConnected) void post({ cols: terminal.cols, rows: terminal.rows });
+          },
           150,
         );
       };
@@ -114,17 +117,22 @@ export function VmTerminal({
         events=new EventSource(`${endpoint}?session=${encodeURIComponent(session)}`);
         // Every connection replays guest scrollback, including automatic
         // reconnects before the Vercel function deadline.
-        events.onopen=()=>{terminal.reset();terminal.writeln("Connecting to workspace terminal…");};
+        events.onopen=()=>{terminalConnected=false;terminal.options.disableStdin=true;terminal.reset();terminal.writeln("Connecting to workspace terminal…");};
         events.onmessage=(event)=>terminal.write(decodeChunk(event.data));
         events.addEventListener("terminal-ready", () => {
+          terminalConnected = true;
+          terminal.options.disableStdin = false;
+          syncSize();
           if (!disposed) terminal.writeln("\r\nConnected to workspace terminal.");
         });
         events.addEventListener("terminal-error", (event) => {
+          terminalConnected = false;
+          terminal.options.disableStdin = true;
           events?.close();
           try { reportError(JSON.parse((event as MessageEvent).data).error); }
           catch { reportError("Could not connect to the workspace terminal."); }
         });
-        events.onerror=()=>reportError("Terminal connection lost. Reconnecting…");
+        events.onerror=()=>{terminalConnected=false;terminal.options.disableStdin=true;reportError("Terminal connection lost. Reconnecting…");};
       };
       reconnect();
       cleanups.push(()=>events?.close());

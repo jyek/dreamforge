@@ -8,8 +8,8 @@ import { assertWorkspaceAvailable } from "./runtime-readiness";
 export type Vm = ProjectVm;
 export type PtySession = {
   detach: () => void;
-  write: (data: string) => void;
-  resize: (size: { cols: number; rows: number }) => void;
+  write: (data: string) => void | Promise<void>;
+  resize: (size: { cols: number; rows: number }) => void | Promise<void>;
   signal: (signal: "sigint" | "sigkill") => Promise<void>;
 };
 let client: Runtime | undefined;
@@ -149,10 +149,7 @@ class ProjectVm {
       await sandbox.update({ autoWake });
     }
   }
-  private async session(
-    options: PtyOptions,
-    create: boolean,
-  ): Promise<PtySession> {
+  private async namedTerminal(options: PtyOptions, create: boolean) {
     const sandbox = await this.sandbox();
     assertWorkspaceAvailable(sandbox.state);
     const slug = options.slug || options.session || "shell";
@@ -185,6 +182,10 @@ class ProjectVm {
         throw error;
       }
     }
+    return { sandbox, processId };
+  }
+  private async session(options: PtyOptions, create: boolean): Promise<PtySession> {
+    const { sandbox, processId } = await this.namedTerminal(options, create);
     const terminal: Terminal = await sandbox.terminal({
       processId,
       onData: options.onData,
@@ -203,6 +204,21 @@ class ProjectVm {
     };
   }
   pty = {
+    input: async (slug: string): Promise<PtySession> => {
+      const { sandbox, processId } = await this.namedTerminal({
+        slug,
+        exec: slug === "dev" ? undefined : "cd /workspace && exec bash -l",
+      }, true);
+      const process = await sandbox.processes.get(processId!);
+      // HTTP input is acknowledged before returning; it does not replace the
+      // output WebSocket or close a socket with keystrokes still queued.
+      return {
+        detach: () => {},
+        write: (data) => process.write(data, { timeoutMs: 10000 }),
+        resize: ({ cols, rows }) => process.resize(cols, rows, { timeoutMs: 10000 }),
+        signal: (signal) => process.kill(signal === "sigint" ? "SIGINT" : "SIGKILL", { timeoutMs: 10000 }).then(() => {}),
+      };
+    },
     open: (options: PtyOptions) => this.session(options, true),
     attach: (options: PtyOptions) => this.session(options, false),
     close: async (slug: string) => {

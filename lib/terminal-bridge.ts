@@ -145,22 +145,8 @@ async function withInputSession(
     await action((await bridge(vmId, slug)).session);
     return;
   }
-  // Each serverless input request owns its socket. The browser then reattaches
-  // its output stream and receives the guest's retained scrollback.
-  const pty = devVm(vmId).pty;
-  const session = await pty.attach({ session: slug }).catch(() =>
-    pty.open({
-      slug,
-      exec: slug === "dev" ? undefined : "cd /workspace && exec bash -l",
-      cols: 120,
-      rows: 30,
-    }),
-  );
-  try {
-    await action(session);
-  } finally {
-    session.detach();
-  }
+  // Acknowledged HTTP process input leaves the SSE output socket attached.
+  await action(await devVm(vmId).pty.input(slug));
 }
 
 export const writeToTerminal = (vmId: string, slug: string, data: string) =>
