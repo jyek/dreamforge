@@ -185,9 +185,6 @@ export function ModelSelector() {
                   <span className="min-w-0 flex-1 text-sm font-medium whitespace-nowrap">
                     {label(model)}
                   </span>
-                  <span className="text-[11px] text-slate-400">
-                    {model.id === "auto" ? "" : model.paid ? "Paid" : "Free"}
-                  </span>
                   {selected === model.id && (
                     <CheckIcon className="size-4 shrink-0 text-slate-700" />
                   )}
