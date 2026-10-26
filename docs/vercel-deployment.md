@@ -39,7 +39,7 @@ To also require the database checks before releasing, once the first workflow ha
 
 In GitHub Settings → Rules → Rulesets, protect `main` by requiring a pull request and the `Tests and build` status check. Enable the requirement that branches are up to date before merging. This prevents merging changes that failed CI; Vercel's own test and build gate also covers direct pushes.
 
-Live browser/model E2E tests remain a separate explicit operation because they require a dedicated account and can consume Runtime and model credits. Follow the cleanup requirements below when running them.
+Same-repository pull requests also run the `Live project journey` job against their exact Vercel preview commit. It uses a dedicated test account to create and reopen a project, submit prompts, check replies and generated previews, and remove the disposable project afterward. These tests consume Runtime and model credits. Fork PRs run the deterministic checks without live credentials. See [E2E configuration and coverage](e2e/prompting.md).
 
 ## Verification
 
