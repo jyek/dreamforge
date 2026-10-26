@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { backupEnvironment } from "../scripts/database-backup.mjs";
 import { readFileSync } from "node:fs";
 import pg from "pg";
 import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
@@ -12,7 +17,9 @@ const migration = readFileSync(
 const teacher = "00000000-0000-4000-9000-000000000001",
   child = "00000000-0000-4000-9000-000000000002",
   classId = "00000000-0000-4000-9000-000000000003";
-async function fixture(run: (client: pg.PoolClient) => Promise<void>) {
+async function fixture(
+  run: (client: pg.PoolClient, uri: string) => Promise<void>,
+) {
   const name = `schema_${randomUUID().replaceAll("-", "")}`;
   const url = new URL(process.env.TEST_DATABASE_URL!);
   const admin = new pg.Pool({ connectionString: url.toString() });
@@ -84,13 +91,16 @@ async function fixture(run: (client: pg.PoolClient) => Promise<void>) {
       null,
       "The fresh-install baseline must leave an existing deployment untouched",
     );
-    await run(client);
+    await run(client, url.toString());
   } finally {
     await client.query("rollback").catch(() => {});
     client.release();
     await pool.end();
-    await admin.query(`drop database "${name}"`);
-    await admin.end();
+    try {
+      await admin.query(`drop database "${name}" with (force)`);
+    } finally {
+      await admin.end();
+    }
   }
 }
 test("schema migration preserves data, ownership, roster trigger and access restrictions across the rename", () =>
@@ -217,20 +227,134 @@ test("active runs prevent the cutover; cron schedule and secret references survi
     await client.query(`create schema vault;create table vault.secrets(id uuid primary key,name text);
     create function vault.update_secret(secret_id uuid,new_secret text default null,new_name text default null) returns void language sql as 'update vault.secrets set name=new_name where id=secret_id';
     create schema cron;create table cron.job(jobid bigint generated always as identity primary key,jobname text unique,schedule text,command text,database text,username text,active boolean);
-    create function cron.schedule_in_database(job_name text,sched text,cmd text,db text,usr text,enabled boolean) returns bigint language sql as 'insert into cron.job(jobname,schedule,command,database,username,active) values(job_name,sched,cmd,db,usr,enabled) returning jobid';
+    create function cron.schedule_in_database(job_name text,sched text,cmd text,db text,usr text,enabled boolean) returns bigint language plpgsql as 'declare result bigint; begin if usr is not null then raise exception ''must be superuser to create a job for another role''; end if; insert into cron.job(jobname,schedule,command,database,username,active) values(job_name,sched,cmd,db,current_user,enabled) returning jobid into result; return result; end;';
     create function cron.unschedule(job_id bigint) returns boolean language sql as 'delete from cron.job where jobid=job_id returning true';
     insert into vault.secrets values(gen_random_uuid(),'adorable-runtime-cron');
-    insert into cron.job(jobname,schedule,command,database,username,active) values('adorable-runtime-maintenance','* * * * *','select 1 from adorable.runtime_leases where ''adorable-runtime-cron'' is not null','postgres','postgres',false);`);
+    insert into cron.job(jobname,schedule,command,database,username,active) values('adorable-runtime-maintenance','* * * * *','select 1 from adorable.runtime_leases where ''adorable-runtime-cron'' is not null','postgres',current_user,false);`);
+    await client.query("update cron.job set username='another_role'");
+    await assert.rejects(
+      () => client.query(migration),
+      /owned by another role/,
+    );
+    await client.query("rollback");
+    await client.query("update cron.job set username=current_user");
     await client.query(migration);
     const job = (await client.query("select * from cron.job")).rows[0];
     assert.equal(job.jobname, "dreamforge-runtime-maintenance");
     assert.equal(job.schedule, "* * * * *");
     assert.equal(job.active, false);
-    assert.equal(job.username, "postgres");
+    assert.equal(
+      job.username,
+      (await client.query("select current_user as name")).rows[0].name,
+    );
     assert(job.command.includes("dreamforge.runtime_leases"));
     assert(job.command.includes("dreamforge-runtime-cron"));
     assert.equal(
       (await client.query("select name from vault.secrets")).rows[0].name,
       "dreamforge-runtime-cron",
     );
+  }));
+
+test("native backup connects to the requested database and restores data with private permissions", () =>
+  fixture(async (client, uri) => {
+    const execute = promisify(execFile);
+    const directory = await mkdtemp(
+      path.join(tmpdir(), "dreamforge-backup-regression-"),
+    );
+    const archive = path.join(directory, "application.dump");
+    const destination = new URL(uri);
+    destination.pathname = "/restore_" + randomUUID().replaceAll("-", "");
+    const name = destination.pathname.slice(1);
+    let recovery: pg.Pool | undefined;
+    let created = false;
+    try {
+      const env = {
+        ...backupEnvironment(uri, "config/supabase-ca.crt"),
+        PGSSLMODE: "disable",
+      }; // This cluster is loopback-only, with no TLS.
+      await execute(
+        "pg_dump",
+        [
+          "--format=custom",
+          "--no-owner",
+          "--schema=adorable",
+          "--schema=public",
+          `--file=${archive}`,
+        ],
+        { env },
+      );
+      assert(
+        (
+          await execute("pg_restore", ["--list", archive], { env })
+        ).stdout.includes("TABLE DATA"),
+      );
+      await client.query(`create database "${name}"`);
+      created = true;
+      recovery = new pg.Pool({
+        connectionString: destination.toString(),
+        options: APPLICATION_DATABASE_OPTIONS,
+        max: 1,
+      });
+      await recovery.query(
+        "create schema auth;create table auth.users(id uuid primary key)",
+      );
+      await recovery.query("insert into auth.users values($1),($2)", [
+        teacher,
+        child,
+      ]);
+      await execute(
+        "pg_restore",
+        [
+          "--clean",
+          "--if-exists",
+          "--no-owner",
+          "--exit-on-error",
+          `--dbname=${name}`,
+          archive,
+        ],
+        {
+          env: {
+            ...backupEnvironment(
+              destination.toString(),
+              "config/supabase-ca.crt",
+            ),
+            PGSSLMODE: "disable",
+          },
+        },
+      );
+      assert.equal(
+        (await recovery.query("select count(*)::int as n from profiles"))
+          .rows[0].n,
+        2,
+      );
+      assert.equal(
+        (await recovery.query("select count(*)::int as n from public.courses"))
+          .rows[0].n,
+        4,
+      );
+      assert.equal(
+        (await recovery.query("select owner_id from projects")).rows[0]
+          .owner_id,
+        child,
+      );
+      assert.equal(
+        Number(
+          (await recovery.query("select reserved_tokens from token_accounts"))
+            .rows[0].reserved_tokens,
+        ),
+        45,
+      );
+      assert.equal(
+        (
+          await recovery.query(
+            "select has_schema_privilege('authenticated','adorable','usage') as permitted",
+          )
+        ).rows[0].permitted,
+        false,
+      );
+    } finally {
+      await recovery?.end();
+      if (created) await client.query(`drop database "${name}" with (force)`);
+      await rm(directory, { recursive: true, force: true });
+    }
   }));

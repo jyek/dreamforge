@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { database } from "../lib/database";
+import { backupEnvironment } from "./database-backup.mjs";
 import { mkdir, readFile, writeFile, chmod } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -78,17 +79,12 @@ async function main() {
     path.dirname(dump) === "."
       ? "pg_restore"
       : path.join(path.dirname(dump), "pg_restore");
-  const connection = new URL(process.env.DATABASE_URL!);
-  for (const key of ["sslmode", "sslrootcert", "sslcert", "sslkey", "options"])
-    connection.searchParams.delete(key);
   const schemas = [...new Set(before.map((t) => t.schema))];
   // Credentials travel only in the child environment, never argv or receipts.
-  const backupEnv = {
-    ...process.env,
-    PGDATABASE: connection.toString(),
-    PGSSLMODE: "verify-full",
-    PGSSLROOTCERT: path.resolve("config/supabase-ca.crt"),
-  };
+  const backupEnv = backupEnvironment(
+    process.env.DATABASE_URL!,
+    "config/supabase-ca.crt",
+  );
   try {
     await exec(
       dump,
@@ -103,6 +99,7 @@ async function main() {
     await chmod(backup, 0o600);
     const { stdout } = await exec(restore, ["--list", backup], {
       timeout: 15000,
+      env: { PATH: process.env.PATH, LANG: "C" },
     });
     if (!stdout.includes("TABLE DATA")) throw Error("Empty archive");
   } catch {
