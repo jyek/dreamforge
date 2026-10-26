@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { terminalInputQueue } from "@/lib/terminal-input";
 import "@xterm/xterm/css/xterm.css";
 
 /** SSE carries terminal bytes base64-encoded, since the framing is line-based. */
@@ -40,20 +41,26 @@ export function VmTerminal({
 
     let reconnect=()=>{};
     let reportError = (_message: string) => {};
-    let pending=Promise.resolve();
-    const post=(body:Record<string,unknown>)=>{
-      pending=pending.then(async()=>{
-        if(disposed)return;
-        try {
-          const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session,...body}),keepalive:true});
-          if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            reportError(data.error || "Terminal input could not reach the workspace.");
-          }
-        }catch{reportError("Terminal input could not reach the workspace.");}
+    let stopInput = () => {};
+    let inputFailed = false;
+    const inputQueue = terminalInputQueue(async (body) => {
+      if (disposed) return;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session, ...body }),
+        signal: AbortSignal.timeout(15000),
       });
-      return pending;
-    };
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw Error(data.error || "Terminal input could not reach the workspace.");
+      }
+    }, (error) => {
+      inputFailed = true;
+      stopInput();
+      reportError(`${error instanceof Error ? error.message : "Terminal input failed."} Reopen Terminal to reconnect.`);
+    });
+    cleanups.push(() => inputQueue.dispose());
 
     void (async () => {
       const [{ Terminal }, { FitAddon }] = await Promise.all([
@@ -76,6 +83,7 @@ export function VmTerminal({
       terminal.loadAddon(fitAddon);
       terminal.open(container);
       cleanups.push(() => terminal.dispose());
+      stopInput = () => { terminal.options.disableStdin = true; };
       reportError = (message) => {
         if (!disposed) terminal.writeln(`\r\n${message.replace(/[\x00-\x1f\x7f]/g, " ")}\r\n`);
       };
@@ -88,7 +96,7 @@ export function VmTerminal({
         window.clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(
           () => {
-            if (terminalConnected) void post({ cols: terminal.cols, rows: terminal.rows });
+            if (terminalConnected) inputQueue.resize(terminal.cols, terminal.rows);
           },
           150,
         );
@@ -103,13 +111,8 @@ export function VmTerminal({
         window.clearTimeout(resizeTimer);
       });
 
-      let input="";
-      let inputTimer: ReturnType<typeof setTimeout> | undefined;
-      terminal.onData((data)=>{
-        input+=data;clearTimeout(inputTimer);
-        inputTimer=setTimeout(()=>{const data=input;input="";void post({data});},80);
-      });
-      cleanups.push(()=>clearTimeout(inputTimer));
+      const inputSubscription = terminal.onData((data) => inputQueue.write(data));
+      cleanups.push(() => inputSubscription.dispose());
 
       let events:EventSource|undefined;
       reconnect=()=>{
@@ -121,7 +124,7 @@ export function VmTerminal({
         events.onmessage=(event)=>terminal.write(decodeChunk(event.data));
         events.addEventListener("terminal-ready", () => {
           terminalConnected = true;
-          terminal.options.disableStdin = false;
+          terminal.options.disableStdin = inputFailed;
           syncSize();
           if (!disposed) terminal.writeln("\r\nConnected to workspace terminal.");
         });

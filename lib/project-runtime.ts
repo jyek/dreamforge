@@ -1,7 +1,7 @@
 import { resolveRuntimePreview, type RuntimePreview } from "./runtime-preview";
 import { runtimeSnapshotName } from "./runtime-snapshot-name";
 import { Runtime } from "withruntime";
-import type { Terminal } from "withruntime";
+import type { Terminal, Process } from "withruntime";
 import { database } from "./database";
 import { assertWorkspaceAvailable } from "./runtime-readiness";
 
@@ -155,10 +155,11 @@ class ProjectVm {
     const slug = options.slug || options.session || "shell";
     const path = terminalPath(slug);
     let processId: string | undefined;
+    let guestProcess: Process | undefined;
     try {
       processId = JSON.parse(await sandbox.files.readText(path)).processId;
-      const process = await sandbox.processes.get(processId!);
-      if (process.state !== "running") processId = undefined;
+      guestProcess = await sandbox.processes.get(processId!);
+      if (guestProcess.state !== "running") processId = undefined;
     } catch (error) {
       if (
         !(error instanceof SyntaxError) &&
@@ -174,6 +175,7 @@ class ProjectVm {
         stdin: "pipe",
       });
       processId = process.id;
+      guestProcess = process;
       try {
         await sandbox.files.mkdir("/adorable/terminals", { parents: true });
         await sandbox.files.write(path, JSON.stringify({ processId }));
@@ -182,7 +184,7 @@ class ProjectVm {
         throw error;
       }
     }
-    return { sandbox, processId };
+    return { sandbox, processId, process: guestProcess! };
   }
   private async session(options: PtyOptions, create: boolean): Promise<PtySession> {
     const { sandbox, processId } = await this.namedTerminal(options, create);
@@ -205,11 +207,10 @@ class ProjectVm {
   }
   pty = {
     input: async (slug: string): Promise<PtySession> => {
-      const { sandbox, processId } = await this.namedTerminal({
+      const { process } = await this.namedTerminal({
         slug,
         exec: slug === "dev" ? undefined : "cd /workspace && exec bash -l",
       }, true);
-      const process = await sandbox.processes.get(processId!);
       // HTTP input is acknowledged before returning; it does not replace the
       // output WebSocket or close a socket with keystrokes still queued.
       return {

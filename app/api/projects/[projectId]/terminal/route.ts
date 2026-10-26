@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorizeProject } from "@/lib/project-access";
-import {
-  resizeTerminal,
-  signalTerminal,
-  subscribeToTerminal,
-  writeToTerminal,
-} from "@/lib/terminal-bridge";
+import { subscribeToTerminal, updateTerminal } from "@/lib/terminal-bridge";
 import { APP_SESSION, WORKDIR } from "@/lib/vars";
 import { invalidateManualEdit, ExecutionError } from "@/lib/execution";
 import { runtimeFailure } from "@/lib/runtime-readiness";
@@ -132,18 +127,7 @@ export async function POST(
     }
   }
   try {
-  if (typeof payload.data === "string") {
-    await writeToTerminal(projectId, slug, payload.data);
-  }
-
-  if (payload.cols && payload.rows) {
-    await resizeTerminal(projectId, slug, payload.cols, payload.rows);
-  }
-
-  if (payload.signal) {
-    await signalTerminal(projectId, slug, payload.signal);
-  }
-
+    await updateTerminal(projectId, slug, payload);
   return NextResponse.json({ ok: true });
   } catch (error) {
     const failure = runtimeFailure(error);

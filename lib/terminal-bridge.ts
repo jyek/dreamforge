@@ -149,16 +149,12 @@ async function withInputSession(
   await action(await devVm(vmId).pty.input(slug));
 }
 
-export const writeToTerminal = (vmId: string, slug: string, data: string) =>
-  withInputSession(vmId, slug, (session) => session.write(data));
-export const resizeTerminal = (
+export const updateTerminal = (
   vmId: string,
   slug: string,
-  cols: number,
-  rows: number,
-) => withInputSession(vmId, slug, (session) => session.resize({ cols, rows }));
-export const signalTerminal = (
-  vmId: string,
-  slug: string,
-  signal: "sigint" | "sigkill",
-) => withInputSession(vmId, slug, (session) => session.signal(signal));
+  input: { data?: string; cols?: number; rows?: number; signal?: "sigint" | "sigkill" },
+) => withInputSession(vmId, slug, async (session) => {
+  if (typeof input.data === "string") await session.write(input.data);
+  if (input.cols && input.rows) await session.resize({ cols: input.cols, rows: input.rows });
+  if (input.signal) await session.signal(input.signal);
+});
