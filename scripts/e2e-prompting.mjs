@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { uiReplyMarker } from "./e2e-markers.mjs";
 import { config } from "dotenv";
 config({ path: ".env.e2e.local", quiet: true });
 const origin = new URL(
@@ -521,7 +522,7 @@ try {
     return { feedbackBeforeResponse: true, interactiveAfterReload: true };
   });
   if (page) await check("browser typed prompt receives a reply and survives reload", async () => {
-    const marker = `E2E_UI_REPLY_${randomUUID().replaceAll("-", "")}`;
+    const marker = uiReplyMarker();
     await page.getByRole("textbox", { name: "Message input", exact: true }).fill(`Reply with exactly ${marker}. Do not use tools or edit files.`);
     const response = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/chat" && r.request().method() === "POST", { timeout: 240000 });
     const started = performance.now();
