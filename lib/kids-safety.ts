@@ -1,5 +1,7 @@
 import { MODERATION_RETRY_MESSAGE } from "./trusted-errors";
 import { builtinModeration } from "./builtin-moderation";
+import { ModerationServiceError } from "./moderation-request";
+import { currentRun, event } from "./execution";
 import { moderationConfigured } from "./safety-mode";
 import { safetyEnabled } from "./safety-mode";
 import { createHash } from "node:crypto";
@@ -87,14 +89,21 @@ export async function screenContent(
       if (error instanceof QuotaError)
         throw new SafetyError(error.message, "quota");
       // Log metadata only: never prompts, source, provider bodies or credentials.
-      console.error("moderation.failed", {
+      const diagnostic = {
         phase,
+        projectId,
+        reason:
+          error instanceof ModerationServiceError ? error.reason : undefined,
         errorType: error instanceof Error ? error.name : "Unknown",
         status:
           typeof (error as { status?: unknown })?.status === "number"
             ? (error as { status: number }).status
             : undefined,
-      });
+      };
+      console.error("moderation.failed", diagnostic);
+      const run = currentRun();
+      if (run)
+        await event(run, "moderation.failed", diagnostic).catch(() => {});
       throw new SafetyError(MODERATION_RETRY_MESSAGE, "unavailable");
     }
   }
