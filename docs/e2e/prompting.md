@@ -7,7 +7,7 @@ npm run test:prompting
 npm run test:e2e:prompting
 ```
 
-`test:prompting` runs 19 harness tests, four HTTP test-runner fixture cases, and five provider simulations. It catches missing final replies, empty-provider retries, tool-only endings, interrupted streams, safety screening and progress delivery without paid API calls.
+`test:prompting` runs deterministic harness tests, HTTP test-runner fixtures, and provider simulations. It catches missing final replies, empty-provider retries, tool-only endings, interrupted streams, safety screening and progress delivery without paid API calls.
 
 `test:e2e:prompting` uses the actual deployed app, Supabase, configured model and student runtime. It logs in as a dedicated student, creates a fresh E2E Prompting Playground project, and tests:
 
@@ -17,14 +17,24 @@ npm run test:e2e:prompting
 - Safety refusal before tools execute, with the blocked prompt persisted safely.
 - Cross-origin prompt rejection.
 
-The live command tests API integration. It does not click browser controls, validate responsive layouts, or prove counter interactions. Use `$dreamforge-e2e` in Codex to run the commands and a browser interaction pass.
+Without `E2E_BROWSER_EXECUTABLE`, the live command tests API integration. With a browser configured, it signs in through the UI, creates the disposable project using the project dialog, reopens it from Projects, reloads its workspace, interacts with the generated counter, types a prompt, checks the actual visible response, and reloads to confirm the reply was saved.
+
+## Pull-request checks
+
+`DreamForge CI` runs `Tests and build` for every PR. For a PR branch in this repository, it also runs `Live project journey` after the build passes. The live job waits for the Vercel **Preview deployment of that exact PR head commit**; it never substitutes the production site or an older preview.
+
+The live job uses the repository secrets `E2E_LOGIN` and `E2E_PASSWORD` for the existing dedicated test student. Vercel Preview must have the same account/runtime configuration needed by the app. The workflow does not receive database, Runtime, model-provider or Supabase admin keys; those stay on the app server. Live checks consume the test account's finite allowance and real model/Runtime capacity. They never top up the account automatically.
+
+Fork PRs receive unit, database and build checks, but no live test credentials. The live job is limited to trusted same-repository branches and is serialized so two tests cannot clean up one another's projects. It uses normal `pull_request` events, not `pull_request_target`.
+
+The GitHub run uploads `latest.json` and browser screenshots for seven days, including on failure. A failed assertion or cleanup fails the check. The runner's `finally` removes its project and snapshots; the existing stale-E2E maintenance cleanup handles interrupted jobs that cannot finish `finally`.
 
 ## Configure once
 
 Create an ignored `.env.e2e.local` with a **dedicated student**, never an actual learner's account:
 
 ```dotenv
-E2E_BASE_URL=https://dreamforge.vercel.app
+E2E_BASE_URL=https://dreamforge2.vercel.app
 E2E_LOGIN=your_test_student
 E2E_PASSWORD=your_test_password
 E2E_MODEL=glm

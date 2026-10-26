@@ -41,3 +41,49 @@ jobs:
         run: npm run test:database
       - name: Build production app
         run: npm run build
+
+  live-e2e:
+    name: Live project journey
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: test-and-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      deployments: read
+    concurrency:
+      group: dreamforge-live-e2e
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Wait for this PR's Vercel preview
+        id: preview
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          E2E_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/wait-for-preview.mjs
+      - name: Create, load, prompt, verify response and clean up
+        env:
+          E2E_BASE_URL: ${{ steps.preview.outputs.url }}
+          E2E_LOGIN: ${{ secrets.E2E_LOGIN }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_MODEL: glm
+          E2E_BROWSER_EXECUTABLE: /usr/bin/google-chrome
+        run: npm run test:e2e:prompting
+      - name: Save E2E report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-journey-${{ github.event.pull_request.head.sha }}
+          path: |
+            .e2e-results/latest.json
+            .e2e-results/*.png
+          if-no-files-found: ignore
+          retention-days: 7

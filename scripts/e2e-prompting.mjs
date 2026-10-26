@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
 config({ path: ".env.e2e.local", quiet: true });
 const origin = new URL(
-  process.env.E2E_BASE_URL || "https://dreamforge.vercel.app",
+  process.env.E2E_BASE_URL || "https://dreamforge2.vercel.app",
 ).origin;
 const modelChoice = process.env.E2E_MODEL || "glm";
 const output = path.resolve(process.env.E2E_OUTPUT || ".e2e-results");
@@ -16,7 +16,7 @@ const report = {
   checks: [],
 };
 let cookie = "",
-  project;
+  project, browser, page;
 await fs.mkdir(output, { recursive: true });
 const statePath = path.join(output, "project.json");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -258,12 +258,37 @@ try {
       (p) => p.name === "E2E Prompting Playground" && !p.readOnly,
     );
     for (const candidate of stale) await cleanupProject(candidate.id);
-    const created = await (
-      await request("/api/projects", {
-        name: "E2E Prompting Playground",
-        e2eRunId: randomUUID(),
-      })
-    ).json();
+    let created;
+    if (process.env.E2E_BROWSER_EXECUTABLE) {
+      const { chromium } = await import("playwright-core");
+      browser = await chromium.launch({ executablePath: process.env.E2E_BROWSER_EXECUTABLE, headless: true });
+      page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      page.setDefaultTimeout(90000);
+      await page.goto(origin + "/login");
+      await page.getByPlaceholder("Your username or email").fill(process.env.E2E_LOGIN);
+      await page.getByPlaceholder("At least 8 characters").fill(process.env.E2E_PASSWORD);
+      await page.getByRole("button", { name: "Let’s go →" }).click();
+      await page.waitForURL("**/home");
+      await page.goto(origin + "/projects");
+      // Mark only this dedicated test account's UI-created project for cleanup.
+      const e2eRunId = randomUUID();
+      await page.route("**/api/projects", async (route) => {
+        const req = route.request();
+        if (req.method() !== "POST") return route.continue();
+        return route.continue({ postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }) });
+      });
+      await page.getByRole("button", { name: "Create a project", exact: true }).click();
+      await page.getByLabel("Project name", { exact: true }).fill("E2E Prompting Playground");
+      const response = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/projects" && r.request().method() === "POST", { timeout: 240000 });
+      await page.getByRole("button", { name: "Let’s build →", exact: true }).click();
+      const result = await response;
+      assert.equal(result.status(), 200, "UI project creation failed");
+      created = await result.json();
+    } else {
+      created = await (await request("/api/projects", {
+        name: "E2E Prompting Playground", e2eRunId: randomUUID(),
+      })).json();
+    }
     project = created.project;
     await fs.writeFile(
       statePath,
@@ -273,6 +298,23 @@ try {
     assert(project?.id);
     report.projectId = project.id;
     report.projectUrl = `${origin}/${project.id}`;
+    report.initialConversationId = created.conversationId;
+    if (page) {
+      await page.waitForURL(`**/${project.id}/${created.conversationId}`, { timeout: 240000 });
+      await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
+    }
+  });
+  await check("created project reloads from saved project list", async () => {
+    const { projects } = await (await request("/api/projects")).json();
+    assert(projects.some((p) => p.id === project.id), "Created project missing on reload");
+    if (page) {
+      await page.goto(origin + "/projects");
+      await page.getByText("E2E Prompting Playground", { exact: true }).first().click();
+      await page.waitForURL(`**/${project.id}/**`);
+      await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
+      await page.reload();
+      await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
+    }
   });
   await check("read-only reply streams and persists", async () => {
     const id = await conversation("reply");
@@ -399,25 +441,7 @@ try {
   });
   if (process.env.E2E_BROWSER_EXECUTABLE)
     await check("browser counter interactions", async () => {
-      const { chromium } = await import("playwright-core");
-      const browser = await chromium.launch({
-        executablePath: process.env.E2E_BROWSER_EXECUTABLE,
-        headless: true,
-      });
       try {
-        const page = await browser.newPage({
-          viewport: { width: 1440, height: 900 },
-        });
-        page.setDefaultTimeout(90000);
-        await page.goto(origin + "/login");
-        await page
-          .getByPlaceholder("Your username or email")
-          .fill(process.env.E2E_LOGIN);
-        await page
-          .getByPlaceholder("At least 8 characters")
-          .fill(process.env.E2E_PASSWORD);
-        await page.getByRole("button", { name: "Let’s go →" }).click();
-        await page.waitForURL("**/home");
         await page.goto(`${origin}/${project.id}/${report.conversationId}`);
         const frame = page.frameLocator("iframe").first();
         await frame
@@ -443,16 +467,32 @@ try {
           path: path.join(output, "browser-counter.png"),
           fullPage: true,
         });
-      } finally {
-        await browser.close();
+      } catch (error) {
+        await page.screenshot({ path: path.join(output, "browser-failure.png") }).catch(() => {});
+        throw error;
       }
     });
+  if (page) await check("browser typed prompt receives a reply and survives reload", async () => {
+    const marker = `E2E_UI_REPLY_${randomUUID().replaceAll("-", "")}`;
+    await page.getByRole("textbox", { name: "Message input", exact: true }).fill(`Reply with exactly ${marker}. Do not use tools or edit files.`);
+    const response = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/chat" && r.request().method() === "POST", { timeout: 240000 });
+    const started = performance.now();
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    assert.equal((await response).status(), 200, "Browser prompt request failed");
+    await page.getByText(marker, { exact: true }).waitFor({ timeout: 240000 });
+    const replyMs = Math.round(performance.now() - started);
+    await page.reload();
+    await page.getByText(marker, { exact: true }).waitFor();
+    await page.screenshot({ path: path.join(output, "browser-prompt-reply.png"), fullPage: true });
+    return { replyMs };
+  });
   report.status = "passed";
 } catch (error) {
   report.status = "failed";
   console.error(`FAIL ${error.message}`);
   process.exitCode = 1;
 } finally {
+  if (page && report.status === "failed") await page.screenshot({ path: path.join(output, "browser-failure.png") }).catch(() => {});
   if (project?.id) {
     try {
       report.cleanup = {
@@ -473,6 +513,7 @@ try {
       console.error("FAIL test cleanup: " + error.message);
     }
   }
+  await browser?.close().catch(() => {});
   report.finishedAt = new Date().toISOString();
   await fs.writeFile(
     path.join(output, "latest.json"),

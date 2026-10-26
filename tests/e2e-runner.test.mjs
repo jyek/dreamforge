@@ -155,7 +155,7 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error"])
       if (success)
         assert.equal(
           report.checks.filter((c) => c.status === "passed").length,
-          7,
+          8,
         );
       else
         assert.equal(
