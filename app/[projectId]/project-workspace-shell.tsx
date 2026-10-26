@@ -696,7 +696,6 @@ function AppPreview({
   useEffect(() => {
     if (!activity.ready) {
       setIframeLoaded(false);
-      setView("preview");
     }
   }, [activity.ready, activity.generation]);
   const [iframeLoaded, setIframeLoaded] = useState(false);
@@ -730,12 +729,15 @@ function AppPreview({
                 .map(({ id, label, Icon }) => (
                   <button
                     key={id}
-                    disabled={!activity.ready && id !== "preview"}
+                    disabled={!activity.ready && id === "code"}
                     role="tab"
                     aria-selected={view === id}
                     aria-controls={`workspace-${id}`}
                     title={label}
-                    onClick={() => setView(id)}
+                    onClick={() => {
+                      setView(id);
+                      if (id === "terminal" && activity.idle) void activity.resume();
+                    }}
                     className={cn(
                       "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
                       view === id
@@ -860,8 +862,7 @@ function AppPreview({
         </div>
       )}
       {view === "terminal" &&
-        project.shellAllowed === true &&
-        !activity.idle && (
+        project.shellAllowed === true && (
           <div
             id="workspace-terminal"
             role="tabpanel"
