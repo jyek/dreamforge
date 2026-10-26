@@ -483,6 +483,43 @@ try {
         throw error;
       }
     });
+  if (page) await check("preview refresh shows feedback before the response arrives", async () => {
+    const pattern = `**/api/projects/${project.id}/preview/**`;
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    let intercepted = false;
+    const holdPreview = async (route) => {
+      if (route.request().isNavigationRequest()) {
+        intercepted = true;
+        await gate;
+      }
+      await route.continue();
+    };
+    const reload = page.getByRole("button", { name: "Reload preview", exact: true });
+    await page.route(pattern, holdPreview);
+    try {
+      const pending = page.waitForRequest((request) =>
+        request.isNavigationRequest() && new URL(request.url()).pathname === `/api/projects/${project.id}/preview/`);
+      await reload.click();
+      await pending;
+      await page.getByText("Loading preview…", { exact: true }).waitFor({ timeout: 3000 });
+      assert.equal(await reload.getAttribute("aria-busy"), "true");
+      assert(await reload.locator("svg").evaluate((icon) => icon.classList.contains("animate-spin")));
+      assert(intercepted, "The preview response must still be held while feedback is checked");
+      await page.screenshot({ path: path.join(output, "browser-refresh-loading.png"), fullPage: true });
+    } finally {
+      release();
+      await page.unroute(pattern, holdPreview);
+    }
+    await page.getByText("Loading preview…", { exact: true }).waitFor({ state: "hidden", timeout: 60000 });
+    assert.equal(await reload.getAttribute("aria-busy"), "false");
+    const frame = page.frameLocator("iframe").first();
+    await frame.getByRole("heading", { name: "DreamForge E2E Counter", exact: true }).waitFor();
+    await frame.getByRole("button", { name: "Reset", exact: true }).click();
+    await frame.getByRole("button", { name: "Add one", exact: true }).click();
+    await frame.getByText("1", { exact: true }).waitFor();
+    return { feedbackBeforeResponse: true, interactiveAfterReload: true };
+  });
   if (page) await check("browser typed prompt receives a reply and survives reload", async () => {
     const marker = `E2E_UI_REPLY_${randomUUID().replaceAll("-", "")}`;
     await page.getByRole("textbox", { name: "Message input", exact: true }).fill(`Reply with exactly ${marker}. Do not use tools or edit files.`);

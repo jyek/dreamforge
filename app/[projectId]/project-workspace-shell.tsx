@@ -756,6 +756,14 @@ function AppPreview({
                 previewUrl={project.previewUrl}
                 iframeRef={iframeRef}
                 project={project}
+                loading={activity.starting || (activity.ready && !iframeLoaded)}
+                onNavigationStart={() => setIframeLoaded(false)}
+                onReload={() => {
+                  setIframeLoaded(false);
+                  const iframe = iframeRef.current;
+                  if (iframe) iframe.src = iframe.src;
+                  else void activity.resume();
+                }}
               />
             ) : (
               <>
@@ -884,10 +892,16 @@ function BrowserControls({
   previewUrl,
   iframeRef,
   project,
+  loading,
+  onNavigationStart,
+  onReload,
 }: {
   previewUrl: string;
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
   project: ProjectItem;
+  loading: boolean;
+  onNavigationStart: () => void;
+  onReload: () => void;
 }) {
   const [urlValue, setUrlValue] = useState(() => {
     try {
@@ -929,13 +943,8 @@ function BrowserControls({
     if (!iframe) return;
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     setUrlValue(normalizedPath);
+    onNavigationStart();
     iframe.src = previewPathUrl(normalizedPath);
-  };
-
-  const handleReload = () => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    iframe.src = iframe.src;
   };
 
   const handleBack = () => {
@@ -970,11 +979,13 @@ function BrowserControls({
       </button>
       <button
         type="button"
-        onClick={handleReload}
+        onClick={onReload}
+        aria-label="Reload preview"
+        aria-busy={loading}
         className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
         title="Reload"
       >
-        <RotateCwIcon className="size-3.5" />
+        <RotateCwIcon className={cn("size-3.5", loading && "animate-spin")} />
       </button>
       <form
         className="ml-1 min-w-0 flex-1"
