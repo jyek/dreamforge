@@ -1,4 +1,8 @@
 import { parseModerationDecision } from "./moderation-decision";
+import {
+  moderationRequest,
+  ModerationServiceError,
+} from "./moderation-request";
 import { reserveUsage, settleUsage } from "./platform-usage";
 import { reserveTokens, settleTokens } from "./token-quota";
 import { platformEnabled } from "./platform-auth";
@@ -69,41 +73,34 @@ export async function builtinModeration(
     }
   };
   try {
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
+    const result = await moderationRequest(
+      JSON.stringify({
+        model: "openai/gpt-oss-safeguard-20b",
+        provider: {
+          data_collection: "deny",
+          zdr: true,
+          require_parameters: true,
         },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-safeguard-20b",
-          provider: {
-            data_collection: "deny",
-            zdr: true,
-            require_parameters: true,
-          },
-          messages: [
-            { role: "system", content: policy },
-            { role: "user", content: JSON.stringify({ phase, content: text }) },
-          ],
-          temperature: 0,
-          max_tokens: 2048,
-          response_format: { type: "json_object" },
-          reasoning: { effort: "low", exclude: true },
-        }),
-        signal: AbortSignal.timeout(15000),
-      },
+        messages: [
+          { role: "system", content: policy },
+          { role: "user", content: JSON.stringify({ phase, content: text }) },
+        ],
+        temperature: 0,
+        max_tokens: 2048,
+        response_format: { type: "json_object" },
+        reasoning: { effort: "low", exclude: true },
+      }),
     );
-    if (!response.ok)
-      throw Object.assign(Error("Moderation provider unavailable"), {
-        status: response.status,
-      });
-    const result = await response.json();
     await settle(result.usage?.prompt_tokens, result.usage?.completion_tokens);
-    const content = result.choices?.[0]?.message?.content;
-    return parseModerationDecision(content);
+    if (result.error) throw new ModerationServiceError("response_error");
+    const choice = result.choices?.[0];
+    if (choice?.finish_reason === "length")
+      throw new ModerationServiceError("decision_truncated");
+    try {
+      return parseModerationDecision(choice?.message?.content);
+    } catch {
+      throw new ModerationServiceError("invalid_decision");
+    }
   } catch (error) {
     await settle().catch(() => {});
     throw error;
