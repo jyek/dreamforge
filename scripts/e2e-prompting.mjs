@@ -84,6 +84,12 @@ async function cleanupProject(id) {
     return result;
   }
 }
+function safeError(error) {
+  let message = error instanceof Error ? error.message : String(error);
+  for (const value of [process.env.E2E_PASSWORD, process.env.E2E_LOGIN])
+    if (value) message = message.split(value).join("[redacted]");
+  return message;
+}
 async function check(name, run) {
   const start = performance.now();
   try {
@@ -100,7 +106,7 @@ async function check(name, run) {
       name,
       status: "failed",
       ms: Math.round(performance.now() - start),
-      error: error.message,
+      error: safeError(error),
     });
     throw error;
   }
@@ -484,17 +490,27 @@ try {
     const started = performance.now();
     await page.getByRole("button", { name: "Send message", exact: true }).click();
     assert.equal((await response).status(), 200, "Browser prompt request failed");
-    await page.getByText(marker, { exact: true }).waitFor({ timeout: 240000 });
+    const visibleReply = () => page.locator(".aui-assistant-message-root:visible").getByText(marker, { exact: true }).first();
+    await visibleReply().waitFor({ timeout: 240000 });
     const replyMs = Math.round(performance.now() - started);
+    let persisted = false;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const { messages } = await (await request(`/api/projects/${project.id}/conversations/${report.conversationId}`)).json();
+      const replies = messages.filter((m) => m.role === "assistant" && m.parts.some((p) => p.type === "text" && p.text.trim() === marker));
+      assert(replies.length <= 1, "Browser prompt saved duplicate assistant replies");
+      if (replies.length === 1) { persisted = true; break; }
+      await sleep(500);
+    }
+    assert(persisted, "Browser reply was visible but was not saved");
     await page.reload();
-    await page.getByText(marker, { exact: true }).waitFor();
+    await visibleReply().waitFor();
     await page.screenshot({ path: path.join(output, "browser-prompt-reply.png"), fullPage: true });
-    return { replyMs };
+    return { replyMs, persisted: true };
   });
   report.status = "passed";
 } catch (error) {
   report.status = "failed";
-  console.error(`FAIL ${error.message}`);
+  console.error(`FAIL ${safeError(error)}`);
   process.exitCode = 1;
 } finally {
   if (page && report.status === "failed") await page.screenshot({ path: path.join(output, "browser-failure.png") }).catch(() => {});
@@ -512,10 +528,10 @@ try {
       await fs.rm(statePath, { force: true });
       console.log("PASS test project and snapshots removed");
     } catch (error) {
-      report.cleanup = { status: "failed", error: error.message };
+      report.cleanup = { status: "failed", error: safeError(error) };
       report.status = "failed";
       process.exitCode = 1;
-      console.error("FAIL test cleanup: " + error.message);
+      console.error("FAIL test cleanup: " + safeError(error));
     }
   }
   await browser?.close().catch(() => {});
