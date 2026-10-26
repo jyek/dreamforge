@@ -86,4 +86,5 @@ jobs:
             .e2e-results/latest.json
             .e2e-results/*.png
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7

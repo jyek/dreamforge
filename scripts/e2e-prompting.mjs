@@ -275,7 +275,12 @@ try {
       await page.route("**/api/projects", async (route) => {
         const req = route.request();
         if (req.method() !== "POST") return route.continue();
-        return route.continue({ postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }) });
+        const response = await route.fetch({ postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }) });
+        created = await response.json();
+        // Capture ownership before navigation can discard the browser response,
+        // including when a later UI assertion fails and finally must clean up.
+        project = created.project || (created.id ? { id: created.id } : undefined);
+        await route.fulfill({ response });
       });
       await page.getByRole("button", { name: "Create a project", exact: true }).click();
       await page.getByLabel("Project name", { exact: true }).fill("E2E Prompting Playground");
@@ -283,7 +288,6 @@ try {
       await page.getByRole("button", { name: "Let’s build →", exact: true }).click();
       const result = await response;
       assert.equal(result.status(), 200, "UI project creation failed");
-      created = await result.json();
     } else {
       created = await (await request("/api/projects", {
         name: "E2E Prompting Playground", e2eRunId: randomUUID(),
