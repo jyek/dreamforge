@@ -1,7 +1,7 @@
 import { MODERATION_RETRY_MESSAGE } from "./trusted-errors";
 import { builtinModeration } from "./builtin-moderation";
 import { ModerationServiceError } from "./moderation-request";
-import { currentRun, event } from "./execution";
+import { currentRun, event as executionEvent } from "./execution";
 import { moderationConfigured } from "./safety-mode";
 import { safetyEnabled } from "./safety-mode";
 import { createHash } from "node:crypto";
@@ -103,7 +103,7 @@ export async function screenContent(
       console.error("moderation.failed", diagnostic);
       const run = currentRun();
       if (run)
-        await event(run, "moderation.failed", diagnostic).catch(() => {});
+        await executionEvent(run, "moderation.failed", diagnostic).catch(() => {});
       throw new SafetyError(MODERATION_RETRY_MESSAGE, "unavailable");
     }
   }
