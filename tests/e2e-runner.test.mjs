@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 // Exercise the CLI itself over HTTP. Provider/runtime behavior is a fixture here;
 // this validates test-runner failures, not DreamForge's live deployment.
-for (const mode of ["success", "reused-text-id", "tool-only", "stream-error"])
+for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "moderation-unavailable"])
   test(`E2E runner: ${mode}`, async () => {
     const output = await mkdtemp(path.join(os.tmpdir(), "dreamforge-e2e-"));
     const histories = new Map();
@@ -77,7 +77,9 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error"])
         const user = body.messages[0],
           blocked = user.parts[0].text.includes("keylogger"),
           build = user.parts[0].text.includes("click counter");
-        const answer = blocked
+        const answer = mode === "moderation-unavailable" && !build
+          ? "Safety checks are busy. Please retry."
+          : blocked
           ? "Please choose a safe project."
           : build
             ? "E2E_BUILD_COMPLETE"
@@ -155,13 +157,17 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error"])
       if (success)
         assert.equal(
           report.checks.filter((c) => c.status === "passed").length,
-          7,
+          8,
         );
       else
         assert.equal(
           report.checks.at(-1).name,
-          "code edit, app check, final answer and saved history",
+          mode === "moderation-unavailable"
+            ? "read-only reply streams and persists"
+            : "code edit, app check, final answer and saved history",
         );
+      if (mode === "moderation-unavailable")
+        assert.match(report.checks.at(-1).error, /Returned: Safety checks are busy/);
       assert.equal(report.cleanup.status, "passed");
       assert.equal(
         project,
