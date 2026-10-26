@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   if (!pack || typeof body.token !== "string")
     return Response.json({ error: "Choose a package." }, { status: 400 });
   const { rows } = await database().query(
-    "select child_id from adorable.topup_requests where token_hash=$1 and expires_at>now()",
+    "select child_id from topup_requests where token_hash=$1 and expires_at>now()",
     [tokenHash(body.token)],
   );
   if (!rows[0])

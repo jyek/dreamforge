@@ -6,7 +6,7 @@ import { PROJECT_IDLE_SECONDS } from "../lib/project-idle.mjs";
 config({ path: ".env", quiet: true });
 try {
   const { rows } = await database().query(
-    "select project_id from adorable.runtime_bindings order by project_id",
+    "select project_id from runtime_bindings order by project_id",
   );
   if (!process.argv.includes("--apply")) {
     console.log(
@@ -32,7 +32,7 @@ try {
     // Match the maintenance wake-up condition to the app's new idle threshold.
     // Keep its existing URL, Vault authentication and minute schedule intact.
     const { rows: jobs } = await database().query(
-      "select jobid,command from cron.job where jobname='adorable-runtime-maintenance'",
+      "select jobid,command from cron.job where jobname in ('dreamforge-runtime-maintenance','adorable-runtime-maintenance')",
     );
     for (const job of jobs) {
       const command = job.command.replace(

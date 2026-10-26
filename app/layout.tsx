@@ -2,7 +2,7 @@ import { ModelSettingsProvider } from "@/components/assistant-ui/model-settings"
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { WorkspaceFrame } from "./workspace-frame";
-import { StudentGate } from "@/components/student-gate";
+import { demoMode } from "@/lib/demo-mode";
 import "./globals.css";
 import "./platform.css";
 import { platformEnabled } from "@/lib/platform-auth";
@@ -30,10 +30,11 @@ export const metadata: Metadata = {
 };
 
 function AccountGate({ children }: { children: React.ReactNode }) {
-  return platformEnabled() ? (
-    <>{children}</>
-  ) : (
-    <StudentGate>{children}</StudentGate>
+  if (platformEnabled() || demoMode()) return <>{children}</>;
+  return (
+    <main className="p-8">
+      Enable DreamForge account login to open this workspace.
+    </main>
   );
 }
 
@@ -43,7 +44,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full overflow-hidden">
+    <html
+      lang="en"
+      className="h-full overflow-hidden"
+      data-database-schema="dreamforge"
+    >
       <body
         className={`${geistSans.variable} ${geistMono.variable} h-full overflow-hidden overscroll-none antialiased`}
       >

@@ -8,7 +8,7 @@ const db = database(),
 try {
   await client.query("begin");
   const { rows } = await client.query(
-    `select c.id as class_id,c.teacher_id,p.vm_id,pr.id,pr.username,pr.display_name,pr.role from adorable.classes c join adorable.class_members m on m.class_id=c.id join adorable.profiles pr on pr.id=m.child_id join adorable.projects p on p.owner_id=pr.id where not p.is_example limit 1`,
+    `select c.id as class_id,c.teacher_id,p.vm_id,pr.id,pr.username,pr.display_name,pr.role from classes c join class_members m on m.class_id=c.id join profiles pr on pr.id=m.child_id join projects p on p.owner_id=pr.id where not p.is_example limit 1`,
   );
   assert.ok(
     rows.length,

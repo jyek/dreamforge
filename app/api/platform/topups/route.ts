@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Child account required." }, { status: 403 });
   const token = inviteToken();
   await database().query(
-    "insert into adorable.topup_requests(token_hash,child_id) values($1,$2)",
+    "insert into topup_requests(token_hash,child_id) values($1,$2)",
     [tokenHash(token), user.id],
   );
   return Response.json({

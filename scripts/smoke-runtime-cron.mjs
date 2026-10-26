@@ -1,3 +1,4 @@
+import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import dotenv from 'dotenv';
@@ -5,12 +6,12 @@ import { Pool } from 'pg';
 import { Freestyle } from 'freestyle';
 const env=dotenv.parse(await fs.readFile('.env'));
 const freestyle=new Freestyle({apiKey:env.FREESTYLE_API_KEY,baseUrl:env.FREESTYLE_BASE_URL});
-const pool=new Pool({connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:true,ca:await fs.readFile('config/supabase-ca.crt','utf8')},max:1});
+const pool=new Pool({options: APPLICATION_DATABASE_OPTIONS,connectionString:env.DATABASE_URL,ssl:{rejectUnauthorized:true,ca:await fs.readFile('config/supabase-ca.crt','utf8')},max:1});
 const {id}=JSON.parse(await fs.readFile('.deployment/vercel-smoke-project.json'));
 const origin=process.argv[2];
 try{
- await pool.query("update adorable.runtime_leases set last_activity=now()-interval '21 minutes',hold_until=null,paused_at=null where vm_id=$1",[id]);
- const {rows}=await pool.query('select command from cron.job where jobname=$1',['adorable-runtime-maintenance']);
+ await pool.query("update runtime_leases set last_activity=now()-interval '21 minutes',hold_until=null,paused_at=null where vm_id=$1",[id]);
+ const {rows}=await pool.query('select command from cron.job where jobname=$1',['dreamforge-runtime-maintenance']);
  const {rows:requests}=await pool.query(rows[0].command);assert(requests.length);
  const requestId=requests[0].http_get;
  for(let attempt=0;attempt<25;attempt++){

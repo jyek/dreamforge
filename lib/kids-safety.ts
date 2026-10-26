@@ -7,7 +7,7 @@ import { safetyEnabled } from "./safety-mode";
 import { createHash } from "node:crypto";
 import { moderationDecisionSchema as resultSchema } from "./moderation-decision";
 import type { z } from "zod";
-import { QuotaError } from "./token-quota";
+import { QuotaError } from "./quota-error";
 import { localSafetyDecision } from "./local-safety-policy";
 import { database } from "./database";
 export const POLICY_VERSION = "dreamforge-safety-2026-10-10-v1";
@@ -103,7 +103,9 @@ export async function screenContent(
       console.error("moderation.failed", diagnostic);
       const run = currentRun();
       if (run)
-        await executionEvent(run, "moderation.failed", diagnostic).catch(() => {});
+        await executionEvent(run, "moderation.failed", diagnostic).catch(
+          () => {},
+        );
       throw new SafetyError(MODERATION_RETRY_MESSAGE, "unavailable");
     }
   }
@@ -116,44 +118,21 @@ export async function screenContent(
   )
     result.decision = "block";
   const hash = createHash("sha256").update(text).digest("hex");
-  const event = !userId
-    ? await database().query(
-        `insert into adorable.safety_events(vm_id,phase,decision,categories,severity,content_hash,content,policy_version)
+  const event = await database().query(
+    `insert into safety_events(vm_id,phase,decision,categories,severity,content_hash,content,policy_version)
     values($1,$2,$3,$4,$5,$6,$7,$8) returning id`,
-        [
-          projectId,
-          phase,
-          result.decision,
-          result.categories,
-          result.severity,
-          hash,
-          text,
-          POLICY_VERSION + (safetyEnabled() ? "-semantic" : "-local-rules"),
-        ],
-      )
-    : await database().query(
-        `insert into harness_safety_events(project_id,user_id,phase,decision,categories,severity,content_hash,content,policy_version)
-    values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,
-        [
-          projectId,
-          userId,
-          phase,
-          result.decision,
-          result.categories,
-          result.severity,
-          hash,
-          text,
-          POLICY_VERSION,
-        ],
-      );
+    [
+      projectId,
+      phase,
+      result.decision,
+      result.categories,
+      result.severity,
+      hash,
+      text,
+      POLICY_VERSION + (safetyEnabled() ? "-semantic" : "-local-rules"),
+    ],
+  );
   const rows = event.rows;
-  if (userId && result.decision === "review" && phase === "input") {
-    const approved = await database().query(
-      `select 1 from harness_safety_events where project_id=$1 and user_id=$2 and content_hash=$3 and phase='input' and decision='review' and review_status='allowed' and policy_version=$4 and reviewed_at>now()-interval '24 hours' limit 1`,
-      [projectId, userId, hash, POLICY_VERSION],
-    );
-    if (approved.rowCount) return;
-  }
   if (result.decision !== "allow")
     throw new SafetyError(
       result.categories.includes("self_harm")

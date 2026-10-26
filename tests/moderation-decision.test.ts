@@ -1,4 +1,4 @@
-import { QuotaError } from "../lib/token-quota";
+import { QuotaError } from "../lib/quota-error";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

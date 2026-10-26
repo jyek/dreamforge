@@ -53,7 +53,7 @@ if (key && process.env.SUPABASE_URL) {
   });
   if (!r.ok) throw Error(`Dedicated test signup failed: HTTP ${r.status}`);
   const { rows } = await database().query(
-    "select id from adorable.profiles where username=$1 and role='child'",
+    "select id from profiles where username=$1 and role='child'",
     [username],
   );
   if (!rows[0])
@@ -65,11 +65,11 @@ try {
   await db.query("begin");
   if (key)
     await db.query(
-      "insert into adorable.profiles(id,username,display_name,auth_email,role) values($1,$2,'E2E Dreamer',$3,'child')",
+      "insert into profiles(id,username,display_name,auth_email,role) values($1,$2,'E2E Dreamer',$3,'child')",
       [user.id, username, email],
     );
   await db.query(
-    "insert into adorable.token_accounts(child_id,token_limit) values($1,1000000) on conflict(child_id) do update set token_limit=1000000",
+    "insert into token_accounts(child_id,token_limit) values($1,1000000) on conflict(child_id) do update set token_limit=1000000",
     [user.id],
   );
   await fs.writeFile(

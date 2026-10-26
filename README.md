@@ -45,7 +45,9 @@ The earlier Vite prototype is archived outside this repository. It is not part o
 
 ## Existing data compatibility
 
-Existing Supabase tables use the `adorable` schema, and stored Runtime snapshots use `/adorable` for internal project state. Those persisted identifiers are retained so the refactor does not require moving live student data or rebuilding saved environments. They are not the application's name or deployment root. Historical migrations and provider resource identifiers must not be renamed with a global search-and-replace.
+Application data belongs in the private `dreamforge` schema. See [database setup and consolidation](docs/database-schema.md) for the fresh-install baseline and guarded upgrade from the earlier schema. Supabase's `auth`, `storage`, and extension schemas remain separate. Original SQL migrations are retained in `supabase/history`.
+
+Stored Runtime snapshots still use `/adorable` for internal project state. Those filesystem paths and provider resource identifiers remain unchanged so saved projects keep working.
 
 Keep credentials, deployment receipts and generated test reports in ignored local files. Do not publish `.env*` files or embed provider/service credentials in generated projects.
 

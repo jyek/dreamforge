@@ -9,7 +9,7 @@ export async function GET() {
       { status: 403 },
     );
   const { rows } = await database().query(
-    "select greatest(0,token_limit-used_tokens-reserved_tokens)::text as remaining from adorable.token_accounts where child_id=$1",
+    "select greatest(0,token_limit-used_tokens-reserved_tokens)::text as remaining from token_accounts where child_id=$1",
     [user.id],
   );
   return Response.json(

@@ -12,7 +12,7 @@ export async function acceptClassroomTeacherInvite(
     await db.query("begin");
     const hash = createHash("sha256").update(token).digest("hex");
     const { rows } = await db.query(
-      `select i.classroom_id,i.created_by,i.used_by,c.teacher_id from adorable.teacher_invites i join adorable.classes c on c.id=i.classroom_id where i.token_hash=$1 and i.expires_at>now() for update of i`,
+      `select i.classroom_id,i.created_by,i.used_by,c.teacher_id from teacher_invites i join classes c on c.id=i.classroom_id where i.token_hash=$1 and i.expires_at>now() for update of i`,
       [hash],
     );
     const invite = rows[0];
@@ -22,7 +22,7 @@ export async function acceptClassroomTeacherInvite(
     }
     if (invite.used_by) {
       const { rowCount } = await db.query(
-        "select 1 from adorable.class_teachers where class_id=$1 and teacher_id=$2",
+        "select 1 from class_teachers where class_id=$1 and teacher_id=$2",
         [invite.classroom_id, user.id],
       );
       await db.query("rollback");
@@ -32,11 +32,11 @@ export async function acceptClassroomTeacherInvite(
     }
     if (invite.teacher_id !== user.id)
       await db.query(
-        "insert into adorable.class_teachers(class_id,teacher_id,added_by) values($1,$2,$3) on conflict do nothing",
+        "insert into class_teachers(class_id,teacher_id,added_by) values($1,$2,$3) on conflict do nothing",
         [invite.classroom_id, user.id, invite.created_by],
       );
     await db.query(
-      "update adorable.teacher_invites set used_by=$2,used_at=now() where token_hash=$1",
+      "update teacher_invites set used_by=$2,used_at=now() where token_hash=$1",
       [hash, user.id],
     );
     await db.query("commit");

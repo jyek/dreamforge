@@ -4,7 +4,6 @@ import { runtimePreview } from "@/lib/project-runtime";
 import { childPolicy } from "@/lib/child-policy";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled, checkOrigin } from "@/lib/platform-auth";
-import { projectAccess } from "@/lib/harness-access";
 import {
   beginRun,
   finishRun,
@@ -26,7 +25,7 @@ export async function GET(
     const {
       rows: [share],
     } = await database().query(
-      "select url,revision,created_at from adorable.approved_shares where project_id=$1 order by created_at desc limit 1",
+      "select url,revision,created_at from approved_shares where project_id=$1 order by created_at desc limit 1",
       [projectId],
     );
     return Response.json(share || { url: null, approvalRequired: true }, {
@@ -48,10 +47,7 @@ export async function POST(
   if (!checkOrigin(req) || !(await authorizeProject(projectId, true)))
     return Response.json({ error: "Forbidden" }, { status: 403 });
   const teacher = platformEnabled() ? await getProfile() : null;
-  const legacy = platformEnabled()
-    ? null
-    : await projectAccess(projectId, true);
-  if (teacher?.role !== "teacher" && !legacy?.teacher)
+  if (teacher?.role !== "teacher")
     return Response.json(
       { error: "Ask your teacher to approve a fixed project revision." },
       { status: 403 },
@@ -73,8 +69,8 @@ export async function POST(
       return result;
     });
     await database().query(
-      "insert into adorable.approved_shares(id,project_id,revision,teacher_id,snapshot_id,url) select $1,$2,$3,$4,snapshot_id,$5 from adorable.execution_runs where id=$6",
-      [id, projectId, revision, teacher?.id || legacy!.user.id, url, active.id],
+      "insert into approved_shares(id,project_id,revision,teacher_id,snapshot_id,url) select $1,$2,$3,$4,snapshot_id,$5 from execution_runs where id=$6",
+      [id, projectId, revision, teacher!.id, url, active.id],
     );
     await finishRun(active, "completed");
     // Revision URL remains immutable even if another release is published later.

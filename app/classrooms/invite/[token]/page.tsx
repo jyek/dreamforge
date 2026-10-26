@@ -12,7 +12,7 @@ export default async function Page({
   const { token } = await params;
   const user = await getProfile();
   const { rows } = await database().query(
-    "select c.id,c.name,i.used_by,i.used_at from adorable.teacher_invites i join adorable.classes c on c.id=i.classroom_id where i.token_hash=$1 and i.expires_at>now()",
+    "select c.id,c.name,i.used_by,i.used_at from teacher_invites i join classes c on c.id=i.classroom_id where i.token_hash=$1 and i.expires_at>now()",
     [tokenHash(token)],
   );
   const invite = rows[0];

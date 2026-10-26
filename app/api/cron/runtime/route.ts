@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const { rowCount } = await database().query(
-    "select 1 from adorable.runtime_bindings where project_id=$1",
+    "select 1 from runtime_bindings where project_id=$1",
     [payload.projectId],
   );
   if (!rowCount)

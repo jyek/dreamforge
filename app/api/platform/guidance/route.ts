@@ -12,17 +12,17 @@ export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const studentId = params.get("studentId");
   const scoped = `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.created_at,p.metadata->>'name' as project_name,${guidanceSQL} as guidance
-    from adorable.prompt_reviews r join adorable.projects p on p.vm_id=r.vm_id
+    from prompt_reviews r join projects p on p.vm_id=r.vm_id
     where ${teacherStudentAccessSQL("r.child_id")})`;
   if (!studentId) {
     const { rows } = await database().query(
       `${scoped}
       select pr.id,pr.display_name,pr.username,
-      (select count(*)::int from adorable.projects p where p.owner_id=pr.id and not p.is_example) as project_count,
+      (select count(*)::int from projects p where p.owner_id=pr.id and not p.is_example) as project_count,
       (select count(*)::int from prompts r where r.child_id=pr.id) as prompt_count,
       (select count(*)::int from prompts r where r.child_id=pr.id and cardinality(r.guidance)>0) as guidance_count,
       coalesce((select jsonb_object_agg(category,n) from (select category,count(*)::int as n from prompts r cross join lateral unnest(r.guidance) category where r.child_id=pr.id group by category) counts),'{}'::jsonb) as categories
-      from adorable.profiles pr where ${teacherStudentAccessSQL("pr.id")} order by lower(pr.display_name),pr.id`,
+      from profiles pr where ${teacherStudentAccessSQL("pr.id")} order by lower(pr.display_name),pr.id`,
       [user.id],
     );
     return Response.json({ students: rows });
@@ -37,13 +37,13 @@ export async function GET(req: Request) {
     return Response.json({ error: "Invalid page." }, { status: 400 });
   const db = database();
   const { rows: students } = await db.query(
-    `select pr.id,pr.display_name from adorable.profiles pr where pr.id=$2 and ${teacherStudentAccessSQL("pr.id")}`,
+    `select pr.id,pr.display_name from profiles pr where pr.id=$2 and ${teacherStudentAccessSQL("pr.id")}`,
     [user.id, studentId],
   );
   if (!students.length)
     return Response.json({ error: "Student not found." }, { status: 404 });
   const { rows: projects } = await db.query(
-    `select vm_id,metadata->>'name' as name from adorable.projects where owner_id=$1 and not is_example order by updated_at desc`,
+    `select vm_id,metadata->>'name' as name from projects where owner_id=$1 and not is_example order by updated_at desc`,
     [studentId],
   );
   const { rows } = await db.query(

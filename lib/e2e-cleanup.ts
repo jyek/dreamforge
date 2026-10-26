@@ -41,7 +41,7 @@ export async function removeE2eProject(projectId: string, ownerId: string) {
     const {
       rows: [project],
     } = await db.query(
-      "select p.owner_id,p.metadata->>'name' as name,p.metadata->>'e2eRunId' as e2e_run_id,u.username,u.auth_email from adorable.projects p join adorable.profiles u on u.id=p.owner_id where p.vm_id=$1 for update of p",
+      "select p.owner_id,p.metadata->>'name' as name,p.metadata->>'e2eRunId' as e2e_run_id,u.username,u.auth_email from projects p join profiles u on u.id=p.owner_id where p.vm_id=$1 for update of p",
       [projectId],
     );
     if (!project) {
@@ -50,20 +50,20 @@ export async function removeE2eProject(projectId: string, ownerId: string) {
     }
     assertTestProject(project, ownerId);
     await db.query(
-      "insert into adorable.project_execution(project_id) values($1) on conflict do nothing",
+      "insert into project_execution(project_id) values($1) on conflict do nothing",
       [projectId],
     );
     const {
       rows: [execution],
     } = await db.query(
-      "select active_run from adorable.project_execution where project_id=$1 for update",
+      "select active_run from project_execution where project_id=$1 for update",
       [projectId],
     );
     if (execution.active_run) {
       const {
         rows: [run],
       } = await db.query(
-        "select deadline from adorable.execution_runs where id=$1",
+        "select deadline from execution_runs where id=$1",
         [execution.active_run],
       );
       if (!run || new Date(run.deadline).getTime() > Date.now())
@@ -72,18 +72,18 @@ export async function removeE2eProject(projectId: string, ownerId: string) {
         );
       // Only expired disposable test runs can be reclaimed without a live worker.
       await db.query(
-        "update adorable.execution_runs set cancel_requested=true,state='interrupted',finished_at=now() where id=$1",
+        "update execution_runs set cancel_requested=true,state='interrupted',finished_at=now() where id=$1",
         [execution.active_run],
       );
       await db.query(
-        "update adorable.project_execution set active_run=null where project_id=$1",
+        "update project_execution set active_run=null where project_id=$1",
         [projectId],
       );
     }
     const {
       rows: [binding],
     } = await db.query(
-      "select sandbox_id from adorable.runtime_bindings where project_id=$1",
+      "select sandbox_id from runtime_bindings where project_id=$1",
       [projectId],
     );
     for await (const snapshot of await runtime().snapshots.list({
@@ -112,28 +112,28 @@ export async function removeE2eProject(projectId: string, ownerId: string) {
         if (!missing(error)) throw error;
       }
     await db.query(
-      "delete from adorable.runtime_bindings where project_id=$1",
+      "delete from runtime_bindings where project_id=$1",
       [projectId],
     );
-    await db.query("delete from adorable.approved_shares where project_id=$1", [
+    await db.query("delete from approved_shares where project_id=$1", [
       projectId,
     ]);
     await db.query(
-      "delete from adorable.execution_events where run_id in(select id from adorable.execution_runs where project_id=$1)",
+      "delete from execution_events where run_id in(select id from execution_runs where project_id=$1)",
       [projectId],
     );
-    await db.query("delete from adorable.execution_runs where project_id=$1", [
+    await db.query("delete from execution_runs where project_id=$1", [
       projectId,
     ]);
     await db.query(
-      "delete from adorable.project_execution where project_id=$1",
+      "delete from project_execution where project_id=$1",
       [projectId],
     );
     // Keep the account's aggregate token usage; only disposable test-project records go.
-    await db.query("delete from adorable.usage_runs where vm_id=$1", [
+    await db.query("delete from usage_runs where vm_id=$1", [
       projectId,
     ]);
-    await db.query("delete from adorable.projects where vm_id=$1", [projectId]);
+    await db.query("delete from projects where vm_id=$1", [projectId]);
     await db.query("commit");
     return { removed: true, snapshotsDeleted };
   } catch (error) {
@@ -147,8 +147,8 @@ export async function removeE2eProject(projectId: string, ownerId: string) {
 /** Safety net when a test process is killed before its finally block can run. */
 export async function removeStaleE2eProjects() {
   const { rows } = await database()
-    .query(`select p.vm_id,p.owner_id from adorable.projects p
-    join adorable.profiles u on u.id=p.owner_id
+    .query(`select p.vm_id,p.owner_id from projects p
+    join profiles u on u.id=p.owner_id
     where p.metadata->>'name' ~* '^E2E( |$)' and p.metadata->>'e2eRunId' ~* '^[a-f0-9-]{36}$' and u.username ~ '^e2e_[a-f0-9]{12}$'
     and (u.auth_email like '%@tests.dreamforge.invalid' or u.auth_email like '%@children.dreamforge.invalid')
     and p.updated_at<now()-interval '1 hour' order by p.updated_at limit 5`);

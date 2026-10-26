@@ -22,7 +22,7 @@ export async function POST(
   if (!classroom)
     return Response.json({ error: "Classroom not found." }, { status: 404 });
   const { rows } = await database().query(
-    `select p.metadata from adorable.class_projects cp join adorable.projects p on p.vm_id=cp.vm_id where cp.class_id=$1 and cp.vm_id=$2 and (${classroomTeacherSQL("$1", "p.owner_id")} or exists(select 1 from adorable.class_members m where m.class_id=$1 and m.child_id=p.owner_id))`,
+    `select p.metadata from class_projects cp join projects p on p.vm_id=cp.vm_id where cp.class_id=$1 and cp.vm_id=$2 and (${classroomTeacherSQL("$1", "p.owner_id")} or exists(select 1 from class_members m where m.class_id=$1 and m.child_id=p.owner_id))`,
     [classId, projectId],
   );
   if (!rows.length)
