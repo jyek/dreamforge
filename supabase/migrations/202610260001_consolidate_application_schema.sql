@@ -81,12 +81,17 @@ do $$ declare secret_id uuid; begin
 end $$;
 -- Cron commands contain SQL text. Recreate through pg_cron's API, retaining its
 -- schedule, database, role and active state; the whole change is transactional.
+-- Supabase rejects an explicit username for non-superusers, even their own name.
+-- The ownership guard permits NULL (the current owner) without changing roles.
 do $$ declare item record; begin
   if to_regclass('cron.job') is not null then
     for item in select * from cron.job where jobname='adorable-runtime-maintenance' loop
+      if item.username is distinct from current_user then
+        raise exception 'Maintenance job is owned by another role; run the cutover as its owner';
+      end if;
       perform cron.schedule_in_database('dreamforge-runtime-maintenance',item.schedule,
         replace(replace(item.command,'adorable.','dreamforge.'),'adorable-runtime-cron','dreamforge-runtime-cron'),
-        item.database,item.username,item.active);
+        item.database,NULL::text,item.active);
       perform cron.unschedule(item.jobid);
     end loop;
   end if;

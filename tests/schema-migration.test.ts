@@ -227,16 +227,26 @@ test("active runs prevent the cutover; cron schedule and secret references survi
     await client.query(`create schema vault;create table vault.secrets(id uuid primary key,name text);
     create function vault.update_secret(secret_id uuid,new_secret text default null,new_name text default null) returns void language sql as 'update vault.secrets set name=new_name where id=secret_id';
     create schema cron;create table cron.job(jobid bigint generated always as identity primary key,jobname text unique,schedule text,command text,database text,username text,active boolean);
-    create function cron.schedule_in_database(job_name text,sched text,cmd text,db text,usr text,enabled boolean) returns bigint language sql as 'insert into cron.job(jobname,schedule,command,database,username,active) values(job_name,sched,cmd,db,usr,enabled) returning jobid';
+    create function cron.schedule_in_database(job_name text,sched text,cmd text,db text,usr text,enabled boolean) returns bigint language plpgsql as 'declare result bigint; begin if usr is not null then raise exception ''must be superuser to create a job for another role''; end if; insert into cron.job(jobname,schedule,command,database,username,active) values(job_name,sched,cmd,db,current_user,enabled) returning jobid into result; return result; end;';
     create function cron.unschedule(job_id bigint) returns boolean language sql as 'delete from cron.job where jobid=job_id returning true';
     insert into vault.secrets values(gen_random_uuid(),'adorable-runtime-cron');
-    insert into cron.job(jobname,schedule,command,database,username,active) values('adorable-runtime-maintenance','* * * * *','select 1 from adorable.runtime_leases where ''adorable-runtime-cron'' is not null','postgres','postgres',false);`);
+    insert into cron.job(jobname,schedule,command,database,username,active) values('adorable-runtime-maintenance','* * * * *','select 1 from adorable.runtime_leases where ''adorable-runtime-cron'' is not null','postgres',current_user,false);`);
+    await client.query("update cron.job set username='another_role'");
+    await assert.rejects(
+      () => client.query(migration),
+      /owned by another role/,
+    );
+    await client.query("rollback");
+    await client.query("update cron.job set username=current_user");
     await client.query(migration);
     const job = (await client.query("select * from cron.job")).rows[0];
     assert.equal(job.jobname, "dreamforge-runtime-maintenance");
     assert.equal(job.schedule, "* * * * *");
     assert.equal(job.active, false);
-    assert.equal(job.username, "postgres");
+    assert.equal(
+      job.username,
+      (await client.query("select current_user as name")).rows[0].name,
+    );
     assert(job.command.includes("dreamforge.runtime_leases"));
     assert(job.command.includes("dreamforge-runtime-cron"));
     assert.equal(

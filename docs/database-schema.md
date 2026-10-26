@@ -69,7 +69,10 @@ external dependencies roll back the transaction. It preserves course rows, live
 account/project identities, constraints, indexes and permissions. It repairs the
 roster trigger body, renames the maintenance Vault entry through its API, and
 recreates the pg_cron job through its API with the original schedule, database,
-role and active state. An existing maintenance-secret name collision also aborts.
+role and active state. Run the cutover as the existing maintenance-job owner;
+Supabase rejects an explicit cron username for non-superusers, so the migration
+checks ownership and uses the API default without changing roles. An existing
+maintenance-secret name collision also aborts.
 Supabase-managed service schemas are not renamed or removed.
 
 ## Recovery
@@ -96,4 +99,6 @@ projects, balances and courses, then exercise the live rename. They verify the
 same connection works across cutover, data/table identities and permissions
 survive, the roster trigger still works, populated tables and unexpected
 dependencies roll back, active runs block migration, and cron/Vault references
-are updated. No production data is used in these fixtures.
+are updated. A native pg_dump/pg_restore regression also restores an isolated application
+archive with matching Auth IDs and checks data and private permissions. No
+production data is used in these fixtures.
