@@ -335,7 +335,7 @@ try {
     );
     assert(
       result.answer.includes("DREAMFORGE_E2E_READY"),
-      "Expected reply marker missing",
+      `Expected reply marker missing. Returned: ${safeError(result.answer).slice(0, 240)}`,
     );
     return {
       firstFeedbackMs: result.firstFeedbackMs,
