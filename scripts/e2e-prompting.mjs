@@ -275,7 +275,7 @@ try {
       await page.route("**/api/projects", async (route) => {
         const req = route.request();
         if (req.method() !== "POST") return route.continue();
-        const response = await route.fetch({ postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }) });
+        const response = await route.fetch({ postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }), timeout: 240000 });
         created = await response.json();
         // Capture ownership before navigation can discard the browser response,
         // including when a later UI assertion fails and finally must clean up.
@@ -307,6 +307,7 @@ try {
       await page.waitForURL(`**/${project.id}/${created.conversationId}`, { timeout: 240000 });
       await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
     }
+    return { createdVia: page ? "browser" : "api" };
   });
   await check("created project reloads from saved project list", async () => {
     const { projects } = await (await request("/api/projects")).json();
