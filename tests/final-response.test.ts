@@ -163,3 +163,115 @@ test("incomplete outcomes reach the run controller before stream completion", as
   assert.equal(parts.at(-2).data.status, "incomplete");
   assert.equal(parts.at(-1).type, "finish");
 });
+
+test("edit requests cannot complete through narration, inspections, old edits or failed writes", async () => {
+  const { requestsProjectEdit } = await import("../lib/project-edit-request");
+  const turn = (text: string): any => ({
+    id: "u",
+    role: "user",
+    parts: [{ type: "text", text }],
+  });
+  for (const text of [
+    "can you make the cards larger",
+    "Please fix the reset button",
+    "Build a scorekeeper app",
+    "Add a blue background",
+    "Make the cards larger without changing game logic",
+  ])
+    assert.equal(requestsProjectEdit([turn(text)]), true, text);
+  for (const text of [
+    "Why are the cards small?",
+    "How can I make the cards larger?",
+    "Explain the code",
+    "Can you make a plan for the app?",
+    "Reply with exactly READY",
+    "Make the cards larger without editing files",
+    "Show me an example",
+  ])
+    assert.equal(requestsProjectEdit([turn(text)]), false, text);
+  assert.equal(
+    requestsProjectEdit([turn("Make the cards larger"), turn("continue")]),
+    true,
+  );
+  assert.equal(
+    requestsProjectEdit([turn("Explain this code"), turn("continue")]),
+    false,
+  );
+  for (const tools of [
+    [],
+    [
+      {
+        type: "tool-readFileTool",
+        state: "output-available",
+        output: { ok: true },
+      },
+    ],
+    [
+      {
+        type: "tool-writeFileTool",
+        state: "output-available",
+        output: { ok: false },
+      },
+    ],
+    [
+      {
+        type: "tool-replaceInFileTool",
+        state: "output-available",
+        output: { ok: true, replacements: 0 },
+      },
+    ],
+  ]) {
+    const result = ensureFinalResponse(
+      [
+        {
+          id: "old",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-writeFileTool",
+              state: "output-available",
+              output: { ok: true },
+            },
+          ],
+        },
+        turn("Make the cards larger"),
+        {
+          id: "a",
+          role: "assistant",
+          parts: [
+            ...tools,
+            {
+              type: "text",
+              text: "I updated app/page.tsx. The cards are now larger.",
+            },
+          ],
+        },
+      ] as any,
+      false,
+      "stop",
+      true,
+    );
+    assert.match(result.text!, /No successful file-editing action/);
+    assert.equal(ensureFinalResponse(result.messages).text, null);
+  }
+  const changed = ensureFinalResponse(
+    [
+      {
+        id: "a",
+        role: "assistant",
+        parts: [
+          {
+            type: "tool-replaceInFileTool",
+            state: "output-available",
+            output: { ok: true, replacements: 1 },
+          },
+          { type: "text", text: "Increased card size." },
+        ],
+      },
+    ] as any,
+    false,
+    "stop",
+    true,
+  );
+  assert.equal(changed.text, null);
+});

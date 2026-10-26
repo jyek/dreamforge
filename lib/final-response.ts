@@ -1,9 +1,11 @@
 import type { UIMessage } from "ai";
+import { successfulProjectEdit } from "./project-edit-request";
 /** A visible harness status, not a fabricated model answer or proof of completion. */
 export function ensureFinalResponse(
   messages: UIMessage[],
   interrupted = false,
   finishReason?: string,
+  requiresEdits = false,
 ) {
   const last = messages.at(-1);
   if (!last || last.role !== "assistant") return { messages, text: null };
@@ -29,10 +31,22 @@ export function ensureFinalResponse(
       ),
   );
   const truncated = finishReason === "length";
+  const missingEdit =
+    requiresEdits &&
+    !last.parts.some(
+      (part) =>
+        part.type.startsWith("tool-") &&
+        (part as { state?: string }).state === "output-available" &&
+        successfulProjectEdit(
+          part.type.slice(5),
+          (part as { output?: unknown }).output,
+        ),
+    );
   if (
     !interrupted &&
     !truncated &&
     !incompleteTools &&
+    !missingEdit &&
     last.parts
       .slice(boundary + 1)
       .some((part) => part.type === "text" && part.text.trim())
@@ -64,13 +78,16 @@ export function ensureFinalResponse(
   const failed = tools.some(
     (part) => part.state === "output-error" || part.output?.ok === false,
   );
-  let text = truncated
-    ? "**Harness status:** The response reached its size limit before this step finished. The request is incomplete. Continue with smaller changes."
-    : incompleteTools
-      ? "**Harness status:** A tool call did not finish. Changes may be incomplete."
-      : interrupted
-        ? "**Harness status:** This run was interrupted before a final summary. The request may be incomplete."
-        : "**Harness status:** The agent ended without a written summary.";
+  let text =
+    missingEdit && !interrupted && !truncated && !incompleteTools
+      ? "**Harness status:** No successful file-editing action was recorded for this request. The requested changes were not confirmed; the written response is not evidence that files changed."
+      : truncated
+        ? "**Harness status:** The response reached its size limit before this step finished. The request is incomplete. Continue with smaller changes."
+        : incompleteTools
+          ? "**Harness status:** A tool call did not finish. Changes may be incomplete."
+          : interrupted
+            ? "**Harness status:** This run was interrupted before a final summary. The request may be incomplete."
+            : "**Harness status:** The agent ended without a written summary.";
   if (
     last.parts.some(
       (part) =>

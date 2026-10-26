@@ -308,6 +308,7 @@ async function handleChat(req: Request) {
                 final,
                 streamError || isAborted,
                 finishReason,
+                llm.requiresEdits,
               );
               completionText = completion.text;
               const safe = redactPayload(completion.messages) as UIMessage[];
@@ -393,6 +394,7 @@ async function handleChat(req: Request) {
             final,
             isAborted,
             finishReason,
+            llm.requiresEdits,
           );
           completionText = completion.text;
           await saveConversationMessages(
@@ -582,6 +584,7 @@ async function handleChat(req: Request) {
             final,
             streamError || isAborted,
             finishReason,
+            llm.requiresEdits,
           );
           completionText = completion.text;
           final = completion.messages;

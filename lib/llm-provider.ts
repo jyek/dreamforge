@@ -18,6 +18,11 @@ import {
 import { compactPastToolHistory, normalizeModelHistory } from "./model-history";
 import { createModelRouting } from "./model-routing";
 import type { ModelChoice } from "./model-catalog";
+import {
+  requestsProjectEdit,
+  successfulProjectEdit,
+  PROJECT_EDIT_TOOLS,
+} from "./project-edit-request";
 
 type LlmProviderName = "openai" | "anthropic";
 
@@ -50,6 +55,7 @@ type StreamLlmResponseResult = {
   result: ReturnType<typeof streamText>;
   provider: LlmProviderName;
   routing?: ReturnType<typeof createModelRouting>;
+  requiresEdits: boolean;
 };
 
 export const streamLlmResponse = async ({
@@ -73,6 +79,10 @@ export const streamLlmResponse = async ({
     compactPastToolHistory(await convertToModelMessages(messages)),
   );
   const stepLimit = Math.max(2, Math.min(20, Math.floor(maxSteps)));
+  const requiresEdits =
+    requestsProjectEdit(messages) &&
+    Object.keys(tools).some((name) => PROJECT_EDIT_TOOLS.has(name));
+  let editRecorded = false;
   const prepareStep = async ({
     messages,
     stepNumber,
@@ -88,6 +98,13 @@ export const streamLlmResponse = async ({
         system:
           system +
           "\nThis is your final step. Do not call tools. Give a brief written answer based on the results so far. Clearly say if the requested task remains incomplete or checks failed; never claim success without evidence.",
+      };
+    if (requiresEdits && !editRecorded)
+      return {
+        toolChoice: "required" as const,
+        system:
+          system +
+          "\nThis is an explicit project edit request and no successful file-editing action has been recorded in this turn. Inspect the current files as needed, then apply the requested change with the file-editing tools. Text describing a change does not apply it. Do not substitute a terminal command for file-editing evidence.",
       };
     return {};
   };
@@ -156,7 +173,10 @@ export const streamLlmResponse = async ({
       onError: async () => {
         await onStreamError?.();
       },
-      onStepFinish: async ({ usage, response }) => {
+      onStepFinish: async ({ usage, response, toolResults }) => {
+        editRecorded ||= toolResults.some((result) =>
+          successfulProjectEdit(result.toolName, result.output),
+        );
         await afterStep?.({ ...usage, modelId: response.modelId });
       },
       providerOptions: {
@@ -171,6 +191,7 @@ export const streamLlmResponse = async ({
       result,
       provider,
       routing,
+      requiresEdits,
     };
   }
 
@@ -191,7 +212,10 @@ export const streamLlmResponse = async ({
     onAbort: async () => {
       await onStreamError?.();
     },
-    onStepFinish: async ({ usage, response }) => {
+    onStepFinish: async ({ usage, response, toolResults }) => {
+      editRecorded ||= toolResults.some((result) =>
+        successfulProjectEdit(result.toolName, result.output),
+      );
       await afterStep?.({ ...usage, modelId: response.modelId });
     },
     stopWhen: stepCountIs(stepLimit),
@@ -200,5 +224,6 @@ export const streamLlmResponse = async ({
   return {
     result,
     provider,
+    requiresEdits,
   };
 };
