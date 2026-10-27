@@ -344,6 +344,41 @@
   max-width: 880px;
   margin: auto;
 }
+.df-payment-notices {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.df-payment-notices > .df-notice {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid transparent;
+}
+.df-payment-notices > .df-payment-sandbox {
+  background: #f7f6fa;
+  border-color: #e2deeb;
+  color: #62596f;
+}
+.df-payment-status.is-success {
+  background: #ecfdf3;
+  border-color: #a7dfbc;
+  color: #175b36;
+}
+.df-payment-status.is-pending {
+  background: #f5f0ff;
+  border-color: #d8c9f5;
+}
+.df-payment-status.is-error {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+.df-payment-status p {
+  margin: 8px 0 0;
+}
+.df-payment-status .df-button {
+  margin-top: 16px;
+}
 .df-pay .df-stats {
   grid-template-columns: repeat(3, 1fr);
 }

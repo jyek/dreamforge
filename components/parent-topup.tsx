@@ -123,53 +123,62 @@ export function ParentTopup({
           This is a one-time purchase, with no subscription or automatic
           renewal.
         </p>
-        {sandbox && (
-          <p className="df-notice">
-            <strong>Sandbox payments</strong> · No real money is charged. Use
-            test card 4242 4242 4242 4242, any future expiry date and any
-            three-digit CVC.
-          </p>
-        )}
-        {paid && (
-          <div className="df-notice" role="status" aria-live="polite">
-            {credit !== null ? (
-              <>
-                <strong>
-                  {credit.prepaid
-                    ? credit.creditAddedMicros == null
-                      ? "This earlier token purchase was already credited. Your current prepaid balance is shown below."
-                      : `${formatCredit(credit.creditAddedMicros)} added to the account.`
-                    : `${credit.tokens.toLocaleString()} tokens added to the account.`}
-                </strong>
-                <p>
-                  New available balance:{" "}
-                  <strong>
-                    {credit.prepaid
-                      ? formatCredit(credit.availableCreditMicros || 0)
-                      : `${credit.remaining.toLocaleString()} tokens`}
-                  </strong>
-                  .
-                </p>
-                <Link className="df-button" href="/profile">
-                  Return to DreamForge →
-                </Link>
-              </>
-            ) : (
-              <>
-                <p>
-                  {paymentError || "Confirming your payment and adding tokens…"}
-                </p>
-                {checking ? (
-                  <InlineSpinner className="size-4" />
+        {(sandbox || paid) && (
+          <div className="df-payment-notices">
+            {sandbox && (
+              <p className="df-notice df-payment-sandbox">
+                <strong>Sandbox payments</strong> · No real money is charged.
+                Use test card 4242 4242 4242 4242, any future expiry date and
+                any three-digit CVC.
+              </p>
+            )}
+            {paid && (
+              <div
+                className={`df-notice df-payment-status ${credit !== null ? "is-success" : paymentError ? "is-error" : "is-pending"}`}
+                role="status"
+                aria-live="polite"
+              >
+                {credit !== null ? (
+                  <>
+                    <strong>
+                      {credit.prepaid
+                        ? credit.creditAddedMicros == null
+                          ? "This earlier token purchase was already credited. Your current prepaid balance is shown below."
+                          : `${formatCredit(credit.creditAddedMicros)} added to the account.`
+                        : `${credit.tokens.toLocaleString()} tokens added to the account.`}
+                    </strong>
+                    <p>
+                      New available balance:{" "}
+                      <strong>
+                        {credit.prepaid
+                          ? formatCredit(credit.availableCreditMicros || 0)
+                          : `${credit.remaining.toLocaleString()} tokens`}
+                      </strong>
+                      .
+                    </p>
+                    <Link className="df-button" href="/profile">
+                      Return to DreamForge →
+                    </Link>
+                  </>
                 ) : (
-                  <button
-                    className="df-button"
-                    onClick={() => setCheckVersion((n) => n + 1)}
-                  >
-                    Check payment again
-                  </button>
+                  <>
+                    <p>
+                      {paymentError ||
+                        "Confirming your payment and adding tokens…"}
+                    </p>
+                    {checking ? (
+                      <InlineSpinner className="size-4" />
+                    ) : (
+                      <button
+                        className="df-button"
+                        onClick={() => setCheckVersion((n) => n + 1)}
+                      >
+                        Check payment again
+                      </button>
+                    )}
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
         )}
