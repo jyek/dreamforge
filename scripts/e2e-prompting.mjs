@@ -522,6 +522,11 @@ try {
     return { feedbackBeforeResponse: true, interactiveAfterReload: true };
   });
   if (page) await check("browser typed prompt receives a reply and survives reload", async () => {
+    const catalog = await (await request("/api/models")).json();
+    const selectedModel = catalog.choices.find((model) => model.id === modelChoice);
+    assert(selectedModel?.available !== false && selectedModel?.name, "Configured E2E model is unavailable");
+    await page.getByRole("button", { name: /^Coding model:/ }).click();
+    await page.getByRole("menuitemradio").filter({ hasText: selectedModel.name }).click();
     const marker = uiReplyMarker();
     await page.getByRole("textbox", { name: "Message input", exact: true }).fill(`Reply with exactly ${marker}. Do not use tools or edit files.`);
     const response = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/chat" && r.request().method() === "POST", { timeout: 240000 });
