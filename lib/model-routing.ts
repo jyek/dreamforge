@@ -55,14 +55,46 @@ export function createModelRouting(
     const send = async (model: (typeof MODELS)[keyof typeof MODELS]) => {
       const body = { ...original, model: model.id };
       delete body.models;
-      body.max_tokens = Math.min(
+      const responses = Object.hasOwn(body, "input");
+      const maxOutput = Math.min(
         8192,
         Math.max(
           1,
-          Number(body.max_completion_tokens || body.max_tokens || 8192),
+          Number(
+            body.max_output_tokens ||
+              body.max_completion_tokens ||
+              body.max_tokens ||
+              8192,
+          ),
         ),
       );
+      delete body.max_tokens;
       delete body.max_completion_tokens;
+      delete body.max_output_tokens;
+      if (responses) {
+        body.max_output_tokens = maxOutput;
+        body.store = false;
+        delete body.previous_response_id;
+      } else body.max_tokens = maxOutput;
+      if (model === MODELS.sonnet) {
+        // Sonnet 5.5 rejects forced tool use and sampling overrides. The harness
+        // still requires recorded file-edit evidence before confirming success.
+        if (body.tool_choice !== "none") body.tool_choice = "auto";
+        delete body.temperature;
+        delete body.top_p;
+        delete body.top_k;
+      }
+      if (
+        model === MODELS.sonnet ||
+        model === MODELS.sol ||
+        model === MODELS["glm-advanced"]
+      ) {
+        delete body.reasoning_effort;
+        body.reasoning = {
+          effort: "low",
+          ...(responses ? {} : { exclude: true }),
+        };
+      }
       // DeepSeek exposes optional reasoning; disable it for responsive coding
       // rather than letting thinking consume the entire completion budget.
       if (model === MODELS.deepseek) {
@@ -73,18 +105,22 @@ export function createModelRouting(
         delete body.reasoning_effort;
         body.reasoning = { effort: "low", exclude: true };
       }
-      const visual = /"type"\s*:\s*"image_url"/.test(
-        JSON.stringify(body.messages),
+      const visual = /"type"\s*:\s*"(?:image_url|input_image)"/.test(
+        JSON.stringify(body.messages || body.input),
       );
       const otherMedia = /"type"\s*:\s*"(?:input_audio|video_url)"/.test(
-        JSON.stringify(body.messages),
+        JSON.stringify(body.messages || body.input),
       );
       if (
         otherMedia ||
-        (visual && model !== MODELS.deepseek && model !== MODELS.glm)
+        (visual &&
+          model !== MODELS.deepseek &&
+          model !== MODELS.glm &&
+          model !== MODELS.sonnet &&
+          model !== MODELS.sol)
       )
         throw new ModelRoutingError(
-          "Choose DeepSeek V4.1 Flash or GLM 5.3 Flash to use image attachments.",
+          "Choose an image-capable model, such as GLM 5.3 Flash, Claude Sonnet 5.5 or GPT-6.1 Sol. GLM 5.3 [1M] accepts text only.",
         );
       if (model !== MODELS.free) {
         body.provider = {

@@ -62,6 +62,7 @@ export function PlatformDashboardLayout({
   teacher,
   name,
   remainingTokens,
+  creditBalanceMicros,
   section,
   onSectionChange,
   children,
@@ -70,6 +71,7 @@ export function PlatformDashboardLayout({
   teacher: boolean;
   name?: string;
   remainingTokens?: number;
+  creditBalanceMicros?: number;
   section: string;
   onSectionChange: (section: string) => void;
   children: ReactNode;
@@ -92,6 +94,7 @@ export function PlatformDashboardLayout({
         onProfileOpen={() => setNavOpen(false)}
         name={name}
         remainingTokens={remainingTokens}
+        creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}
         label={teacher ? "Teacher sidebar" : "Builder sidebar"}
         className={navOpen ? "is-open" : ""}

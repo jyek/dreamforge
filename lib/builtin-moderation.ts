@@ -41,6 +41,8 @@ export async function builtinModeration(
         project.owner_id,
         active.projectId,
         bound,
+        "openai/gpt-oss-safeguard-20b",
+        2048,
       );
     }
   }

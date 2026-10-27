@@ -1,3 +1,4 @@
+import { prepaidBillingEnabled, creditWalletSelect } from "./billing";
 import {
   classroomTeacherSQL,
   teacherStudentAccessSQL,
@@ -17,7 +18,7 @@ export async function loadDashboardData(user: Profile, section?: string) {
     const { rows: wallet } =
       user.role === "child"
         ? await db.query(
-            "select token_limit,used_tokens,reserved_tokens,input_tokens,output_tokens from token_accounts where child_id=$1",
+            `select token_limit,used_tokens,reserved_tokens,input_tokens,output_tokens,${creditWalletSelect()} from token_accounts where child_id=$1`,
             [user.id],
           )
         : { rows: [] };
@@ -30,6 +31,7 @@ export async function loadDashboardData(user: Profile, section?: string) {
       unconfirmed: [],
       projectUsage: [],
       paymentsEnabled: paymentsEnabled(),
+      prepaid: prepaidBillingEnabled(),
     };
   }
   const { rows: projects } = await db.query(
@@ -39,31 +41,31 @@ export async function loadDashboardData(user: Profile, section?: string) {
   const { rows: children } =
     user.role === "teacher"
       ? await db.query(
-          `select distinct pr.id,pr.display_name,pr.username,a.token_limit,a.used_tokens,a.reserved_tokens,a.input_tokens,a.output_tokens,a.estimated_cost_usd from profiles pr left join token_accounts a on a.child_id=pr.id where ${teacherStudentAccessSQL("pr.id")}`,
+          `select distinct pr.id,pr.display_name,pr.username,a.token_limit,a.used_tokens,a.reserved_tokens,a.input_tokens,a.output_tokens,a.estimated_cost_usd,${creditWalletSelect("a.")} from profiles pr left join token_accounts a on a.child_id=pr.id where ${teacherStudentAccessSQL("pr.id")}`,
           [user.id],
         )
       : { rows: [] };
   const { rows: wallet } =
     user.role === "child"
       ? await db.query(
-          "select token_limit,used_tokens,reserved_tokens,input_tokens,output_tokens,estimated_cost_usd from token_accounts where child_id=$1",
+          `select token_limit,used_tokens,reserved_tokens,input_tokens,output_tokens,estimated_cost_usd,${creditWalletSelect()} from token_accounts where child_id=$1`,
           [user.id],
         )
       : { rows: [] };
   const { rows: unconfirmed } =
     user.role === "teacher"
       ? await db.query(
-          `select r.id,r.reserved_tokens,pr.display_name from usage_runs r join profiles pr on pr.id=r.child_id where r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")}`,
+          `select r.id,r.reserved_tokens,${prepaidBillingEnabled() ? "r.credit_reserved_micros," : ""}pr.display_name from usage_runs r join profiles pr on pr.id=r.child_id where r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")}`,
           [user.id],
         )
       : await db.query(
-          "select id,reserved_tokens from usage_runs where child_id=$1 and state='uncertain'",
+          `select id,reserved_tokens${prepaidBillingEnabled() ? ",credit_reserved_micros" : ""} from usage_runs where child_id=$1 and state='uncertain'`,
           [user.id],
         );
   const { rows: projectUsage } =
     user.role === "child"
       ? await db.query(
-          `select p.vm_id,p.metadata->>'name' as project_name,
+          `select p.vm_id,p.metadata->>'name' as project_name,${prepaidBillingEnabled() ? "coalesce(sum(r.credit_cost_micros) filter(where r.state='settled'),0)::text as credit_cost_micros," : ""}
     coalesce(sum(case when r.state='settled' then coalesce(r.input_tokens,0)+coalesce(r.output_tokens,0) else 0 end),0)::text as used_tokens,
     coalesce(sum(case when r.state='settled' then r.input_tokens else 0 end),0)::text as input_tokens,
     coalesce(sum(case when r.state='settled' then r.output_tokens else 0 end),0)::text as output_tokens
@@ -81,5 +83,6 @@ export async function loadDashboardData(user: Profile, section?: string) {
     unconfirmed,
     wallet: wallet[0] || null,
     paymentsEnabled: paymentsEnabled(),
+    prepaid: prepaidBillingEnabled(),
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 import { InlineSpinner } from "./dream-loading";
 import { useEffect, useState } from "react";
+import { CREDIT_TOPUPS, formatCredit } from "@/lib/billing";
 import { TOPUP_PACKAGES } from "@/lib/topup-packages";
 import { notifyBalanceChanged } from "@/lib/balance-refresh";
 import Link from "next/link";
@@ -11,16 +12,21 @@ export function ParentTopup({
   paid,
   sessionId,
   sandbox = false,
+  prepaid = false,
 }: {
   token: string;
   enabled: boolean;
   paid: boolean;
   sessionId?: string;
   sandbox?: boolean;
+  prepaid?: boolean;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState("");
   const [credit, setCredit] = useState<{
+    creditAddedMicros?: number | null;
+    availableCreditMicros?: number;
+    prepaid?: boolean;
     tokens: number;
     remaining: number;
   } | null>(null);
@@ -50,7 +56,13 @@ export function ParentTopup({
         });
         const data = await r.json();
         if (r.ok && data.credited && !stopped) {
-          setCredit({ tokens: data.tokens, remaining: data.remaining });
+          setCredit({
+            tokens: data.tokens,
+            remaining: data.remaining,
+            prepaid: data.prepaid,
+            creditAddedMicros: data.creditAddedMicros,
+            availableCreditMicros: data.availableCreditMicros,
+          });
           setChecking(false);
           notifyBalanceChanged();
           return;
@@ -105,8 +117,11 @@ export function ParentTopup({
         <p className="df-eyebrow">For parents & guardians</p>
         <h1 className="df-title">Fuel their next big idea.</h1>
         <p className="df-muted">
-          Add a token allowance to your child’s DreamForge account. This is a
-          one-time purchase, with no subscription or automatic renewal.
+          {prepaid
+            ? "Add prepaid credit to your child’s DreamForge account. One balance works with every model; Advanced models cost more."
+            : "Add a token allowance to your child’s DreamForge account."}{" "}
+          This is a one-time purchase, with no subscription or automatic
+          renewal.
         </p>
         {sandbox && (
           <p className="df-notice">
@@ -120,11 +135,20 @@ export function ParentTopup({
             {credit !== null ? (
               <>
                 <strong>
-                  {credit.tokens.toLocaleString()} tokens added to the account.
+                  {credit.prepaid
+                    ? credit.creditAddedMicros == null
+                      ? "This earlier token purchase was already credited. Your current prepaid balance is shown below."
+                      : `${formatCredit(credit.creditAddedMicros)} added to the account.`
+                    : `${credit.tokens.toLocaleString()} tokens added to the account.`}
                 </strong>
                 <p>
                   New available balance:{" "}
-                  <strong>{credit.remaining.toLocaleString()} tokens</strong>.
+                  <strong>
+                    {credit.prepaid
+                      ? formatCredit(credit.availableCreditMicros || 0)
+                      : `${credit.remaining.toLocaleString()} tokens`}
+                  </strong>
+                  .
                 </p>
                 <Link className="df-button" href="/profile">
                   Return to DreamForge →
@@ -161,11 +185,18 @@ export function ParentTopup({
         )}
         {!(paid && credit === null) && (
           <div className="df-stats">
-            {TOPUP_PACKAGES.map((p) => (
+            {(prepaid
+              ? CREDIT_TOPUPS.map((p) => ({ ...p, tokens: 0 }))
+              : TOPUP_PACKAGES
+            ).map((p) => (
               <article key={p.id} className="df-card df-stat">
                 <span className="df-pill">{p.name}</span>
                 <strong>S${p.amount / 100}</strong>
-                <p>{(p.tokens / 1000000).toLocaleString()} million tokens</p>
+                <p>
+                  {prepaid
+                    ? "Prepaid credit · any model"
+                    : `${(p.tokens / 1000000).toLocaleString()} million tokens`}
+                </p>
                 <button
                   className="df-button"
                   disabled={!enabled || !!busy}
@@ -176,15 +207,21 @@ export function ParentTopup({
                     ? "Opening Stripe…"
                     : sandbox
                       ? "Test top-up →"
-                      : "Add tokens →"}
+                      : prepaid
+                        ? "Add credit →"
+                        : "Add tokens →"}
                 </button>
               </article>
             ))}
           </div>
         )}
         <div className="df-card">
-          <h2 style={{ marginTop: 0 }}>What counts as a token?</h2>
+          <h2 style={{ marginTop: 0 }}>
+            {prepaid ? "How your balance is used" : "What counts as a token?"}
+          </h2>
           <p className="df-muted">
+            {prepaid &&
+              "Basic and Advanced describe the model, not separate wallets. Model prices are shown in the selector. Each request is charged for its actual input and output, including tool steps and safety checks. A temporary hold prevents overspending; unused credit is released after the request finishes. "}
             AI reads prompts, project files and previous messages, then writes
             replies and code. All input and output tokens count toward the
             allowance, including requests using free models. Bigger projects can

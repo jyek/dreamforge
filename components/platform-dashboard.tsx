@@ -1,4 +1,9 @@
 "use client";
+import {
+  availableCreditMicros,
+  formatCredit,
+  type CreditWallet,
+} from "@/lib/billing";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
 import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
@@ -33,7 +38,7 @@ type Project = {
   metadata: { name: string; conversations: { id: string }[] };
   child_name: string;
 };
-type Wallet = {
+type Wallet = CreditWallet & {
   token_limit: string;
   used_tokens: string;
   reserved_tokens: string;
@@ -51,11 +56,18 @@ type Data = {
   projects: Project[];
   children: ({ id: string; display_name: string; username: string } & Wallet)[];
   wallet: Wallet | null;
-  unconfirmed: { id: string; reserved_tokens: string; display_name?: string }[];
+  unconfirmed: {
+    id: string;
+    reserved_tokens: string;
+    credit_reserved_micros?: string;
+    display_name?: string;
+  }[];
   paymentsEnabled: boolean;
+  prepaid?: boolean;
   projectUsage: {
     vm_id: string;
     project_name: string;
+    credit_cost_micros?: string;
     used_tokens: string;
     input_tokens: string;
     output_tokens: string;
@@ -175,7 +187,14 @@ export function PlatformDashboard({
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
-      remainingTokens={!teacher && data?.wallet ? remaining : undefined}
+      remainingTokens={
+        !teacher && data?.wallet && !data.prepaid ? remaining : undefined
+      }
+      creditBalanceMicros={
+        !teacher && data?.wallet && data.prepaid
+          ? availableCreditMicros(data.wallet)
+          : undefined
+      }
       name={data?.user.display_name || initialUser?.display_name}
       section={view}
       onSectionChange={selectSection}
@@ -279,26 +298,34 @@ export function PlatformDashboard({
               {teacher && (data.unconfirmed || []).length > 0 && (
                 <section
                   className="df-notice df-token-hold"
-                  aria-label="Tokens awaiting confirmation"
+                  aria-label={
+                    data.prepaid
+                      ? "Credit awaiting confirmation"
+                      : "Tokens awaiting confirmation"
+                  }
                 >
                   <div className="df-inline">
                     <Clock3 size={18} aria-hidden="true" />
-                    <strong>Tokens waiting for confirmation</strong>
+                    <strong>
+                      {data.prepaid
+                        ? "Credit waiting for confirmation"
+                        : "Tokens waiting for confirmation"}
+                    </strong>
                   </div>
                   <p>
                     These AI requests ended without reporting their token usage.{" "}
                     <strong>
-                      {data.unconfirmed
-                        .reduce(
-                          (total, request) =>
-                            total + Number(request.reserved_tokens),
-                          0,
-                        )
-                        .toLocaleString()}{" "}
-                      tokens
+                      {data.prepaid
+                        ? formatCredit(
+                            data.unconfirmed.reduce(
+                              (n, r) =>
+                                n + Number(r.credit_reserved_micros || 0),
+                              0,
+                            ),
+                          )
+                        : `${data.unconfirmed.reduce((n, r) => n + Number(r.reserved_tokens), 0).toLocaleString()} tokens`}
                     </strong>{" "}
-                    are temporarily set aside. They aren’t counted as used
-                    tokens.
+                    are temporarily set aside and have not been charged.
                   </p>
                   {(data.unconfirmed || []).map((r) => (
                     <div
@@ -308,7 +335,9 @@ export function PlatformDashboard({
                     >
                       <span>
                         {r.display_name} ·{" "}
-                        {Number(r.reserved_tokens).toLocaleString()} tokens held
+                        {data.prepaid
+                          ? `${formatCredit(Number(r.credit_reserved_micros || 0))} held`
+                          : `${Number(r.reserved_tokens).toLocaleString()} tokens held`}
                       </span>
                       <button
                         disabled={busy}
@@ -483,17 +512,39 @@ export function PlatformDashboard({
               <div className="df-profile-summary">
                 <div>
                   <ProfileModuleHeader
-                    title="Your token usage"
-                    description="Confirmed usage from prompts, replies and tool steps."
+                    title={
+                      data.prepaid ? "Your prepaid balance" : "Your token usage"
+                    }
+                    description={
+                      data.prepaid
+                        ? "One balance for every model. Advanced models cost more per request. Confirmed deductions appear below."
+                        : "Confirmed usage from prompts, replies and tool steps."
+                    }
                   />
                 </div>
                 <div>
-                  <span>Total tokens used</span>
+                  <span>
+                    {data.prepaid ? "Available credit" : "Total tokens used"}
+                  </span>
                   <strong>
-                    {Number(data.wallet?.used_tokens || 0).toLocaleString()}
+                    {data.prepaid
+                      ? formatCredit(availableCreditMicros(data.wallet))
+                      : Number(data.wallet?.used_tokens || 0).toLocaleString()}
                   </strong>
                 </div>
               </div>
+              {data.prepaid && (
+                <p className="df-muted">
+                  Spent:{" "}
+                  {formatCredit(Number(data.wallet?.credit_used_micros || 0))} ·
+                  Held for running or unconfirmed requests:{" "}
+                  {formatCredit(
+                    Number(data.wallet?.credit_reserved_micros || 0),
+                  )}
+                  . A reservation is a temporary hold; only confirmed usage is
+                  charged.
+                </p>
+              )}
               <h3>Usage by project</h3>
               {(data.projectUsage || []).length ? (
                 <div className="df-table-scroll">
@@ -501,7 +552,7 @@ export function PlatformDashboard({
                     <thead>
                       <tr>
                         <th>Project</th>
-                        <th>Tokens used</th>
+                        <th>{data.prepaid ? "Charged" : "Tokens used"}</th>
                         <th>Input</th>
                         <th>Output</th>
                       </tr>
@@ -518,7 +569,11 @@ export function PlatformDashboard({
                             </Link>
                           </td>
                           <td>
-                            {Number(project.used_tokens).toLocaleString()}
+                            {data.prepaid
+                              ? formatCredit(
+                                  Number(project.credit_cost_micros || 0),
+                                )
+                              : Number(project.used_tokens).toLocaleString()}
                           </td>
                           <td>
                             {Number(project.input_tokens).toLocaleString()}
@@ -554,7 +609,9 @@ export function PlatformDashboard({
                   title="More room for big ideas"
                   description={
                     data.paymentsEnabled
-                      ? "Ask a parent to add tokens. Create a private link, then copy it and share it with them."
+                      ? data.prepaid
+                        ? "Ask a parent to add prepaid credit. One balance works with Basic and Advanced models."
+                        : "Ask a parent to add tokens. Create a private link, then copy it and share it with them."
                       : "Parent top-ups aren’t available yet. You can keep building with any tokens you have left."
                   }
                 />

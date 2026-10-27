@@ -1,4 +1,5 @@
 "use client";
+import { billingRate } from "@/lib/billing";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
@@ -9,8 +10,20 @@ import {
   MODEL_CHOICES,
   MODELS,
   modelLabel,
+  modelTier,
 } from "@/lib/model-catalog";
-type Model = { id: string; name: string; paid: boolean };
+const priceHint = (id: string) => {
+  try {
+    if (id === "auto")
+      return "Up to S$0.75 input / S$2.50 output per 1M tokens (Basic models only)";
+    const choice = isModelChoice(id) && id !== "auto" ? id : "glm";
+    const r = billingRate(MODELS[choice].id);
+    return `S$${r.input} input / S$${r.output} output per 1M tokens${choice === "sol" ? "; above 272K input: S$20 / S$75" : ""}`;
+  } catch {
+    return "";
+  }
+};
+type Model = { id: string; name: string; paid: boolean; available?: boolean };
 const label = (model: Model) => model.name.replace(/\s*\(free\)$/, "");
 export function ModelSelector() {
   const [models, setModels] = useState<Model[]>(
@@ -18,6 +31,7 @@ export function ModelSelector() {
         id: choice.id,
         name: choice.label,
         paid: choice.id !== "auto" && choice.id !== "free",
+        available: modelTier(choice.id) === "basic",
       })),
     ),
     [open, setOpen] = useState(false);
@@ -27,6 +41,7 @@ export function ModelSelector() {
     ({ thread }) =>
       thread.messages.at(-1)?.metadata?.custom?.model as string | undefined,
   );
+  const [prepaid, setPrepaid] = useState(false);
   const [autoModel, setAutoModel] = useState<string | null>(null);
   const [position, setPosition] = useState({ left: 0, bottom: 0 });
   const trigger = useRef<HTMLButtonElement>(null),
@@ -37,6 +52,7 @@ export function ModelSelector() {
       .then((r) => r.json())
       .then((data) => {
         setModels(data.choices || data.models);
+        setPrepaid(!!data.prepaid);
         setAutoModel(data.autoModel || null);
       })
       .catch(() => {});
@@ -104,8 +120,8 @@ export function ModelSelector() {
         aria-label={`Coding model: ${activeLabel}`}
         title={
           selected === "auto" && routedModel
-            ? modelLabel(routedModel)
-            : label(active)
+            ? `${modelLabel(routedModel)} · Basic`
+            : `${label(active)} · ${modelTier(selected) === "advanced" ? "Advanced" : "Basic"}`
         }
         aria-haspopup="menu"
         aria-expanded={open}
@@ -145,7 +161,7 @@ export function ModelSelector() {
                 event.currentTarget.querySelectorAll<HTMLButtonElement>(
                   '[role="menuitemradio"]',
                 ),
-              );
+              ).filter((button) => !button.disabled);
               const index = buttons.indexOf(
                 document.activeElement as HTMLButtonElement,
               );
@@ -166,7 +182,7 @@ export function ModelSelector() {
             className="fixed z-[100] w-[380px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1.5 text-slate-800 shadow-[0_8px_32px_rgba(15,23,42,0.12)]"
           >
             <p className="px-3 pt-2 pb-2.5 text-xs font-medium text-slate-400">
-              Model
+              Model · Basic and Advanced share one balance
             </p>
             <div className="max-h-[50vh] overflow-y-auto">
               {models.map((model) => (
@@ -175,6 +191,8 @@ export function ModelSelector() {
                   type="button"
                   role="menuitemradio"
                   aria-checked={selected === model.id}
+                  disabled={model.available === false}
+                  title={`${prepaid ? priceHint(model.id) + " · " : ""}${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
                   onClick={() => {
                     if (isModelChoice(model.id)) setSelected(model.id);
                     setOpen(false);
@@ -184,6 +202,12 @@ export function ModelSelector() {
                 >
                   <span className="min-w-0 flex-1 text-sm font-medium whitespace-nowrap">
                     {label(model)}
+                  </span>
+                  <span className="ml-auto text-xs text-slate-400">
+                    {isModelChoice(model.id) &&
+                    modelTier(model.id) === "advanced"
+                      ? "Advanced"
+                      : "Basic"}
                   </span>
                   {selected === model.id && (
                     <CheckIcon className="size-4 shrink-0 text-slate-700" />

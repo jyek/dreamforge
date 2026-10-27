@@ -26,8 +26,13 @@ export async function POST(req: Request) {
       );
     }
     await db.query(
-      "update token_accounts set reserved_tokens=reserved_tokens-$2 where child_id=$1",
-      [rows[0].child_id, rows[0].reserved_tokens],
+      rows[0].credit_reserved_micros != null
+        ? "update token_accounts set credit_reserved_micros=credit_reserved_micros-$2 where child_id=$1"
+        : "update token_accounts set reserved_tokens=reserved_tokens-$2 where child_id=$1",
+      [
+        rows[0].child_id,
+        rows[0].credit_reserved_micros ?? rows[0].reserved_tokens,
+      ],
     );
     await db.query(
       "update usage_runs set state='released',released_by=$2 where id=$1",

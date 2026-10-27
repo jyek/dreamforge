@@ -1,3 +1,8 @@
+import {
+  prepaidBillingEnabled,
+  availableCreditMicros,
+  creditWalletSelect,
+} from "@/lib/billing";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
 export async function GET() {
@@ -9,11 +14,19 @@ export async function GET() {
       { status: 403 },
     );
   const { rows } = await database().query(
-    "select greatest(0,token_limit-used_tokens-reserved_tokens)::text as remaining from token_accounts where child_id=$1",
+    `select greatest(0,token_limit-used_tokens-reserved_tokens)::text as remaining,${creditWalletSelect()} from token_accounts where child_id=$1`,
     [user.id],
   );
   return Response.json(
-    { remaining: Number(rows[0]?.remaining || 0) },
+    {
+      remaining: Number(rows[0]?.remaining || 0),
+      ...(prepaidBillingEnabled()
+        ? {
+            prepaid: true,
+            availableCreditMicros: availableCreditMicros(rows[0]),
+          }
+        : {}),
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

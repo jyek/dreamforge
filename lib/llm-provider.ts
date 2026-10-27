@@ -133,9 +133,10 @@ export const streamLlmResponse = async ({
     });
     const modelName =
       modelOverride || process.env["LLM_MODEL"] || "gpt-5.3-codex";
-    const model = baseURL
-      ? openaiProvider.chat(modelName)
-      : openaiProvider.responses(modelName);
+    const model =
+      baseURL && modelChoice !== "sol"
+        ? openaiProvider.chat(modelName)
+        : openaiProvider.responses(modelName);
     const routedModel =
       !routing && baseURL && modelName === "cohere/north-mini-code:free"
         ? withQuotaFallback(
@@ -177,7 +178,10 @@ export const streamLlmResponse = async ({
         editRecorded ||= toolResults.some((result) =>
           successfulProjectEdit(result.toolName, result.output),
         );
-        await afterStep?.({ ...usage, modelId: response.modelId });
+        await afterStep?.({
+          ...usage,
+          modelId: routing?.state.usedModel || response.modelId,
+        });
       },
       providerOptions: {
         openai: {
@@ -216,7 +220,10 @@ export const streamLlmResponse = async ({
       editRecorded ||= toolResults.some((result) =>
         successfulProjectEdit(result.toolName, result.output),
       );
-      await afterStep?.({ ...usage, modelId: response.modelId });
+      await afterStep?.({
+        ...usage,
+        modelId: response.modelId,
+      });
     },
     stopWhen: stepCountIs(stepLimit),
   });

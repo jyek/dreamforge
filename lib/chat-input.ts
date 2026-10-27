@@ -5,7 +5,10 @@ export const DEMO_PROMPT_LIMIT = 32_000;
 export const DEMO_CONVERSATION_BYTES = 3_500_000;
 const IMAGE_BYTES = 2 * 1024 * 1024;
 export const supportsImages = (choice: ModelChoice) =>
-  choice === "deepseek" || choice === "glm";
+  choice === "deepseek" ||
+  choice === "glm" ||
+  choice === "sonnet" ||
+  choice === "sol";
 export class ChatInputError extends Error {}
 
 /** Image bytes have their own size limit and never count as prompt text. */

@@ -16,5 +16,5 @@ with tempfile.TemporaryDirectory(prefix='dreamforge-tests-') as tmp:
   for migration in migrations:
    run(cmd+['-f',str(migration)])
   env=os.environ.copy();env['TEST_DATABASE_URL']=f'postgresql://harness_test@127.0.0.1:{port}/postgres';env['DATABASE_URL']=env['TEST_DATABASE_URL'];env['PGOPTIONS']='-c search_path=dreamforge,adorable,extensions'
-  print(run(['node','--import','tsx','--test','tests/quota-safety.test.ts','tests/execution.test.ts','tests/schema-migration.test.ts','tests/payment-credit.test.ts'],cwd=root,env=env))
+  print(run(['node','--import','tsx','--test','tests/quota-safety.test.ts','tests/execution.test.ts','tests/schema-migration.test.ts','tests/payment-credit.test.ts','tests/prepaid-wallet.test.ts'],cwd=root,env=env))
  finally: run(['pg_ctl','-D',str(data),'-m','immediate','-w','stop'])

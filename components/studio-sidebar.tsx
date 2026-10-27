@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
+import { formatCredit } from "@/lib/billing";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -13,6 +14,7 @@ export async function signOut() {
 export function StudioSidebar({
   name,
   remainingTokens,
+  creditBalanceMicros,
   onProfileOpen,
   role,
   caption,
@@ -25,6 +27,7 @@ export function StudioSidebar({
 }: {
   name?: string;
   remainingTokens?: number;
+  creditBalanceMicros?: number;
   onProfileOpen?: () => void;
   role?: "teacher" | "child";
   caption?: string;
@@ -37,8 +40,14 @@ export function StudioSidebar({
 }) {
   const { collapsed, toggle: toggleCollapsed } = useSidebarState();
   const [fetchedBalance, setFetchedBalance] = useState<number | null>(null);
+  const [fetchedCredit, setFetchedCredit] = useState<number | null>(null);
   useEffect(() => {
-    if (role !== "child" || remainingTokens !== undefined) return;
+    if (
+      role !== "child" ||
+      remainingTokens !== undefined ||
+      creditBalanceMicros !== undefined
+    )
+      return;
     const controller = new AbortController();
     const refresh = () =>
       fetch("/api/platform/balance", {
@@ -49,6 +58,7 @@ export function StudioSidebar({
           if (r.ok) {
             const data = await r.json();
             setFetchedBalance(data.remaining);
+            if (data.prepaid) setFetchedCredit(data.availableCreditMicros);
           }
         })
         .catch(() => {});
@@ -63,8 +73,9 @@ export function StudioSidebar({
       unwatch();
       window.removeEventListener("dreamforge:thread-state", afterRequest);
     };
-  }, [role, remainingTokens]);
+  }, [role, remainingTokens, creditBalanceMicros]);
   const balance = remainingTokens ?? fetchedBalance;
+  const credit = creditBalanceMicros ?? fetchedCredit;
   const account = (
     <>
       <span className="df-studio-avatar" aria-hidden="true">
@@ -74,8 +85,14 @@ export function StudioSidebar({
         <strong>{name || "DreamForge"}</strong>
         {role === "child" ? (
           <small className="df-account-tokens">
-            Tokens
-            <span>{balance === null ? "—" : balance.toLocaleString()}</span>
+            {credit !== null ? "Credit" : "Tokens"}
+            <span>
+              {credit !== null
+                ? formatCredit(credit)
+                : balance === null
+                  ? "—"
+                  : balance.toLocaleString()}
+            </span>
           </small>
         ) : (
           <small>{role === "teacher" ? "Teacher" : "Project explorer"}</small>
@@ -135,7 +152,7 @@ export function StudioSidebar({
               aria-label="Open profile"
               title={
                 role === "child"
-                  ? `${name || "Your account"} · Tokens ${balance === null ? "—" : balance.toLocaleString()} · Profile`
+                  ? `${name || "Your account"} · ${credit !== null ? `Credit ${formatCredit(credit)}` : `Tokens ${balance === null ? "—" : balance.toLocaleString()}`} · Profile`
                   : `${name || "Your account"} · Profile`
               }
             >
