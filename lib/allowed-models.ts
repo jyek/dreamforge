@@ -5,7 +5,14 @@ export const EXTRA_MODELS = Object.entries(MODELS)
   .filter(([key]) => key !== "free")
   .map(([, model]) => ({ id: model.id, name: model.label, paid: true }));
 export function modelOptions() {
-  return Object.values(MODELS).map((model) => ({
+  return [
+    MODELS.glm,
+    MODELS.free,
+    MODELS.deepseek,
+    MODELS.sonnet,
+    MODELS.sol,
+    MODELS["glm-advanced"],
+  ].map((model) => ({
     id: model.id,
     name: model.label,
     paid: model !== MODELS.free,
