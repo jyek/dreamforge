@@ -1,4 +1,5 @@
 "use client";
+import { watchBalanceChanges } from "@/lib/balance-refresh";
 import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -69,7 +70,7 @@ async function api(url: string, body?: unknown) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         }
-      : undefined,
+      : { cache: "no-store" },
   );
   const data = await r.json();
   if (!r.ok) throw Error(data.error || "Something went wrong.");
@@ -119,6 +120,12 @@ export function PlatformDashboard({
   useEffect(() => {
     if (!initialData) void load();
   }, []);
+  useEffect(() => {
+    if ((data?.user || initialUser)?.role !== "child") return;
+    return watchBalanceChanges(() => {
+      void load();
+    });
+  }, [data?.user.role, initialUser?.role]);
   useEffect(() => {
     if (!initialData || initialData.user.role !== "teacher" || view !== "home")
       return;

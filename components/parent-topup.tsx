@@ -2,6 +2,8 @@
 import { InlineSpinner } from "./dream-loading";
 import { useEffect, useState } from "react";
 import { TOPUP_PACKAGES } from "@/lib/topup-packages";
+import { notifyBalanceChanged } from "@/lib/balance-refresh";
+import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
 export function ParentTopup({
   token,
@@ -18,26 +20,57 @@ export function ParentTopup({
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState("");
-  const [credit, setCredit] = useState<number | null>(null);
+  const [credit, setCredit] = useState<{
+    tokens: number;
+    remaining: number;
+  } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [checkVersion, setCheckVersion] = useState(0);
   useEffect(() => {
     if (!paid || !sessionId) return;
+    setCredit(null);
+    setChecking(true);
+    setPaymentError("");
     let stopped = false;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     let attempts = 0;
     async function poll() {
       try {
-        const r = await fetch(
-          `/api/platform/payment-status?${new URLSearchParams({ token, session: sessionId! })}`,
-          { signal: controller.signal },
-        );
+        const r = await fetch("/api/platform/payment-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, session: sessionId }),
+          cache: "no-store",
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(15000),
+          ]),
+        });
         const data = await r.json();
         if (r.ok && data.credited && !stopped) {
-          setCredit(data.tokens);
+          setCredit({ tokens: data.tokens, remaining: data.remaining });
+          setChecking(false);
+          notifyBalanceChanged();
+          return;
+        }
+        if (!r.ok && r.status < 500) {
+          if (!stopped) {
+            setPaymentError(data.error || "We couldn’t confirm this payment.");
+            setChecking(false);
+          }
           return;
         }
       } catch {}
-      if (!stopped && ++attempts < 30) timer = setTimeout(poll, 2000);
+      if (stopped) return;
+      if (++attempts < 15) timer = setTimeout(poll, 2000);
+      else {
+        setChecking(false);
+        setPaymentError(
+          "Payment confirmation is taking longer than expected. Check again below. You don’t need to pay again.",
+        );
+      }
     }
     void poll();
     return () => {
@@ -45,7 +78,7 @@ export function ParentTopup({
       controller.abort();
       clearTimeout(timer);
     };
-  }, [paid, sessionId, token]);
+  }, [paid, sessionId, token, checkVersion]);
   async function pay(id: string) {
     setError("");
     setBusy(id);
@@ -83,11 +116,38 @@ export function ParentTopup({
           </p>
         )}
         {paid && (
-          <p className="df-notice">
-            {credit !== null
-              ? `${credit.toLocaleString()} tokens added to the account. You can return to DreamForge and keep building.`
-              : "Waiting for Stripe to confirm your payment and add tokens. If this takes a moment, refresh this page shortly."}
-          </p>
+          <div className="df-notice" role="status" aria-live="polite">
+            {credit !== null ? (
+              <>
+                <strong>
+                  {credit.tokens.toLocaleString()} tokens added to the account.
+                </strong>
+                <p>
+                  New available balance:{" "}
+                  <strong>{credit.remaining.toLocaleString()} tokens</strong>.
+                </p>
+                <Link className="df-button" href="/profile">
+                  Return to DreamForge →
+                </Link>
+              </>
+            ) : (
+              <>
+                <p>
+                  {paymentError || "Confirming your payment and adding tokens…"}
+                </p>
+                {checking ? (
+                  <InlineSpinner className="size-4" />
+                ) : (
+                  <button
+                    className="df-button"
+                    onClick={() => setCheckVersion((n) => n + 1)}
+                  >
+                    Check payment again
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         )}
         {!enabled && (
           <p className="df-notice">
@@ -99,27 +159,29 @@ export function ParentTopup({
             {error}
           </p>
         )}
-        <div className="df-stats">
-          {TOPUP_PACKAGES.map((p) => (
-            <article key={p.id} className="df-card df-stat">
-              <span className="df-pill">{p.name}</span>
-              <strong>S${p.amount / 100}</strong>
-              <p>{(p.tokens / 1000000).toLocaleString()} million tokens</p>
-              <button
-                className="df-button"
-                disabled={!enabled || !!busy}
-                onClick={() => pay(p.id)}
-              >
-                {busy === p.id && <InlineSpinner className="size-4" />}
-                {busy === p.id
-                  ? "Opening Stripe…"
-                  : sandbox
-                    ? "Test top-up →"
-                    : "Add tokens →"}
-              </button>
-            </article>
-          ))}
-        </div>
+        {!(paid && credit === null) && (
+          <div className="df-stats">
+            {TOPUP_PACKAGES.map((p) => (
+              <article key={p.id} className="df-card df-stat">
+                <span className="df-pill">{p.name}</span>
+                <strong>S${p.amount / 100}</strong>
+                <p>{(p.tokens / 1000000).toLocaleString()} million tokens</p>
+                <button
+                  className="df-button"
+                  disabled={!enabled || !!busy}
+                  onClick={() => pay(p.id)}
+                >
+                  {busy === p.id && <InlineSpinner className="size-4" />}
+                  {busy === p.id
+                    ? "Opening Stripe…"
+                    : sandbox
+                      ? "Test top-up →"
+                      : "Add tokens →"}
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
         <div className="df-card">
           <h2 style={{ marginTop: 0 }}>What counts as a token?</h2>
           <p className="df-muted">

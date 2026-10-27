@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
+import { watchBalanceChanges } from "@/lib/balance-refresh";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -55,11 +56,11 @@ export function StudioSidebar({
       if (!(event as CustomEvent).detail?.isRunning) void refresh();
     };
     void refresh();
-    window.addEventListener("focus", refresh);
+    const unwatch = watchBalanceChanges(refresh);
     window.addEventListener("dreamforge:thread-state", afterRequest);
     return () => {
       controller.abort();
-      window.removeEventListener("focus", refresh);
+      unwatch();
       window.removeEventListener("dreamforge:thread-state", afterRequest);
     };
   }, [role, remainingTokens]);
