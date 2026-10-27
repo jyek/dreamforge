@@ -6,7 +6,7 @@ flag, convert balances, or change live checkout packages until approved.
 ## Decision and customer experience
 
 Use one SGD prepaid credit balance. Basic and Advanced describe models, not
-separate currencies. Parents buy S$5, S$10, S$20 or S$40 of credit. Students switch
+separate currencies. Parents buy S$10, S$25, S$50 or S$100 of credit. Students switch
 models freely, see their model's category and published prices in the selector,
 and spend the same balance. There is no Advanced token purchase or conversion
 between wallets. Amounts represent DreamForge service credit, not cash deposits.
@@ -17,68 +17,84 @@ The payment return page confirms both the amount credited and the new balance.
 Previous token receipts remain valid and cannot credit twice. No subscription,
 automatic renewal or automatic model upgrade is introduced.
 
-Basic: Auto, Cohere North Mini Code, GLM 5.3 Flash, DeepSeek V4.1 Flash.
-Advanced: Claude Sonnet 5.5, GPT-6.1 Sol, GLM 5.3 [1M]. Auto stays Basic.
-The [1M] label means model context capacity, not one million purchased tokens.
-GLM 5.3 accepts text only; the other two Advanced choices support image input.
+The seven choices are Claude Haiku 5.5 (default), Claude Sonnet 5.5, GPT-6
+Luna, GPT-6.1 Sol, Gemini 3.5 Flash-Lite, Gemini 3.8 Flash and GLM 5.3 Flash.
+Each vendor has a low-cost and mid-tier option, with GLM Flash retained for
+explicit testing. Auto, Cohere North Mini Code, DeepSeek and full GLM are not
+selectable. All seven accept image references. Existing model selections remain
+saved when valid; retired choices fall back to Claude Haiku.
 
-## Proposed retail rates
+## Cost rate and 50% markup
 
-Prices are SGD per one million actual input/output tokens. They are retail
-service rates, distinct from underlying USD provider bills. Cached input and
-reasoning are counted in reported total input/output tokens at these retail
-rates; the proposal does not promise provider cache discounts. Tokens from
-repeated tool/model steps all count. No additional per-message fee is proposed.
+Customer rate = declared provider cost in USD × USD-to-SGD conversion × 1.50.
+The cost rate and selling rate are separate fields/functions in the rate card;
+prices are derived by this formula rather than independently entered retail
+numbers. Top-ups add exactly their SGD face value, with no top-up markup. The
+minimum new prepaid checkout is S$10 and the available amounts are S$10, S$25,
+S$50 and S$100. Legacy token packages remain only for pre-cutover compatibility.
 
-| Model | Category | Input | Output |
-| --- | --- | ---: | ---: |
-| Cohere North Mini Code | Basic | S$0.25 | S$1.00 |
-| GLM 5.3 Flash | Basic | S$0.75 | S$2.50 |
-| DeepSeek V4.1 Flash | Basic | S$1.50 | S$6.00 |
-| Claude Sonnet 5.5 | Advanced | S$10.00 | S$50.00 |
-| GPT-6.1 Sol, up to 272K input | Advanced | S$10.00 | S$50.00 |
-| GPT-6.1 Sol, above 272K input (whole request) | Advanced | S$20.00 | S$75.00 |
-| GLM 5.3 [1M] | Advanced | S$7.00 | S$22.00 |
-| Safety classifier (separate model calls) | Included workflow | S$0.375 | S$1.50 |
+`sgd-2026-10-cost-plus-50-v1` fixes the planning conversion at 1 USD = S$1.35.
+This is an explicit proposal assumption, not a live FX quote. Update the version
+and review all prices when changing cost rates or FX; preserve existing versions
+for reserved/pending runs. No daily automatic FX/cost-rate updates are implemented.
 
-For one call using 20,000 input and 2,000 output tokens, the proposed charge is
-S$0.02 for GLM Flash, S$0.042 for DeepSeek, S$0.184 for GLM 5.3, or S$0.30 for
-Sonnet/Sol. These are illustrations, not quotes for an entire coding request:
-multiple tool steps, accumulated context and safety calls add usage.
+The provider costs below are the OpenRouter catalog snapshot checked on
+28 October 2026, in USD per one million input/output tokens. These can differ
+from vendor list prices and may include temporary provider discounts. Routing
+caps for selectable models are aligned with the declared costs; if an eligible private
+provider cannot meet them, the request fails instead of silently buying at a
+higher price. Verify provider availability on staging before activation.
 
-The rate card is versioned as `sgd-2026-10-v1`. Usage records retain the version;
-future price changes must preserve old versions for reserved/pending runs. No
-unpriced model can silently consume credit. Provider routing also has explicit
-maximum supplier prices, so unexpected premium endpoints fail rather than
-silently changing the economics.
+| Model | Category | USD input cost | USD output cost | SGD input price | SGD output price |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Claude Haiku 5.5, up to 100K input | Basic, default | $0.10 | $0.50 | S$0.2025 | S$1.0125 |
+| Claude Haiku 5.5, above 100K input | Basic | $0.50 | $2.50 | S$1.0125 | S$5.0625 |
+| Claude Sonnet 5.5 | Advanced | $2 | $10 | S$4.05 | S$20.25 |
+| GPT-6 Luna, up to 272K input | Basic | $0.10 | $0.50 | S$0.2025 | S$1.0125 |
+| GPT-6 Luna, above 272K input | Basic | $0.20 | $0.75 | S$0.405 | S$1.51875 |
+| GPT-6.1 Sol, up to 272K input | Advanced | $2 | $10 | S$4.05 | S$20.25 |
+| GPT-6.1 Sol, above 272K input | Advanced | $4 | $15 | S$8.10 | S$30.375 |
+| Gemini 3.5 Flash-Lite | Basic | $0.30 | $2.50 | S$0.6075 | S$5.0625 |
+| Gemini 3.8 Flash | Advanced | $0.825 | $4.125 | S$1.670625 | S$8.353125 |
+| GLM 5.3 Flash | Basic, testing | $0.15 | $0.50 | S$0.30375 | S$1.0125 |
+| Safety classifier | Workflow calls | $0.075 | $0.30 | S$0.151875 | S$0.6075 |
 
-## Cost and margin assumptions
+The menu shows literal per-token input and output prices, including all existing
+Basic models, not just the Advanced choices. For example, GLM Flash input is
+S$0.00000030375/token and output is S$0.0000010125/token. The tooltip also provides
+rates per million for easier comparison, and discloses Haiku/Luna/Sol long-context rates.
+While the feature is disabled, prices are labelled proposed rather than implying
+that current production token purchases already use them.
 
-Checked 28 October 2026. Sonnet list pricing is US$2 input / US$10 output per
-million; Sol is US$2 / US$10 normally and US$4 / US$15 above 272K input. GLM 5.3
-list pricing is US$1.40 / US$4.40; GLM Flash is US$0.15 / US$0.50. OpenRouter's
-catalog currently lists a lower GLM price, but the proposal does not depend on a
-promotion continuing. Supplier caps use list prices and Sol long-context rates.
+Usage is priced at the versioned rate, converted with the same FX and marked up
+50%. Reported cached reads and default five-minute cache writes use their own
+provider cost rates and the same markup; they are not billed at ordinary input
+rates. If cache usage is not reported, standard input pricing applies. An
+unpriced cache type or invalid token report leaves a reviewable hold. One-hour
+cache writes are not requested by the current adapter. The ledger retains cache
+counts and the rate-card version. Retail charges use integer rational arithmetic,
+rounded once per model step up to the nearest micro-SGD, not once per token.
+Reasoning tokens are included in reported output totals. Repeated tool steps,
+context and safety checks also consume usage. Historical free model rates remain in the versioned ledger but are not selectable. No per-message fee is added.
 
-Use US$1 = S$1.35 as a planning assumption, not a live exchange-rate quote. At a
-90% input / 10% output mix, one million Sonnet tokens costs about S$3.78 before
-fees and infrastructure and sells for S$14.00, roughly 73% gross margin before
-those costs. Basic GLM Flash costs about S$0.25 and sells for S$0.925, also about
-73%. This is a starting rate card to test against real usage, not a profitability
-guarantee. Actual FX, OpenRouter funding fees, Stripe fees, tax, refunds, moderation,
-verification, support and VM storage/uptime must be included in the operating model.
-A long-running idle VM can cost money without generating token revenue; monitor
-that separately rather than assuming token markup covers every account.
+The profile shows all-time token counts and input/output counts alongside actual
+prepaid spending, available SGD and temporary holds. Its project table shows
+both tokens used and SGD spent, without substituting one for the other.
 
-Charging for Cohere, despite a free upstream endpoint, pays for the overall
-DreamForge workflow; it is labelled Basic, never advertised as free usage.
+A 50% cost markup yields a 33.3% gross margin before payment fees, FX differences,
+provider funding fees, tax, refunds, support and infrastructure. For instance,
+US$1 of declared model cost becomes S$1.35 cost and S$2.025 customer charges at
+the planning FX. VM uptime/storage and browser verification have costs even when
+few model tokens are used, so this rule does not guarantee an overall profit.
+This is pricing against a declared rate snapshot, not a claim to reproduce every
+line of the eventual provider invoice or promotional credit.
 
 Sources:
 
+- [OpenRouter model cost catalog](https://openrouter.ai/api/v1/models)
 - [OpenAI GPT-6.1 Sol pricing and long-context surcharge](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
 - [Anthropic Sonnet 5.5 specifications and pricing](https://platform.claude.com/docs/en/models/sonnet-5-5/overview)
-- [Z.ai list pricing](https://docs.z.ai/guides/overview/pricing)
-- [Live OpenRouter model catalog](https://openrouter.ai/api/v1/models)
+- [Z.ai vendor list pricing, which can differ from gateway costs](https://docs.z.ai/guides/overview/pricing)
 - [OpenRouter stateless Responses API](https://openrouter.ai/docs/api/reference/responses/overview)
 
 ## Existing balances and rollout
@@ -131,5 +147,20 @@ students.
 
 A parent-controlled Advanced spending cap and a per-request cost estimate/limit
 would further improve confidence. They are follow-ups, not implemented in this PR.
-The present PR publishes model rates and shows actual spending by project; it does
+The present PR publishes per-token model rates and shows token usage and actual spending by project; it does
 not claim to know the final price of a multi-step coding request in advance.
+
+## Local development
+
+The actual app runs from this checkout at http://localhost:3000. It uses private,
+Git-ignored .env.local settings. By explicit user choice, the current local
+instance connects to production Supabase so existing projects appear; editing
+those projects therefore affects the real VMs and records. No production
+migration has been applied, and prepaid billing/Stripe checkout remain disabled
+for this production-connected local run until the new wallet schema is approved.
+
+A separate development database can be used with NODE_ENV=development,
+DREAMFORGE_LOCAL_DATABASE=true and a loopback DATABASE_URL; only that combination
+permits non-TLS local PostgreSQL. Production and remote databases keep verified
+TLS. Development Stripe sessions use local_child_id/local_origin metadata, never
+production child_id; production webhook handlers ignore those sessions.

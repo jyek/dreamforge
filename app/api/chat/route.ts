@@ -1,5 +1,5 @@
 import { prepaidBillingEnabled } from "@/lib/billing";
-import { modelTier, MODELS } from "@/lib/model-catalog";
+import { modelTier, MODELS, DEFAULT_MODEL_CHOICE } from "@/lib/model-catalog";
 import { moderationConversation } from "@/lib/moderation-decision";
 import { managedChat } from "@/lib/managed-chat";
 import { currentRun, assertRun } from "@/lib/execution";
@@ -107,7 +107,9 @@ async function handleChat(req: Request) {
     try {
       const payload = await req.json();
       const modelChoice: ModelChoice =
-        payload.modelChoice ?? choiceForModel(payload.model) ?? "glm";
+        payload.modelChoice ??
+        choiceForModel(payload.model) ??
+        DEFAULT_MODEL_CHOICE;
       if (!isModelChoice(modelChoice))
         return Response.json(
           { error: "Choose a supported model." },
@@ -263,7 +265,7 @@ async function handleChat(req: Request) {
                 learner.id,
                 payload.projectId,
                 bound,
-                modelChoice === "auto" ? MODELS.glm.id : MODELS[modelChoice].id,
+                MODELS[modelChoice].id,
                 Number(process.env.LLM_MAX_OUTPUT_TOKENS || 4096),
               );
             }
@@ -282,6 +284,7 @@ async function handleChat(req: Request) {
                 usage.inputTokens,
                 usage.outputTokens,
                 usage.modelId,
+                usage.inputTokenDetails,
               );
               platformReservation = null;
             }

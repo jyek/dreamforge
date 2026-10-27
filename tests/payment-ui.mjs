@@ -218,8 +218,8 @@ try {
     reserved_tokens: "50",
     input_tokens: "50",
     output_tokens: "50",
-    credit_limit_micros: String(available),
-    credit_used_micros: "0",
+    credit_limit_micros: String(available + 50000),
+    credit_used_micros: "50000",
     credit_reserved_micros: "0",
   });
   await cash.route("**/api/platform/balance", (r) =>
@@ -237,7 +237,16 @@ try {
         wallet: cashWallet(),
         unconfirmed: [],
         paymentsEnabled: true,
-        projectUsage: [],
+        projectUsage: [
+          {
+            vm_id: "vm-usagefixture",
+            project_name: "Counter",
+            used_tokens: "100",
+            input_tokens: "50",
+            output_tokens: "50",
+            credit_cost_micros: "50000",
+          },
+        ],
         prepaid: true,
       },
     }),
@@ -256,6 +265,8 @@ try {
   );
   const account = await cash.newPage();
   await account.goto(origin + "/?screen=credit-dashboard");
+  await account.getByText("Total tokens used", { exact: true }).waitFor();
+  await account.getByText("Total spent", { exact: true }).waitFor();
   await account
     .locator(".df-account-tokens span")
     .filter({ hasText: /^S\$1\.00$/ })
@@ -270,11 +281,17 @@ try {
     .getByText("S$10.00 added to the account.", { exact: true })
     .waitFor();
   await paid.getByText("S$11.00", { exact: true }).waitFor();
+  for (const amount of ["S$10", "S$25", "S$50", "S$100"])
+    await paid.getByText(amount, { exact: true }).waitFor();
+  assert.equal(await paid.getByText("S$5", { exact: true }).count(), 0);
   await account.bringToFront();
   await account
     .locator(".df-account-tokens span")
     .filter({ hasText: /^S\$11\.00$/ })
     .waitFor();
+  const usageRow = account.getByRole("row").filter({ hasText: "Counter" });
+  await usageRow.getByRole("cell", { name: "100", exact: true }).waitFor();
+  await usageRow.getByRole("cell", { name: "S$0.05", exact: true }).waitFor();
   await studio.bringToFront();
   await studio.getByText("S$11.00", { exact: true }).waitFor();
   assert.equal(
@@ -288,17 +305,17 @@ try {
   );
   const modelPage = await cash.newPage();
   const choices = [
-    ["auto", "Auto"],
-    ["free", "Cohere North Mini Code"],
+    ["haiku", "Claude Haiku 5.5"],
+    ["luna", "GPT-6 Luna"],
     ["glm", "GLM 5.3 Flash"],
-    ["deepseek", "DeepSeek V4.1 Flash"],
+    ["gemini-lite", "Gemini 3.5 Flash-Lite"],
     ["sonnet", "Claude Sonnet 5.5"],
     ["sol", "GPT-6.1 Sol"],
-    ["glm-advanced", "GLM 5.3 [1M]"],
+    ["gemini", "Gemini 3.8 Flash"],
   ].map(([id, name]) => ({
     id,
     name,
-    paid: id !== "free" && id !== "auto",
+    paid: true,
     available: true,
   }));
   await modelPage.route("**/api/models", (r) =>
@@ -306,15 +323,23 @@ try {
   );
   await modelPage.goto(origin + "/?screen=models");
   await modelPage
-    .getByRole("button", { name: "Coding model: GLM 5.3 Flash" })
+    .getByRole("button", { name: "Coding model: Claude Haiku 5.5" })
     .click();
   const sonnet = modelPage
     .getByRole("menuitemradio")
     .filter({ hasText: "Claude Sonnet 5.5" });
   await sonnet.waitFor();
+  await modelPage
+    .getByRole("menuitemradio")
+    .filter({ hasText: "GLM 5.3 Flash" })
+    .getByText("Input S$0.00000030375 / token", { exact: true })
+    .waitFor();
+  await sonnet
+    .getByText("Output S$0.00002025 / token", { exact: true })
+    .waitFor();
   assert.match(
     await sonnet.getAttribute("title"),
-    /S\$10 input \/ S\$50 output/,
+    /S\$4.05 input \/ S\$20.25 output/,
   );
   assert.match(await sonnet.getAttribute("title"), /Advanced/);
   await sonnet.click();

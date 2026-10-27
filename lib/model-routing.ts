@@ -1,28 +1,8 @@
 import { MODELS, type ModelChoice } from "./model-catalog";
 export class ModelRoutingError extends Error {}
-export async function freeQuota(
-  apiKey = process.env.OPENROUTER_API_KEY!,
-  request = fetch,
-) {
-  const response = await request("https://openrouter.ai/api/v1/key", {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(10000),
-    cache: "no-store",
-  });
-  if (!response.ok)
-    throw new ModelRoutingError(
-      "Could not check free quota. Try again, or select GLM explicitly.",
-    );
-  const data = (await response.json()).data?.free_model_daily_requests;
-  if (!data || !Number.isFinite(data.remaining))
-    throw new ModelRoutingError(
-      "OpenRouter did not report the free quota. Try again, or select GLM explicitly.",
-    );
-  return data as { used: number; limit: number; remaining: number };
-}
 type Dependencies = {
   request: typeof fetch;
-  quota: () => Promise<{ remaining: number }>;
+  quota?: () => Promise<{ remaining: number }>;
 };
 export function createModelRouting(
   choice: ModelChoice,
@@ -31,27 +11,16 @@ export function createModelRouting(
 ) {
   const deps: Dependencies = {
     request: fetch,
-    quota: () => freeQuota(key),
     ...overrides,
   };
-  let exhausted = false;
   const state = { usedModel: "", modelsUsed: [] as string[] };
   const routedFetch: typeof fetch = async (input, init) => {
     if (!init?.body || typeof init.body !== "string")
       throw new ModelRoutingError("Unsupported model request.");
     const original = JSON.parse(init.body);
-    let target =
-      choice === "auto" || choice === "free" ? MODELS.free : MODELS[choice];
-    if (choice === "auto" || choice === "free") {
-      if (!exhausted) exhausted = (await deps.quota()).remaining <= 0;
-      if (exhausted) {
-        if (choice === "free")
-          throw new ModelRoutingError(
-            "Your daily free quota is used up. Choose Auto or GLM to continue with a paid model.",
-          );
-        target = MODELS.glm;
-      }
-    }
+    const target = MODELS[choice];
+    if (!target)
+      throw new ModelRoutingError("Choose an available coding model.");
     const send = async (model: (typeof MODELS)[keyof typeof MODELS]) => {
       const body = { ...original, model: model.id };
       delete body.models;
@@ -76,30 +45,28 @@ export function createModelRouting(
         body.store = false;
         delete body.previous_response_id;
       } else body.max_tokens = maxOutput;
-      if (model === MODELS.sonnet) {
+      if (model === MODELS.sonnet || model === MODELS.haiku) {
         // Sonnet 5.5 rejects forced tool use and sampling overrides. The harness
         // still requires recorded file-edit evidence before confirming success.
-        if (body.tool_choice !== "none") body.tool_choice = "auto";
+        if (model === MODELS.sonnet && body.tool_choice !== "none")
+          body.tool_choice = "auto";
         delete body.temperature;
         delete body.top_p;
         delete body.top_k;
       }
       if (
         model === MODELS.sonnet ||
+        model === MODELS.haiku ||
         model === MODELS.sol ||
-        model === MODELS["glm-advanced"]
+        model === MODELS.luna ||
+        model === MODELS["gemini-lite"] ||
+        model === MODELS.gemini
       ) {
         delete body.reasoning_effort;
         body.reasoning = {
           effort: "low",
           ...(responses ? {} : { exclude: true }),
         };
-      }
-      // DeepSeek exposes optional reasoning; disable it for responsive coding
-      // rather than letting thinking consume the entire completion budget.
-      if (model === MODELS.deepseek) {
-        delete body.reasoning_effort;
-        body.reasoning = { enabled: false, exclude: true };
       }
       if (model === MODELS.glm) {
         delete body.reasoning_effort;
@@ -111,29 +78,20 @@ export function createModelRouting(
       const otherMedia = /"type"\s*:\s*"(?:input_audio|video_url)"/.test(
         JSON.stringify(body.messages || body.input),
       );
-      if (
-        otherMedia ||
-        (visual &&
-          model !== MODELS.deepseek &&
-          model !== MODELS.glm &&
-          model !== MODELS.sonnet &&
-          model !== MODELS.sol)
-      )
+      if (otherMedia)
         throw new ModelRoutingError(
-          "Choose an image-capable model, such as GLM 5.3 Flash, Claude Sonnet 5.5 or GPT-6.1 Sol. GLM 5.3 [1M] accepts text only.",
+          "Attach images rather than audio or video.",
         );
-      if (model !== MODELS.free) {
-        body.provider = {
-          sort: model === MODELS.glm ? "throughput" : "price",
-          require_parameters: true,
-          max_price: {
-            prompt: model.input,
-            completion: model.output,
-            request: 0,
-            image: 0,
-          },
-        };
-      }
+      body.provider = {
+        sort: model === MODELS.glm ? "throughput" : "price",
+        require_parameters: true,
+        max_price: {
+          prompt: model.input,
+          completion: model.output,
+          request: 0,
+          ...(model.id.startsWith("google/") ? {} : { image: 0 }),
+        },
+      };
       const response = await deps.request(input, {
         ...init,
         body: JSON.stringify(body),
@@ -143,21 +101,7 @@ export function createModelRouting(
       if (!state.modelsUsed.includes(model.id)) state.modelsUsed.push(model.id);
       return response;
     };
-    const response = await send(target);
-    if (
-      choice === "auto" &&
-      target === MODELS.free &&
-      response.status === 429
-    ) {
-      // Provider congestion is not permission to spend. Only confirmed daily
-      // exhaustion permits switching to a paid model.
-      if ((await deps.quota()).remaining <= 0) {
-        exhausted = true;
-        await response.body?.cancel();
-        return send(MODELS.glm);
-      }
-    }
-    return response;
+    return send(target);
   };
   return { fetch: routedFetch, state };
 }

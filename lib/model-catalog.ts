@@ -1,34 +1,24 @@
 export type ModelTier = "basic" | "advanced";
 export const MODEL_CHOICES = [
-  { id: "auto", label: "Auto" },
-  { id: "free", label: "Cohere North Mini Code" },
-  { id: "glm", label: "GLM 5.3 Flash" },
-  { id: "deepseek", label: "DeepSeek V4.1 Flash" },
+  { id: "haiku", label: "Claude Haiku 5.5" },
   { id: "sonnet", label: "Claude Sonnet 5.5" },
+  { id: "luna", label: "GPT-6 Luna" },
   { id: "sol", label: "GPT-6.1 Sol" },
-  { id: "glm-advanced", label: "GLM 5.3 [1M]" },
+  { id: "gemini-lite", label: "Gemini 3.5 Flash-Lite" },
+  { id: "gemini", label: "Gemini 3.8 Flash" },
+  { id: "glm", label: "GLM 5.3 Flash" },
 ] as const;
 export type ModelChoice = (typeof MODEL_CHOICES)[number]["id"];
+export const DEFAULT_MODEL_CHOICE: ModelChoice = "haiku";
 export const isModelChoice = (value: unknown): value is ModelChoice =>
-  MODEL_CHOICES.some((choice) => choice.id === value);
+  MODEL_CHOICES.some((c) => c.id === value);
+// Supplier maximum USD rates per 1M tokens, including long-context tiers.
 export const MODELS = {
-  free: {
-    id: "cohere/north-mini-code:free",
-    label: "Cohere North Mini Code",
-    input: 0,
-    output: 0,
-  },
-  glm: {
-    id: "z-ai/glm-5.3-flash",
-    label: "GLM 5.3 Flash",
-    input: 0.15,
-    output: 0.5,
-  },
-  deepseek: {
-    id: "deepseek/deepseek-v4.1-flash",
-    label: "DeepSeek V4.1 Flash",
-    input: 0.3,
-    output: 1.2,
+  haiku: {
+    id: "anthropic/claude-haiku-5.5",
+    label: "Claude Haiku 5.5",
+    input: 0.5,
+    output: 2.5,
   },
   sonnet: {
     id: "anthropic/claude-sonnet-5.5",
@@ -36,27 +26,37 @@ export const MODELS = {
     input: 2,
     output: 10,
   },
-  // Long-context maximum rates; protect against >272K input surcharges.
+  luna: {
+    id: "openai/gpt-6-luna",
+    label: "GPT-6 Luna",
+    input: 0.2,
+    output: 0.75,
+  },
   sol: { id: "openai/gpt-6.1-sol", label: "GPT-6.1 Sol", input: 4, output: 15 },
-  "glm-advanced": {
-    id: "z-ai/glm-5.3",
-    label: "GLM 5.3 [1M]",
-    input: 1.4,
-    output: 4.4,
+  "gemini-lite": {
+    id: "google/gemini-3.5-flash-lite",
+    label: "Gemini 3.5 Flash-Lite",
+    input: 0.3,
+    output: 2.5,
+  },
+  gemini: {
+    id: "google/gemini-3.8-flash",
+    label: "Gemini 3.8 Flash",
+    input: 0.825,
+    output: 4.125,
+  },
+  glm: {
+    id: "z-ai/glm-5.3-flash",
+    label: "GLM 5.3 Flash",
+    input: 0.15,
+    output: 0.5,
   },
 } as const;
+export const modelTier = (choice: ModelChoice): ModelTier =>
+  ["sonnet", "sol", "gemini"].includes(choice) ? "advanced" : "basic";
 export const modelLabel = (id: string) =>
-  Object.values(MODELS).find((model) => model.id === id)?.label ||
-  (id === "qwen/qwen3-coder-30b-a3b-instruct"
-    ? "Qwen3 Coder 30B A3B Instruct"
-    : id === "qwen/qwen3-coder"
-      ? "Qwen3 Coder 480B A35B"
-      : id);
-
+  Object.values(MODELS).find((m) => m.id === id)?.label || id;
 export const choiceForModel = (id: unknown): ModelChoice | undefined =>
-  Object.entries(MODELS).find(([, model]) => model.id === id)?.[0] as
+  Object.entries(MODELS).find(([, m]) => m.id === id)?.[0] as
     | ModelChoice
     | undefined;
-
-export const modelTier = (choice: ModelChoice): ModelTier =>
-  ["sonnet", "sol", "glm-advanced"].includes(choice) ? "advanced" : "basic";

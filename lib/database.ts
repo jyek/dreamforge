@@ -18,9 +18,14 @@ export function database() {
     idleTimeoutMillis: 10000,
     allowExitOnIdle: true,
     connectionTimeoutMillis: 5000,
-    ssl: {
-      rejectUnauthorized: true,
-      ca: readFileSync(`${process.cwd()}/config/supabase-ca.crt`, "utf8"),
-    },
+    ssl:
+      process.env.NODE_ENV === "development" &&
+      process.env.DREAMFORGE_LOCAL_DATABASE === "true" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(connection.hostname)
+        ? false
+        : {
+            rejectUnauthorized: true,
+            ca: readFileSync(`${process.cwd()}/config/supabase-ca.crt`, "utf8"),
+          },
   }));
 }

@@ -1,5 +1,5 @@
 "use client";
-import { billingRate } from "@/lib/billing";
+import { billingRate, formatTokenRate } from "@/lib/billing";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
@@ -9,20 +9,26 @@ import {
   isModelChoice,
   MODEL_CHOICES,
   MODELS,
-  modelLabel,
   modelTier,
+  DEFAULT_MODEL_CHOICE,
 } from "@/lib/model-catalog";
+const longThreshold = (id: string) =>
+  id === "haiku" ? 100000 : ["sol", "luna"].includes(id) ? 272000 : null;
 const priceHint = (id: string) => {
-  try {
-    if (id === "auto")
-      return "Up to S$0.75 input / S$2.50 output per 1M tokens (Basic models only)";
-    const choice = isModelChoice(id) && id !== "auto" ? id : "glm";
-    const r = billingRate(MODELS[choice].id);
-    return `S$${r.input} input / S$${r.output} output per 1M tokens${choice === "sol" ? "; above 272K input: S$20 / S$75" : ""}`;
-  } catch {
-    return "";
-  }
+  const choice = isModelChoice(id) ? id : DEFAULT_MODEL_CHOICE;
+  const r = billingRate(MODELS[choice].id),
+    threshold = longThreshold(id);
+  const long = threshold ? billingRate(MODELS[choice].id, threshold + 1) : null;
+  return `S$${r.input} input / S$${r.output} output per 1M tokens${long ? `; above ${threshold! / 1000}K input: S$${long.input} / S$${long.output}` : ""}`;
 };
+const longPrice = (id: string) => {
+  const t = longThreshold(id);
+  if (!t || !isModelChoice(id)) return null;
+  const r = billingRate(MODELS[id].id, t + 1);
+  return `Above ${t / 1000}K input: ${formatTokenRate(r.input)} in · ${formatTokenRate(r.output)} out / token`;
+};
+const tokenPrice = (id: string) =>
+  billingRate(MODELS[isModelChoice(id) ? id : DEFAULT_MODEL_CHOICE].id);
 type Model = { id: string; name: string; paid: boolean; available?: boolean };
 const label = (model: Model) => model.name.replace(/\s*\(free\)$/, "");
 export function ModelSelector() {
@@ -30,19 +36,14 @@ export function ModelSelector() {
       MODEL_CHOICES.map((choice) => ({
         id: choice.id,
         name: choice.label,
-        paid: choice.id !== "auto" && choice.id !== "free",
+        paid: true,
         available: modelTier(choice.id) === "basic",
       })),
     ),
     [open, setOpen] = useState(false);
   const { choice: selected, setChoice: setSelected } = useModelSettings();
   const running = useAuiState(({ thread }) => thread.isRunning);
-  const currentModel = useAuiState(
-    ({ thread }) =>
-      thread.messages.at(-1)?.metadata?.custom?.model as string | undefined,
-  );
   const [prepaid, setPrepaid] = useState(false);
-  const [autoModel, setAutoModel] = useState<string | null>(null);
   const [position, setPosition] = useState({ left: 0, bottom: 0 });
   const trigger = useRef<HTMLButtonElement>(null),
     menu = useRef<HTMLDivElement>(null);
@@ -53,7 +54,6 @@ export function ModelSelector() {
       .then((data) => {
         setModels(data.choices || data.models);
         setPrepaid(!!data.prepaid);
-        setAutoModel(data.autoModel || null);
       })
       .catch(() => {});
     return () => controller.abort();
@@ -100,17 +100,7 @@ export function ModelSelector() {
   }, [open]);
   if (!models.length) return null;
   const active = models.find((model) => model.id === selected) || models[0];
-  const routedModel = running && currentModel ? currentModel : autoModel;
-  const autoProvider =
-    routedModel === MODELS.free.id
-      ? "Cohere"
-      : routedModel === MODELS.glm.id
-        ? "GLM"
-        : null;
-  const activeLabel =
-    selected === "auto" && autoProvider
-      ? `Auto (${autoProvider})`
-      : label(active);
+  const activeLabel = label(active);
   return (
     <>
       <button
@@ -118,11 +108,7 @@ export function ModelSelector() {
         type="button"
         disabled={running}
         aria-label={`Coding model: ${activeLabel}`}
-        title={
-          selected === "auto" && routedModel
-            ? `${modelLabel(routedModel)} · Basic`
-            : `${label(active)} · ${modelTier(selected) === "advanced" ? "Advanced" : "Basic"}`
-        }
+        title={`${label(active)} · ${modelTier(selected) === "advanced" ? "Advanced" : "Basic"}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? "coding-model-menu" : undefined}
@@ -182,7 +168,7 @@ export function ModelSelector() {
             className="fixed z-[100] w-[380px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1.5 text-slate-800 shadow-[0_8px_32px_rgba(15,23,42,0.12)]"
           >
             <p className="px-3 pt-2 pb-2.5 text-xs font-medium text-slate-400">
-              Model · Basic and Advanced share one balance
+              Model · {prepaid ? "SGD per token" : "Proposed SGD per token"}
             </p>
             <div className="max-h-[50vh] overflow-y-auto">
               {models.map((model) => (
@@ -192,7 +178,7 @@ export function ModelSelector() {
                   role="menuitemradio"
                   aria-checked={selected === model.id}
                   disabled={model.available === false}
-                  title={`${prepaid ? priceHint(model.id) + " · " : ""}${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
+                  title={`${priceHint(model.id)} · ${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
                   onClick={() => {
                     if (isModelChoice(model.id)) setSelected(model.id);
                     setOpen(false);
@@ -200,8 +186,21 @@ export function ModelSelector() {
                   }}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
                 >
-                  <span className="min-w-0 flex-1 text-sm font-medium whitespace-nowrap">
-                    {label(model)}
+                  <span className="min-w-0 flex-1 text-sm font-medium">
+                    <span className="block">{label(model)}</span>
+                    <span className="mt-1 block text-[10px] leading-4 font-normal text-slate-500">
+                      <span className="block">
+                        Input {formatTokenRate(tokenPrice(model.id).input)} /
+                        token
+                      </span>
+                      <span className="block">
+                        Output {formatTokenRate(tokenPrice(model.id).output)} /
+                        token
+                      </span>
+                      {longPrice(model.id) && (
+                        <span className="block">{longPrice(model.id)}</span>
+                      )}
+                    </span>
                   </span>
                   <span className="ml-auto text-xs text-slate-400">
                     {isModelChoice(model.id) &&

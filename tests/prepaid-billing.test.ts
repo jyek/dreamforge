@@ -5,19 +5,25 @@ import {
   reservationCreditMicros,
   availableCreditMicros,
   formatCredit,
+  formatCreditBalance,
   billingRate,
   CREDIT_TOPUPS,
+  BILLING_VERSION,
+  USD_TO_SGD,
+  MARKUP_PERCENT,
+  modelCostRate,
+  formatTokenRate,
 } from "../lib/billing";
 import { modelTier, MODELS } from "../lib/model-catalog";
 import { createModelRouting } from "../lib/model-routing";
 import { supportsImages } from "../lib/chat-input";
 import { purchasePackages } from "../lib/topup-packages";
 test("one prepaid balance has explicit versioned model prices, conservative holds and rounded micro-SGD charges", () => {
-  assert.equal(usageCreditMicros(MODELS.glm.id, 1000000, 1000000), 3250000);
-  assert.equal(usageCreditMicros(MODELS.sonnet.id, 1000000, 1000000), 60000000);
-  assert.equal(usageCreditMicros(MODELS.sol.id, 100000, 10000), 1500000);
-  assert.equal(usageCreditMicros(MODELS.sol.id, 300000, 10000), 6750000);
-  assert.equal(usageCreditMicros(MODELS.free.id, 1, 1), 2);
+  assert.equal(usageCreditMicros(MODELS.glm.id, 1000000, 1000000), 1316250);
+  assert.equal(usageCreditMicros(MODELS.sonnet.id, 1000000, 1000000), 24300000);
+  assert.equal(usageCreditMicros(MODELS.sol.id, 100000, 10000), 607500);
+  assert.equal(usageCreditMicros(MODELS.sol.id, 300000, 10000), 2733750);
+
   for (const m of Object.values(MODELS))
     assert(
       reservationCreditMicros(m.id, 2000) >=
@@ -37,8 +43,8 @@ test("one prepaid balance has explicit versioned model prices, conservative hold
     8950000,
   );
   assert.equal(formatCredit(10000000), "S$10.00");
-  assert.equal(reservationCreditMicros(MODELS.sonnet.id, 22000, 2000), 300000);
-  assert.equal(reservationCreditMicros(MODELS.sol.id, 302000, 2000), 6150000);
+  assert.equal(reservationCreditMicros(MODELS.sonnet.id, 22000, 2000), 141750);
+  assert.equal(reservationCreditMicros(MODELS.sol.id, 302000, 2000), 3098250);
 });
 test("pricing proposal is inactive by default; new top-ups buy SGD rather than separate tokens", () => {
   delete process.env.DREAMFORGE_PREPAID_BILLING_ENABLED;
@@ -48,16 +54,16 @@ test("pricing proposal is inactive by default; new top-ups buy SGD rather than s
   for (const p of purchasePackages())
     assert.equal(p.creditMicros, p.amount * 10000);
   delete process.env.DREAMFORGE_PREPAID_BILLING_ENABLED;
-  for (const c of ["auto", "free", "glm", "deepseek"] as const)
+  for (const c of ["haiku", "luna", "gemini-lite", "glm"] as const)
     assert.equal(modelTier(c), "basic");
-  for (const c of ["sonnet", "sol", "glm-advanced"] as const)
+  for (const c of ["sonnet", "sol", "gemini"] as const)
     assert.equal(modelTier(c), "advanced");
   assert.equal(supportsImages("sonnet"), true);
   assert.equal(supportsImages("sol"), true);
-  assert.equal(supportsImages("glm-advanced"), false);
+  assert.equal(supportsImages("gemini"), true);
 });
 test("Advanced models retain correct IDs, gateway caps and API-specific parameter handling", async () => {
-  for (const choice of ["sonnet", "sol", "glm-advanced"] as const) {
+  for (const choice of ["sonnet", "sol", "gemini"] as const) {
     let body: any;
     const r = createModelRouting(choice, "fixture", {
       quota: async () => {
@@ -206,5 +212,104 @@ test("GPT-6.1 Sol uses Responses through the real SDK and reports the canonical 
     globalThis.fetch = previousFetch;
     if (previous === undefined) delete process.env.OPENAI_BASE_URL;
     else process.env.OPENAI_BASE_URL = previous;
+  }
+});
+
+test("published customer rates are cost x SGD conversion x 1.5, including cache rates", () => {
+  assert.equal(MARKUP_PERCENT, 50);
+  assert.equal(USD_TO_SGD, 1.35);
+  for (const m of Object.values(MODELS))
+    for (const input of [1000, 300000]) {
+      const cost = modelCostRate(m.id, input),
+        price = billingRate(m.id, input);
+      assert(Math.abs(price.input - cost.input * USD_TO_SGD * 1.5) < 1e-10);
+      assert(Math.abs(price.output - cost.output * USD_TO_SGD * 1.5) < 1e-10);
+    }
+  assert.equal(
+    formatTokenRate(billingRate(MODELS.glm.id).input),
+    "S$0.00000030375",
+  );
+  assert.equal(
+    usageCreditMicros(MODELS.sonnet.id, 1000, 50, BILLING_VERSION, {
+      cacheReadTokens: 900,
+    }),
+    1600,
+  );
+  assert.throws(
+    () =>
+      usageCreditMicros(MODELS.glm.id, 1, 1, BILLING_VERSION, {
+        cacheReadTokens: 2,
+      }),
+    /Invalid token usage/,
+  );
+  assert.deepEqual(
+    CREDIT_TOPUPS.map((p) => p.amount),
+    [1000, 2500, 5000, 10000],
+  );
+});
+
+test("remaining credit uses two decimals without changing charge precision", () => {
+  assert.equal(formatCreditBalance(23452500), "S$23.45");
+  assert.equal(formatCreditBalance(0), "S$0.00");
+  assert.equal(formatCredit(1234), "S$0.0012");
+});
+
+test("local Stripe session metadata is ignored by production and bound to its local origin", async () => {
+  const { paymentChildId, paidTokenPackage } =
+    await import("../lib/payment-credit");
+  const keys = [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "DREAMFORGE_LOCAL_DATABASE",
+    "DREAMFORGE_SITE_URL",
+  ];
+  const before = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  const local = {
+    id: "cs_test_localmetadata",
+    livemode: false,
+    payment_status: "paid",
+    mode: "payment",
+    currency: "sgd",
+    amount_total: 1000,
+    metadata: {
+      package: "credit-10-v1",
+      local_child_id: "00000000-0000-4000-8000-000000000095",
+      local_origin: "http://localhost:3000",
+    },
+  };
+  try {
+    Object.assign(process.env, {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://local@127.0.0.1/local",
+      DREAMFORGE_LOCAL_DATABASE: "true",
+      DREAMFORGE_SITE_URL: "http://localhost:3000",
+    });
+    assert.equal(paymentChildId(local), undefined);
+    assert.equal(paidTokenPackage(local), null);
+    Object.assign(process.env, { NODE_ENV: "development" });
+    assert.equal(paymentChildId(local), local.metadata.local_child_id);
+    assert(paidTokenPackage(local));
+    assert.equal(
+      paymentChildId({
+        ...local,
+        metadata: { ...local.metadata, local_origin: "http://other.local" },
+      }),
+      undefined,
+    );
+    assert.equal(
+      paymentChildId({
+        ...local,
+        metadata: {
+          package: "credit-10-v1",
+          child_id: local.metadata.local_child_id,
+        },
+      }),
+      undefined,
+    );
+  } finally {
+    for (const k of keys) {
+      if (before[k] === undefined) Reflect.deleteProperty(process.env, k);
+      else process.env[k] = before[k];
+    }
   }
 });

@@ -1,3 +1,4 @@
+import { localDevelopmentBilling } from "./local-development";
 import { database } from "./database";
 import { paymentMode } from "./payment-mode";
 import { prepaidBillingEnabled } from "./billing";
@@ -10,9 +11,20 @@ export type CheckoutSession = {
   mode?: string;
   currency?: string;
   amount_total?: number;
-  metadata?: { child_id?: string; package?: string };
+  metadata?: {
+    child_id?: string;
+    package?: string;
+    local_child_id?: string;
+    local_origin?: string;
+  };
 };
 
+export function paymentChildId(session: CheckoutSession) {
+  if (!localDevelopmentBilling()) return session.metadata?.child_id;
+  return session.metadata?.local_origin === process.env.DREAMFORGE_SITE_URL
+    ? session.metadata?.local_child_id
+    : undefined;
+}
 /** Accept only a paid package from a verified Stripe API response or webhook. */
 export function paidTokenPackage(session: CheckoutSession, childId?: string) {
   const pack = allPurchasePackages().find(
@@ -25,8 +37,8 @@ export function paidTokenPackage(session: CheckoutSession, childId?: string) {
     session.currency === "sgd" &&
     pack &&
     session.amount_total === pack.amount &&
-    typeof session.metadata?.child_id === "string" &&
-    (!childId || session.metadata.child_id === childId)
+    typeof paymentChildId(session) === "string" &&
+    (!childId || paymentChildId(session) === childId)
     ? pack
     : null;
 }
@@ -49,7 +61,7 @@ export async function creditCheckout(
         : "insert into payments(stripe_session_id,child_id,amount_sgd_cents,tokens) values($1,$2,$3,$4) on conflict do nothing returning child_id",
       [
         session.id,
-        session.metadata!.child_id,
+        paymentChildId(session),
         pack.amount,
         pack.tokens,
         ...(prepaidBillingEnabled() ? [pack.creditMicros] : []),

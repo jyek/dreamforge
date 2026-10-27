@@ -77,10 +77,10 @@ test("Basic and Advanced spend the same balance at distinct prices; exact usage 
     1000,
     "anthropic/claude-sonnet-5.5",
   );
-  assert.equal(await settleUsage(a, 100, 50, "z-ai/glm-5.3-flash"), 200);
+  assert.equal(await settleUsage(a, 100, 50, "z-ai/glm-5.3-flash"), 81);
   assert.equal(
     await settleUsage(b, 100, 50, "anthropic/claude-sonnet-5.5"),
-    3500,
+    1418,
   );
   assert.equal(
     await settleUsage(b, 100, 50, "anthropic/claude-sonnet-5.5"),
@@ -89,7 +89,7 @@ test("Basic and Advanced spend the same balance at distinct prices; exact usage 
   const w = (
     await pool.query("select * from token_accounts where child_id=$1", [child])
   ).rows[0];
-  assert.equal(Number(w.credit_used_micros), 3700);
+  assert.equal(Number(w.credit_used_micros), 1499);
   assert.equal(Number(w.credit_reserved_micros), 0);
   assert.equal(Number(w.reserved_tokens), 0);
   const d = await loadDashboardData({
@@ -99,13 +99,13 @@ test("Basic and Advanced spend the same balance at distinct prices; exact usage 
     username: "credit_fixture",
   } as Profile);
   assert.equal(d.prepaid, true);
-  assert.equal(Number(d.wallet.credit_used_micros), 3700);
-  assert.equal(Number(d.projectUsage[0].credit_cost_micros), 3700);
+  assert.equal(Number(d.wallet.credit_used_micros), 1499);
+  assert.equal(Number(d.projectUsage[0].credit_cost_micros), 1499);
 });
 test("concurrent reservations cannot overspend; unknown or over-bound usage remains held without overdraft", async () => {
   const runs = await Promise.allSettled([
-    reserveUsage(child, project, 100000, "openai/gpt-6.1-sol"),
-    reserveUsage(child, project, 100000, "openai/gpt-6.1-sol"),
+    reserveUsage(child, project, 200000, "openai/gpt-6.1-sol"),
+    reserveUsage(child, project, 200000, "openai/gpt-6.1-sol"),
   ]);
   assert.equal(runs.filter((r) => r.status === "fulfilled").length, 1);
   for (const r of runs)
@@ -124,8 +124,8 @@ test("concurrent reservations cannot overspend; unknown or over-bound usage rema
   const w = (
     await pool.query("select * from token_accounts where child_id=$1", [child])
   ).rows[0];
-  assert.equal(Number(w.credit_used_micros), 3700);
-  assert.equal(Number(w.credit_reserved_micros), 5025);
+  assert.equal(Number(w.credit_used_micros), 1499);
+  assert.equal(Number(w.credit_reserved_micros), 2036);
   assert.equal(Number(w.reserved_tokens), 0);
 });
 test("earlier token packages are honoured at conversion value after launch, and earlier credited receipts cannot grant again", async () => {
@@ -233,7 +233,8 @@ test("conversion preserves old balances and receipts, refuses unresolved usage, 
     );
     await c.query("set role authenticated");
     await assert.rejects(
-      () => c.query("select credit_limit_micros from dreamforge.token_accounts"),
+      () =>
+        c.query("select credit_limit_micros from dreamforge.token_accounts"),
       /permission denied/,
     );
     await c.query("reset role");
@@ -243,4 +244,29 @@ test("conversion preserves old balances and receipts, refuses unresolved usage, 
     await admin.query(`drop database "${name}" with (force)`);
     await admin.end();
   }
+});
+
+test("cached input uses its own cost plus 50 percent and retains auditable usage details", async () => {
+  const id = await reserveUsage(
+    child,
+    project,
+    2000,
+    "anthropic/claude-sonnet-5.5",
+  );
+  assert.equal(
+    await settleUsage(id, 1000, 50, "anthropic/claude-sonnet-5.5", {
+      cacheReadTokens: 900,
+    }),
+    1600,
+  );
+  const {
+    rows: [row],
+  } = await pool.query(
+    "select credit_cost_micros,cache_read_tokens,cache_write_tokens,estimated_cost_usd,billing_version from usage_runs where id=$1",
+    [id],
+  );
+  assert.equal(Number(row.cache_read_tokens), 900);
+  assert.equal(Number(row.credit_cost_micros), 1600);
+  assert.equal(Number(row.estimated_cost_usd), 0.00079);
+  assert.match(row.billing_version, /cost-plus-50/);
 });

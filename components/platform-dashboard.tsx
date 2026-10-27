@@ -2,6 +2,7 @@
 import {
   availableCreditMicros,
   formatCredit,
+  formatCreditBalance,
   type CreditWallet,
 } from "@/lib/billing";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
@@ -517,7 +518,7 @@ export function PlatformDashboard({
                     }
                     description={
                       data.prepaid
-                        ? "One balance for every model. Advanced models cost more per request. Confirmed deductions appear below."
+                        ? "One balance for every model. Input and output prices vary by model. Confirmed deductions appear below."
                         : "Confirmed usage from prompts, replies and tool steps."
                     }
                   />
@@ -528,7 +529,7 @@ export function PlatformDashboard({
                   </span>
                   <strong>
                     {data.prepaid
-                      ? formatCredit(availableCreditMicros(data.wallet))
+                      ? formatCreditBalance(availableCreditMicros(data.wallet))
                       : Number(data.wallet?.used_tokens || 0).toLocaleString()}
                   </strong>
                 </div>
@@ -545,6 +546,31 @@ export function PlatformDashboard({
                   charged.
                 </p>
               )}
+              <div className="df-stats" aria-label="Usage totals">
+                <div className="df-stat">
+                  <span>Total tokens used</span>
+                  <strong>
+                    {Number(data.wallet?.used_tokens || 0).toLocaleString()}
+                  </strong>
+                  <p>
+                    Input:{" "}
+                    {Number(data.wallet?.input_tokens || 0).toLocaleString()} ·
+                    Output:{" "}
+                    {Number(data.wallet?.output_tokens || 0).toLocaleString()}
+                  </p>
+                </div>
+                {data.prepaid && (
+                  <div className="df-stat">
+                    <span>Total spent</span>
+                    <strong>
+                      {formatCredit(
+                        Number(data.wallet?.credit_used_micros || 0),
+                      )}
+                    </strong>
+                    <p>Confirmed prepaid charges</p>
+                  </div>
+                )}
+              </div>
               <h3>Usage by project</h3>
               {(data.projectUsage || []).length ? (
                 <div className="df-table-scroll">
@@ -552,7 +578,8 @@ export function PlatformDashboard({
                     <thead>
                       <tr>
                         <th>Project</th>
-                        <th>{data.prepaid ? "Charged" : "Tokens used"}</th>
+                        <th>Tokens used</th>
+                        {data.prepaid && <th>Spent (SGD)</th>}
                         <th>Input</th>
                         <th>Output</th>
                       </tr>
@@ -569,12 +596,15 @@ export function PlatformDashboard({
                             </Link>
                           </td>
                           <td>
-                            {data.prepaid
-                              ? formatCredit(
-                                  Number(project.credit_cost_micros || 0),
-                                )
-                              : Number(project.used_tokens).toLocaleString()}
+                            {Number(project.used_tokens).toLocaleString()}
                           </td>
+                          {data.prepaid && (
+                            <td>
+                              {formatCredit(
+                                Number(project.credit_cost_micros || 0),
+                              )}
+                            </td>
+                          )}
                           <td>
                             {Number(project.input_tokens).toLocaleString()}
                           </td>

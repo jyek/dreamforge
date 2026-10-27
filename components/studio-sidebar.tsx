@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
-import { formatCredit } from "@/lib/billing";
+import { formatCreditBalance } from "@/lib/billing";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -85,10 +85,10 @@ export function StudioSidebar({
         <strong>{name || "DreamForge"}</strong>
         {role === "child" ? (
           <small className="df-account-tokens">
-            {credit !== null ? "Credit" : "Tokens"}
+            {credit !== null ? "Remaining credit" : "Tokens"}
             <span>
               {credit !== null
-                ? formatCredit(credit)
+                ? formatCreditBalance(credit)
                 : balance === null
                   ? "—"
                   : balance.toLocaleString()}
@@ -152,7 +152,7 @@ export function StudioSidebar({
               aria-label="Open profile"
               title={
                 role === "child"
-                  ? `${name || "Your account"} · ${credit !== null ? `Credit ${formatCredit(credit)}` : `Tokens ${balance === null ? "—" : balance.toLocaleString()}`} · Profile`
+                  ? `${name || "Your account"} · ${credit !== null ? `Credit ${formatCreditBalance(credit)}` : `Tokens ${balance === null ? "—" : balance.toLocaleString()}`} · Profile`
                   : `${name || "Your account"} · Profile`
               }
             >

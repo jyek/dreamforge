@@ -1,7 +1,11 @@
 import { prepaidBillingEnabled, availableCreditMicros } from "@/lib/billing";
 import { database } from "@/lib/database";
 import { checkOrigin, tokenHash } from "@/lib/platform-auth";
-import { creditCheckout, type CheckoutSession } from "@/lib/payment-credit";
+import {
+  creditCheckout,
+  paymentChildId,
+  type CheckoutSession,
+} from "@/lib/payment-credit";
 import { paymentsEnabled } from "@/lib/topup-packages";
 
 const headers = { "Cache-Control": "private, no-store" };
@@ -48,7 +52,7 @@ async function status(token: unknown, session: unknown, reconcile: boolean) {
       );
       if (!response.ok) throw Error("Stripe lookup unavailable");
       const checkout = (await response.json()) as CheckoutSession;
-      if (checkout.id !== session || checkout.metadata?.child_id !== childId)
+      if (checkout.id !== session || paymentChildId(checkout) !== childId)
         return Response.json(
           { error: "This payment does not match this top-up link." },
           { status: 400, headers },

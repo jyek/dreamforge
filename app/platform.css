@@ -382,6 +382,9 @@
 .df-pay .df-stats {
   grid-template-columns: repeat(3, 1fr);
 }
+.df-pay--prepaid .df-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 @media (max-width: 800px) {
   .df-page {
     padding: 22px 22px 45px;

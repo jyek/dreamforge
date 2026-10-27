@@ -26,33 +26,19 @@ async function scenario(
     });
   return { routing, run, bodies };
 }
-let s = await scenario("auto", [10]);
-await s.run();
-assert.equal(s.bodies[0].model, MODELS.free.id);
-s = await scenario("auto", [0]);
-await s.run();
-assert.equal(s.bodies[0].model, MODELS.glm.id);
-assert.equal(s.bodies[0].provider.max_price.prompt, 0.15);
-assert.equal(s.bodies[0].reasoning_effort, undefined);
-s = await scenario("free", [0]);
-await assert.rejects(s.run, /daily free quota/);
-assert.equal(s.bodies.length, 0);
-s = await scenario("auto", [10, 0], [429, 200]);
-await s.run();
-assert.deepEqual(
-  s.bodies.map((b) => b.model),
-  [MODELS.free.id, MODELS.glm.id],
-);
-s = await scenario("auto", [10, 10], [429]);
-assert.equal((await s.run()).status, 429);
-assert.equal(s.bodies.length, 1);
-s = await scenario("glm", []);
-await s.run();
-assert.equal(s.bodies[0].model, MODELS.glm.id);
-s = await scenario("deepseek", []);
-for (let i = 0; i < 20; i++) await s.run();
-assert.equal(s.bodies.length, 20);
-assert.ok(s.bodies.every((b) => b.model === MODELS.deepseek.id));
+for (const choice of [
+  "haiku",
+  "sonnet",
+  "luna",
+  "sol",
+  "gemini-lite",
+  "gemini",
+  "glm",
+] as const) {
+  const s = await scenario(choice, []);
+  await s.run();
+  assert.equal(s.bodies[0].model, MODELS[choice].id);
+}
 console.log(
-  "PASS: free-first routing, quota fallback, congestion, free-only, manual selection and repeated paid requests without a budget gate",
+  "PASS seven explicit model choices, no automatic provider fallback",
 );

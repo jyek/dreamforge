@@ -21,7 +21,9 @@ update dreamforge.token_accounts set credit_limit_micros=greatest(0,token_limit-
 alter table dreamforge.usage_runs
  add column credit_reserved_micros bigint check(credit_reserved_micros>=0),
  add column credit_cost_micros bigint check(credit_cost_micros>=0),
- add column billing_version text;
+ add column billing_version text,
+ add column cache_read_tokens bigint check(cache_read_tokens>=0),
+ add column cache_write_tokens bigint check(cache_write_tokens>=0);
 alter table dreamforge.payments add column credit_micros bigint check(credit_micros>=0);
 -- Old payment receipts remain token receipts; retrying them cannot grant twice.
 commit;

@@ -1,3 +1,4 @@
+import { localDevelopmentBilling } from "@/lib/local-development";
 import { database } from "@/lib/database";
 import { checkOrigin, tokenHash } from "@/lib/platform-auth";
 import { paymentsEnabled, purchasePackages } from "@/lib/topup-packages";
@@ -39,7 +40,12 @@ export async function POST(req: Request) {
       ? `DreamForge ${pack.name}`
       : `DreamForge ${pack.name} — ${pack.tokens.toLocaleString()} tokens`,
     "line_items[0][quantity]": "1",
-    "metadata[child_id]": rows[0].child_id,
+    ...(localDevelopmentBilling()
+      ? {
+          "metadata[local_child_id]": rows[0].child_id,
+          "metadata[local_origin]": site,
+        }
+      : { "metadata[child_id]": rows[0].child_id }),
     "metadata[package]": pack.id,
   });
   const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {

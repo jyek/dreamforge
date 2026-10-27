@@ -1,7 +1,11 @@
 "use client";
 import { InlineSpinner } from "./dream-loading";
 import { useEffect, useState } from "react";
-import { CREDIT_TOPUPS, formatCredit } from "@/lib/billing";
+import {
+  CREDIT_TOPUPS,
+  formatCredit,
+  formatCreditBalance,
+} from "@/lib/billing";
 import { TOPUP_PACKAGES } from "@/lib/topup-packages";
 import { notifyBalanceChanged } from "@/lib/balance-refresh";
 import Link from "next/link";
@@ -113,12 +117,12 @@ export function ParentTopup({
       <header className="df-header">
         <DreamForgeBrand />
       </header>
-      <section className="df-pay">
+      <section className={`df-pay ${prepaid ? "df-pay--prepaid" : ""}`}>
         <p className="df-eyebrow">For parents & guardians</p>
         <h1 className="df-title">Fuel their next big idea.</h1>
         <p className="df-muted">
           {prepaid
-            ? "Add prepaid credit to your child’s DreamForge account. One balance works with every model; Advanced models cost more."
+            ? "Add prepaid credit to your child’s DreamForge account. One balance works with every model, with usage charged at the selected model’s rates."
             : "Add a token allowance to your child’s DreamForge account."}{" "}
           This is a one-time purchase, with no subscription or automatic
           renewal.
@@ -151,7 +155,9 @@ export function ParentTopup({
                       New available balance:{" "}
                       <strong>
                         {credit.prepaid
-                          ? formatCredit(credit.availableCreditMicros || 0)
+                          ? formatCreditBalance(
+                              credit.availableCreditMicros || 0,
+                            )
                           : `${credit.remaining.toLocaleString()} tokens`}
                       </strong>
                       .

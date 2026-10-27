@@ -1,4 +1,8 @@
-import { prepaidBillingEnabled, usageCreditMicros } from "./billing";
+import {
+  prepaidBillingEnabled,
+  usageCreditMicros,
+  usageModelCostUSD,
+} from "./billing";
 import { reserveCreditUsage } from "./prepaid-usage";
 import { MODELS } from "./model-catalog";
 import { TOKEN_LIMIT_MESSAGE } from "./trusted-errors";
@@ -58,6 +62,7 @@ export async function settleUsage(
   input?: number,
   output?: number,
   model?: string,
+  cacheUsage: import("./billing").CacheUsage = {},
 ) {
   const db = await database().connect();
   try {
@@ -80,6 +85,7 @@ export async function settleUsage(
           input!,
           output!,
           run.billing_version,
+          cacheUsage,
         );
       } catch {
         uncertain = true;
@@ -95,7 +101,17 @@ export async function settleUsage(
       );
     }
     const tokens = uncertain ? 0 : input! + output!;
-    const cost = uncertain ? null : estimatedCost(model || "", input!, output!);
+    const cost = uncertain
+      ? null
+      : run.credit_reserved_micros != null
+        ? usageModelCostUSD(
+            model || run.model,
+            input!,
+            output!,
+            run.billing_version,
+            cacheUsage,
+          )
+        : estimatedCost(model || "", input!, output!);
     await db.query(
       "update token_accounts set reserved_tokens=reserved_tokens-$2,used_tokens=used_tokens+$3,input_tokens=input_tokens+$4,output_tokens=output_tokens+$5,estimated_cost_usd=estimated_cost_usd+$6 where child_id=$1",
       [
@@ -122,8 +138,13 @@ export async function settleUsage(
     );
     if (run.credit_reserved_micros != null && !uncertain)
       await db.query(
-        "update usage_runs set credit_cost_micros=$2 where id=$1",
-        [id, creditCost],
+        "update usage_runs set credit_cost_micros=$2,cache_read_tokens=$3,cache_write_tokens=$4 where id=$1",
+        [
+          id,
+          creditCost,
+          cacheUsage.cacheReadTokens ?? null,
+          cacheUsage.cacheWriteTokens ?? null,
+        ],
       );
     await db.query("commit");
     return run.credit_reserved_micros != null && !uncertain
