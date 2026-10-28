@@ -14,7 +14,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { ProjectItem } from "@/lib/project-types";
 import { ProjectRename } from "@/components/assistant-ui/project-rename";
-import { VmTerminal } from "@/components/assistant-ui/vm-terminal";
 import { ProjectConversationsProvider } from "@/lib/project-conversations-context";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { ShareDialog } from "@/components/assistant-ui/share-dialog";
@@ -31,7 +30,6 @@ import { useProjectActivity } from "@/components/assistant-ui/use-project-activi
 import { ProjectCode } from "@/components/assistant-ui/project-code";
 import {
   GlobeIcon,
-  TerminalIcon,
   Maximize2Icon,
   Minimize2Icon,
   MessageSquareIcon,
@@ -687,16 +685,14 @@ function AppPreview({
   project: ProjectItem;
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
 }) {
-  const [view, setView] = useState<"preview" | "code" | "terminal">("preview");
+  const [view, setView] = useState<"preview" | "code">("preview");
   useEffect(() => {
     const handleView = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; view: string }>)
         .detail;
       if (
         detail?.projectId === project.id &&
-        (detail.view === "code" ||
-          detail.view === "terminal" ||
-          detail.view === "preview")
+        (detail.view === "code" || detail.view === "preview")
       )
         setView(detail.view);
     };
@@ -736,39 +732,30 @@ function AppPreview({
                 [
                   { id: "preview", label: "Preview", Icon: GlobeIcon },
                   { id: "code", label: "Code", Icon: CodeIcon },
-                  { id: "terminal", label: "Terminal", Icon: TerminalIcon },
                 ] as const
-              )
-                .filter(
-                  ({ id }) =>
-                    id !== "terminal" ||
-                    (!project.readOnly && project.shellAllowed === true),
-                )
-                .map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    disabled={!activity.ready && id === "code"}
-                    role="tab"
-                    aria-selected={view === id}
-                    aria-controls={`workspace-${id}`}
-                    title={label}
-                    onClick={() => {
-                      setView(id);
-                      if (id === "terminal" && activity.idle)
-                        void activity.resume();
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
-                      view === id
-                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
-                        : "text-slate-500 hover:text-slate-800",
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                    <span className="hidden sm:inline">{label}</span>
-                    <span className="sr-only sm:hidden">{label}</span>
-                  </button>
-                ))}
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  disabled={!activity.ready && id === "code"}
+                  role="tab"
+                  aria-selected={view === id}
+                  aria-controls={`workspace-${id}`}
+                  title={label}
+                  onClick={() => {
+                    setView(id);
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
+                    view === id
+                      ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
+                      : "text-slate-500 hover:text-slate-800",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sr-only sm:hidden">{label}</span>
+                </button>
+              ))}
             </div>
             {view === "preview" ? (
               <BrowserControls
@@ -886,20 +873,6 @@ function AppPreview({
           className="min-h-0 flex-1 overflow-hidden bg-white"
         >
           <ProjectCode projectId={project.id} />
-        </div>
-      )}
-      {view === "terminal" && project.shellAllowed === true && (
-        <div
-          id="workspace-terminal"
-          role="tabpanel"
-          aria-label="Terminal"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
-        >
-          <VmTerminal
-            projectId={project.id}
-            session="shell-1"
-            className="min-h-0 flex-1 p-1"
-          />
         </div>
       )}
     </div>
