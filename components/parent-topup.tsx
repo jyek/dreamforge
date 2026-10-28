@@ -205,11 +205,9 @@ export function ParentTopup({
               <article key={p.id} className="df-card df-stat">
                 <span className="df-pill">{p.name}</span>
                 <strong>S${p.amount / 100}</strong>
-                <p>
-                  {prepaid
-                    ? "Prepaid credit · any model"
-                    : `${(p.tokens / 1000000).toLocaleString()} million tokens`}
-                </p>
+                {!prepaid && (
+                  <p>{(p.tokens / 1000000).toLocaleString()} million tokens</p>
+                )}
                 <button
                   className="df-button"
                   disabled={!enabled || !!busy}
