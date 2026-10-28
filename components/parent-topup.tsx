@@ -122,10 +122,8 @@ export function ParentTopup({
         <h1 className="df-title">Fuel their next big idea.</h1>
         <p className="df-muted">
           {prepaid
-            ? "Add prepaid credit to your child’s DreamForge account. One balance works with every model, with usage charged at the selected model’s rates."
-            : "Add a token allowance to your child’s DreamForge account."}{" "}
-          This is a one-time purchase, with no subscription or automatic
-          renewal.
+            ? "Add credit so your child can keep creating with AI in DreamForge."
+            : "Add a token allowance to your child’s DreamForge account."}
         </p>
         {(sandbox || paid) && (
           <div className="df-payment-notices">
@@ -235,17 +233,20 @@ export function ParentTopup({
             {prepaid ? "How your balance is used" : "What counts as a token?"}
           </h2>
           <p className="df-muted">
-            {prepaid &&
-              "Basic and Advanced describe the model, not separate wallets. Model prices are shown in the selector. Each request is charged for its actual input and output, including tool steps and safety checks. A temporary hold prevents overspending; unused credit is released after the request finishes. "}
-            AI reads prompts, project files and previous messages, then writes
-            replies and code. All input and output tokens count toward the
-            allowance, including requests using free models. Bigger projects can
-            use more tokens per change.
+            {prepaid
+              ? "Your child uses credit when they ask AI to help build or change a project. The cost depends on the AI they choose and how much work it does. Prices are shown beside each AI option."
+              : "Tokens measure how much the AI reads and writes while helping your child. Longer conversations and bigger projects can use more tokens."}
           </p>
+          {prepaid && (
+            <p className="df-muted">
+              We set aside some credit while the AI works. When it finishes,
+              only the amount used is charged. The rest stays available.
+            </p>
+          )}
           <p className="df-muted">
-            You’ll pay securely through Stripe. DreamForge credits the child’s
-            account only after confirmed payment. This link does not provide
-            access to the child’s projects or conversations.
+            You pay securely through Stripe. Credit is added after payment is
+            confirmed. This payment link lets you top up without giving access
+            to your child’s projects or conversations.
           </p>
         </div>
       </section>
