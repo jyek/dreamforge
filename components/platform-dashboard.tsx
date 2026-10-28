@@ -542,14 +542,6 @@ export function PlatformDashboard({
                   charged.
                 </p>
               )}
-              {hasHistoricalEstimates && (
-                <p className="df-muted">
-                  Historical token-based runs show estimated costs at provider
-                  cost plus 50%, converted at US$1 = S$1.35. These estimates
-                  were not deducted from a dollar balance. New prepaid charges
-                  use their recorded billing rates.
-                </p>
-              )}
               <h3>Usage by project</h3>
               {(data.projectUsage || []).length ? (
                 <div className="df-project-spending">
