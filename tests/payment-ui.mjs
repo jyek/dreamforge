@@ -53,7 +53,7 @@ import {StudioSidebar} from '${root}/components/studio-sidebar';
 export default async function Page({searchParams}){
  const {screen}=await searchParams; const prepaid=screen?.startsWith("credit-");
  const data={user:{display_name:'Test builder',role:'child'},classes:[],projects:[],children:[],wallet:{token_limit:'1000',used_tokens:'100',reserved_tokens:'50',input_tokens:'50',output_tokens:'50',credit_limit_micros:'1000000',credit_used_micros:'0',credit_reserved_micros:'0'},prepaid,unconfirmed:[],paymentsEnabled:true,projectUsage:[]};
- return screen==='models'?<ModelFixture/>:(screen==='pay'||screen==='credit-pay')?<ParentTopup prepaid={prepaid} token="fixture-link" paid enabled sandbox sessionId="cs_test_fixture"/>:(screen==='project'||screen==='credit-project')?<StudioSidebar name="Test builder" role="child" navigation={<span>Project</span>}/>:<PlatformDashboard initialData={data} initialSection="profile"/>;
+ return screen==='models'?<ModelFixture/>:(screen==='pay'||screen==='credit-pay')?<ParentTopup prepaid={prepaid} token="fixture-link" paid enabled sandbox sessionId="cs_test_fixture"/>:(screen==='project'||screen==='credit-project')?<StudioSidebar name="Test builder" role="child" navigation={<span>Project</span>}/>:<PlatformDashboard initialData={screen==='credit-dashboard'?undefined:data} initialSection="profile"/>;
 }`,
 );
 const reservation = createServer();
@@ -324,7 +324,9 @@ try {
     .locator(".df-account-tokens span")
     .filter({ hasText: /^S\$11\.00$/ })
     .waitFor();
-  const usageRow = account.getByRole("row").filter({ hasText: "Counter" });
+  const usageRow = account
+    .getByRole("row")
+    .filter({ hasText: "GLM 5.3 Flash" });
   await usageRow.getByRole("cell", { name: "100", exact: true }).waitFor();
   await usageRow.getByRole("cell", { name: "S$0.05", exact: true }).waitFor();
   await studio.bringToFront();
