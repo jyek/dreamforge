@@ -41,7 +41,7 @@ await writeFile(
 );
 await writeFile(
   dir + "/app/model-fixture.tsx",
-  `"use client";import {AssistantRuntimeProvider,useLocalRuntime} from '@assistant-ui/react';import {ModelSettingsProvider} from '${root}/components/assistant-ui/model-settings';import {ModelSelector} from '${root}/components/assistant-ui/model-selector';export function ModelFixture(){const runtime=useLocalRuntime({async run(){return {content:[{type:'text',text:'Fixture'}]}}});return <AssistantRuntimeProvider runtime={runtime}><ModelSettingsProvider><ModelSelector/></ModelSettingsProvider></AssistantRuntimeProvider>;}`,
+  `"use client";import {AssistantRuntimeProvider,useLocalRuntime} from '@assistant-ui/react';import {ModelSettingsProvider} from '${root}/components/assistant-ui/model-settings';import {ModelSelector} from '${root}/components/assistant-ui/model-selector';export function ModelFixture(){const runtime=useLocalRuntime({async run(){return {content:[{type:'text',text:'Fixture'}]}}});return <AssistantRuntimeProvider runtime={runtime}><ModelSettingsProvider><ModelSelector/><button onPointerDown={(event)=>event.stopPropagation()}>Outside menu</button><iframe title="Preview fixture" srcDoc="<button>Preview area</button>"/></ModelSettingsProvider></AssistantRuntimeProvider>;}`,
 );
 await writeFile(
   dir + "/app/page.tsx",
@@ -389,13 +389,32 @@ try {
   const sol = modelPage
     .getByRole("menuitemradio")
     .filter({ hasText: "GPT-6.1 Sol" });
-  assert.match(await sol.getAttribute("title"), /272K/);
+  assert.match(await sol.getAttribute("title"), /Advanced/);
   await sol.click();
   await modelPage
     .getByRole("button", { name: "Coding model: GPT-6.1 Sol" })
     .waitFor();
+  await modelPage
+    .getByRole("button", { name: "Coding model: GPT-6.1 Sol" })
+    .click();
+  await modelPage
+    .getByRole("button", { name: "Outside menu", exact: true })
+    .click();
+  await modelPage
+    .getByRole("menu", { name: "Coding models" })
+    .waitFor({ state: "hidden" });
+  await modelPage
+    .getByRole("button", { name: "Coding model: GPT-6.1 Sol" })
+    .click();
+  await modelPage
+    .frameLocator('iframe[title="Preview fixture"]')
+    .getByRole("button", { name: "Preview area" })
+    .click();
+  await modelPage
+    .getByRole("menu", { name: "Coding models" })
+    .waitFor({ state: "hidden" });
   console.log(
-    "PASS Basic/Advanced labels and published model rates; Sonnet and Sol selection",
+    "PASS model tier ordering, clean labels, selection and outside-click dismissal including iframe",
   );
 } finally {
   if (browser) await browser.close();

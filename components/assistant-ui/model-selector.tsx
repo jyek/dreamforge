@@ -60,13 +60,18 @@ export function ModelSelector() {
         trigger.current?.focus();
       }
     };
-    document.addEventListener("pointerdown", outside);
+    const leaveWindow = () => setOpen(false);
+    // Capture outside clicks even when the composer stops event propagation.
+    document.addEventListener("pointerdown", outside, true);
+    // Clicks in the preview iframe belong to another document.
+    window.addEventListener("blur", leaveWindow);
     document.addEventListener("keydown", escape);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
     return () => {
       cancelAnimationFrame(frame);
-      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("pointerdown", outside, true);
+      window.removeEventListener("blur", leaveWindow);
       document.removeEventListener("keydown", escape);
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
