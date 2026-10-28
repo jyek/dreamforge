@@ -550,11 +550,6 @@ export function PlatformDashboard({
                           )}
                         </span>
                       </summary>
-                      <p>
-                        <Link className="df-purple" href={`/${project.vm_id}`}>
-                          Open project →
-                        </Link>
-                      </p>
                       <div className="df-table-scroll">
                         <table className="df-table">
                           <caption className="sr-only">
