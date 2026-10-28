@@ -232,14 +232,29 @@ export function ProjectWorkspaceShell({
     display_name: string;
     role: "teacher" | "child";
   } | null>(null);
+  const [profileStatus, setProfileStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [profileRetry, setProfileRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/platform/auth", { signal: controller.signal })
-      .then((r) => r.json())
-      .then((d) => setProfile(d.user || null))
-      .catch(() => {});
+    setProfileStatus("loading");
+    fetch("/api/platform/auth", {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (r) => {
+        if (!r.ok) throw Error("Profile unavailable");
+        const d = await r.json();
+        if (controller.signal.aborted) return;
+        setProfile(d.user || null);
+        setProfileStatus("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setProfileStatus("error");
+      });
     return () => controller.abort();
-  }, []);
+  }, [profileRetry]);
   const [projectSearch, setProjectSearch] = useState("");
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const onProjectRenamed = useCallback((id: string, name: string) => {
@@ -322,6 +337,9 @@ export function ProjectWorkspaceShell({
       hideCollapseControl
       label="Project sidebar"
       name={profile?.display_name}
+      accountLoading={profileStatus === "loading"}
+      accountError={profileStatus === "error"}
+      onRetryAccount={() => setProfileRetry((n) => n + 1)}
       role={profile?.role}
       className="df-workspace-sidebar"
       navigation={
@@ -736,7 +754,8 @@ function AppPreview({
                     title={label}
                     onClick={() => {
                       setView(id);
-                      if (id === "terminal" && activity.idle) void activity.resume();
+                      if (id === "terminal" && activity.idle)
+                        void activity.resume();
                     }}
                     className={cn(
                       "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
@@ -869,21 +888,20 @@ function AppPreview({
           <ProjectCode projectId={project.id} />
         </div>
       )}
-      {view === "terminal" &&
-        project.shellAllowed === true && (
-          <div
-            id="workspace-terminal"
-            role="tabpanel"
-            aria-label="Terminal"
-            className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
-          >
-            <VmTerminal
-              projectId={project.id}
-              session="shell-1"
-              className="min-h-0 flex-1 p-1"
-            />
-          </div>
-        )}
+      {view === "terminal" && project.shellAllowed === true && (
+        <div
+          id="workspace-terminal"
+          role="tabpanel"
+          aria-label="Terminal"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
+        >
+          <VmTerminal
+            projectId={project.id}
+            session="shell-1"
+            className="min-h-0 flex-1 p-1"
+          />
+        </div>
+      )}
     </div>
   );
 }

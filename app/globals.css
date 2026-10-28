@@ -194,3 +194,11 @@
   font-weight: 700;
   border-top: 2px solid #e2e8f0;
 }
+
+.df-sidebar-account-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  color: #6b647b;
+}

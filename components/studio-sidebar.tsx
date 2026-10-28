@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { InlineSpinner } from "./dream-loading";
 import { DreamForgeBrand } from "./dreamforge-brand";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
 import {
@@ -16,6 +17,9 @@ export async function signOut() {
  * persisted collapse preference across dashboard and project routes. */
 export function StudioSidebar({
   name,
+  accountLoading = false,
+  accountError = false,
+  onRetryAccount,
   remainingTokens,
   creditBalanceMicros,
   onProfileOpen,
@@ -29,6 +33,9 @@ export function StudioSidebar({
   hideCollapseControl = false,
 }: {
   name?: string;
+  accountLoading?: boolean;
+  accountError?: boolean;
+  onRetryAccount?: () => void;
   remainingTokens?: number;
   creditBalanceMicros?: number;
   onProfileOpen?: () => void;
@@ -60,8 +67,19 @@ export function StudioSidebar({
         .then(async (r) => {
           if (r.ok) {
             const data = await r.json();
-            setFetchedBalance(data.remaining);
-            if (data.prepaid) setFetchedCredit(data.availableCreditMicros);
+            setFetchedBalance(
+              typeof data.remaining === "number" &&
+                Number.isFinite(data.remaining)
+                ? data.remaining
+                : null,
+            );
+            setFetchedCredit(
+              data.prepaid &&
+                typeof data.availableCreditMicros === "number" &&
+                Number.isFinite(data.availableCreditMicros)
+                ? data.availableCreditMicros
+                : null,
+            );
           }
         })
         .catch(() => {});
@@ -91,14 +109,12 @@ export function StudioSidebar({
       <div className="df-account-details">
         <strong>{name || "DreamForge"}</strong>
         {role === "child" ? (
-          <small className="df-account-tokens">
-            {creditLabel}
-            <span>
-              {displayedCredit === null
-                ? "—"
-                : formatCreditBalance(displayedCredit)}
-            </span>
-          </small>
+          displayedCredit !== null && (
+            <small className="df-account-tokens">
+              {creditLabel}
+              <span>{formatCreditBalance(displayedCredit)}</span>
+            </small>
+          )
         ) : (
           <small>{role === "teacher" ? "Teacher" : "Project explorer"}</small>
         )}
@@ -149,27 +165,53 @@ export function StudioSidebar({
       {children}
       <div className="df-sidebar-footer">
         <div className="df-sidebar-account">
-          {role ? (
-            <Link
-              href="/profile"
-              onClick={onProfileOpen}
-              className="df-profile-link"
-              aria-label="Open profile"
-              title={
-                role === "child"
-                  ? `${name || "Your account"} · ${creditLabel} ${displayedCredit === null ? "—" : formatCreditBalance(displayedCredit)} · Profile`
-                  : `${name || "Your account"} · Profile`
-              }
+          {accountLoading ? (
+            <div
+              role="status"
+              aria-label="Loading profile"
+              className="df-sidebar-account-loading"
             >
-              {account}
-            </Link>
+              <InlineSpinner />
+              <span className="df-account-details">Loading profile…</span>
+            </div>
+          ) : accountError ? (
+            <div className="df-account-details" role="status">
+              <span>Profile unavailable</span>
+              {onRetryAccount && (
+                <button
+                  type="button"
+                  className="df-purple"
+                  onClick={onRetryAccount}
+                >
+                  Try again
+                </button>
+              )}
+            </div>
           ) : (
-            account
-          )}
-          {!role && (
-            <Link href="/login" className="df-purple">
-              Sign in
-            </Link>
+            <>
+              {role ? (
+                <Link
+                  href="/profile"
+                  onClick={onProfileOpen}
+                  className="df-profile-link"
+                  aria-label="Open profile"
+                  title={
+                    role === "child"
+                      ? `${name || "Your account"}${displayedCredit === null ? "" : ` · ${creditLabel} ${formatCreditBalance(displayedCredit)}`} · Profile`
+                      : `${name || "Your account"} · Profile`
+                  }
+                >
+                  {account}
+                </Link>
+              ) : (
+                account
+              )}
+              {!role && (
+                <Link href="/login" className="df-purple">
+                  Sign in
+                </Link>
+              )}
+            </>
           )}
         </div>
       </div>

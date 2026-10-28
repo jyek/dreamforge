@@ -61,6 +61,7 @@ export const BUILDER_SECTIONS = [
 export function PlatformDashboardLayout({
   teacher,
   name,
+  accountLoading = false,
   remainingTokens,
   creditBalanceMicros,
   section,
@@ -69,6 +70,7 @@ export function PlatformDashboardLayout({
   headerAction,
 }: {
   teacher: boolean;
+  accountLoading?: boolean;
   name?: string;
   remainingTokens?: number;
   creditBalanceMicros?: number;
@@ -93,6 +95,7 @@ export function PlatformDashboardLayout({
       <StudioSidebar
         onProfileOpen={() => setNavOpen(false)}
         name={name}
+        accountLoading={accountLoading}
         remainingTokens={remainingTokens}
         creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}

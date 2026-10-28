@@ -190,6 +190,7 @@ export function PlatformDashboard({
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
+      accountLoading={!data && !initialUser}
       remainingTokens={
         !teacher && data?.wallet && !data.prepaid ? remaining : undefined
       }
