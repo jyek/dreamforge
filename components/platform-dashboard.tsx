@@ -576,9 +576,6 @@ export function PlatformDashboard({
                               <th>Output tokens</th>
                               <th>Total tokens</th>
                               <th>Charged (SGD)</th>
-                              {Number(project.legacy_runs || 0) > 0 && (
-                                <th>Historical estimate (SGD)</th>
-                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -595,24 +592,13 @@ export function PlatformDashboard({
                                   {Number(model.used_tokens).toLocaleString()}
                                 </td>
                                 <td>
-                                  {Number(model.legacy_runs || 0) > 0 &&
-                                  !Number(model.credit_cost_micros || 0)
-                                    ? "—"
-                                    : formatCredit(
-                                        Number(model.credit_cost_micros || 0),
-                                      )}
+                                  {formatCredit(
+                                    Number(model.credit_cost_micros || 0) +
+                                      Number(
+                                        model.estimated_credit_micros || 0,
+                                      ),
+                                  )}
                                 </td>
-                                {Number(project.legacy_runs || 0) > 0 && (
-                                  <td>
-                                    {Number(model.legacy_runs || 0) > 0
-                                      ? formatCredit(
-                                          Number(
-                                            model.estimated_credit_micros || 0,
-                                          ),
-                                        )
-                                      : "—"}
-                                  </td>
-                                )}
                               </tr>
                             ))}
                           </tbody>
