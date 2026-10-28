@@ -245,6 +245,19 @@ try {
             input_tokens: "50",
             output_tokens: "50",
             credit_cost_micros: "50000",
+            estimated_credit_micros: "0",
+            legacy_runs: "0",
+            models: [
+              {
+                model: "z-ai/glm-5.3-flash",
+                input_tokens: "50",
+                output_tokens: "50",
+                used_tokens: "100",
+                credit_cost_micros: "50000",
+                estimated_credit_micros: "0",
+                legacy_runs: "0",
+              },
+            ],
           },
         ],
         prepaid: true,
@@ -265,8 +278,15 @@ try {
   );
   const account = await cash.newPage();
   await account.goto(origin + "/?screen=credit-dashboard");
-  await account.getByText("Total tokens used", { exact: true }).waitFor();
-  await account.getByText("Total spent", { exact: true }).waitFor();
+  await account
+    .getByRole("heading", { name: "Your spending", exact: true })
+    .waitFor();
+  await account.getByText("Total project spend", { exact: true }).waitFor();
+  await account.locator(".df-project-spend summary").click();
+  await account
+    .getByRole("cell", { name: "GLM 5.3 Flash", exact: true })
+    .waitFor();
+  await account.getByRole("cell", { name: "S$0.05", exact: true }).waitFor();
   await account
     .locator(".df-account-tokens span")
     .filter({ hasText: /^S\$1\.00$/ })

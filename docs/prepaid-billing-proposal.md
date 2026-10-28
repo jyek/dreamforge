@@ -105,8 +105,8 @@ token so discounted buyers gain value rather than losing it. For example, 1M
 remaining tokens becomes S$5 and 6M becomes S$30, even if those 6M originally cost
 S$20. Approve this conversion explicitly before production rollout; it is a
 one-time promotional expense. Previous receipts and counters are preserved, and
-historical spending is not billed a second time. New child accounts receive S$0.50
-starter credit, matching the conversion of their old 100K starter allowance.
+historical spending is not billed a second time. New child accounts receive S$10 starter credit. Existing purchased balances retain
+the goodwill conversion above; they are not reset to S$10.
 
 The migration refuses any active project execution or reserved/uncertain usage. It locks the wallets and usage
 ledger, adds integer micro-SGD balance/charge fields and converts only remaining

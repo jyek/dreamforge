@@ -27,7 +27,23 @@ test("a paid cash top-up funds one balance exactly once, without adding old-styl
     [project, child],
   );
   await pool.query(
-    "insert into token_accounts(child_id,token_limit,credit_limit_micros) values($1,0,0)",
+    "insert into token_accounts(child_id,token_limit) values($1,0)",
+    [child],
+  );
+  assert.equal(
+    Number(
+      (
+        await pool.query(
+          "select credit_limit_micros from token_accounts where child_id=$1",
+          [child],
+        )
+      ).rows[0].credit_limit_micros,
+    ),
+    10000000,
+  );
+  // Separate starter credit from the payment idempotency assertions below.
+  await pool.query(
+    "update token_accounts set credit_limit_micros=0 where child_id=$1",
     [child],
   );
   const session = {
@@ -101,6 +117,13 @@ test("Basic and Advanced spend the same balance at distinct prices; exact usage 
   assert.equal(d.prepaid, true);
   assert.equal(Number(d.wallet.credit_used_micros), 1499);
   assert.equal(Number(d.projectUsage[0].credit_cost_micros), 1499);
+  assert.equal(d.projectUsage[0].models.length, 2);
+  assert.equal(
+    d.projectUsage[0].models.find((m) => m.model === "z-ai/glm-5.3-flash")
+      ?.credit_cost_micros,
+    "81",
+  );
+  assert.equal(d.projectUsage[0].estimated_credit_micros, "0");
 });
 test("concurrent reservations cannot overspend; unknown or over-bound usage remains held without overdraft", async () => {
   const runs = await Promise.allSettled([

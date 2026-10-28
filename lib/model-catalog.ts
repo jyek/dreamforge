@@ -54,8 +54,17 @@ export const MODELS = {
 } as const;
 export const modelTier = (choice: ModelChoice): ModelTier =>
   ["sonnet", "sol", "gemini"].includes(choice) ? "advanced" : "basic";
+const HISTORICAL_MODEL_LABELS: Record<string, string> = {
+  "deepseek/deepseek-v4.1-flash": "DeepSeek V4.1 Flash",
+  "cohere/north-mini-code": "Cohere North Mini Code",
+  "z-ai/glm-5.3": "GLM 5.3",
+  "qwen/qwen3-coder-30b-a3b-instruct": "Qwen3 Coder 30B",
+  "openai/gpt-oss-safeguard-20b": "Safety checks (GPT OSS Safeguard 20B)",
+};
 export const modelLabel = (id: string) =>
-  Object.values(MODELS).find((m) => m.id === id)?.label || id;
+  Object.values(MODELS).find((m) => m.id === id)?.label ||
+  HISTORICAL_MODEL_LABELS[id] ||
+  id;
 export const choiceForModel = (id: unknown): ModelChoice | undefined =>
   Object.entries(MODELS).find(([, m]) => m.id === id)?.[0] as
     | ModelChoice

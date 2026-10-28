@@ -5,6 +5,8 @@ import {
   formatCreditBalance,
   type CreditWallet,
 } from "@/lib/billing";
+import { modelLabel } from "@/lib/model-catalog";
+import type { ProjectSpending } from "@/lib/project-spending";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
 import { DreamLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
@@ -65,14 +67,7 @@ type Data = {
   }[];
   paymentsEnabled: boolean;
   prepaid?: boolean;
-  projectUsage: {
-    vm_id: string;
-    project_name: string;
-    credit_cost_micros?: string;
-    used_tokens: string;
-    input_tokens: string;
-    output_tokens: string;
-  }[];
+  projectUsage: ProjectSpending[];
 };
 async function api(url: string, body?: unknown) {
   const r = await fetch(
@@ -185,6 +180,16 @@ export function PlatformDashboard({
           Number(data.wallet.reserved_tokens),
       )
     : 0;
+  const projectSpend = (data?.projectUsage || []).reduce(
+    (sum, p) =>
+      sum +
+      Number(p.credit_cost_micros || 0) +
+      Number(p.estimated_credit_micros || 0),
+    0,
+  );
+  const hasHistoricalEstimates = (data?.projectUsage || []).some(
+    (p) => Number(p.legacy_runs || 0) > 0,
+  );
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
@@ -513,25 +518,16 @@ export function PlatformDashboard({
               <div className="df-profile-summary">
                 <div>
                   <ProfileModuleHeader
-                    title={
-                      data.prepaid ? "Your prepaid balance" : "Your token usage"
-                    }
-                    description={
-                      data.prepaid
-                        ? "One balance for every model. Input and output prices vary by model. Confirmed deductions appear below."
-                        : "Confirmed usage from prompts, replies and tool steps."
-                    }
+                    title="Your spending"
+                    description="Spending by project, with tokens and cost for each model. All amounts are in Singapore dollars."
                   />
                 </div>
                 <div>
                   <span>
-                    {data.prepaid ? "Available credit" : "Total tokens used"}
+                    Total project spend
+                    {hasHistoricalEstimates ? " (incl. estimates)" : ""}
                   </span>
-                  <strong>
-                    {data.prepaid
-                      ? formatCreditBalance(availableCreditMicros(data.wallet))
-                      : Number(data.wallet?.used_tokens || 0).toLocaleString()}
-                  </strong>
+                  <strong>{formatCreditBalance(projectSpend)}</strong>
                 </div>
               </div>
               {data.prepaid && (
@@ -546,81 +542,103 @@ export function PlatformDashboard({
                   charged.
                 </p>
               )}
-              <div className="df-stats" aria-label="Usage totals">
-                <div className="df-stat">
-                  <span>Total tokens used</span>
-                  <strong>
-                    {Number(data.wallet?.used_tokens || 0).toLocaleString()}
-                  </strong>
-                  <p>
-                    Input:{" "}
-                    {Number(data.wallet?.input_tokens || 0).toLocaleString()} ·
-                    Output:{" "}
-                    {Number(data.wallet?.output_tokens || 0).toLocaleString()}
-                  </p>
-                </div>
-                {data.prepaid && (
-                  <div className="df-stat">
-                    <span>Total spent</span>
-                    <strong>
-                      {formatCredit(
-                        Number(data.wallet?.credit_used_micros || 0),
-                      )}
-                    </strong>
-                    <p>Confirmed prepaid charges</p>
-                  </div>
-                )}
-              </div>
+              {hasHistoricalEstimates && (
+                <p className="df-muted">
+                  Historical token-based runs show estimated costs at provider
+                  cost plus 50%, converted at US$1 = S$1.35. These estimates
+                  were not deducted from a dollar balance. New prepaid charges
+                  use their recorded billing rates.
+                </p>
+              )}
               <h3>Usage by project</h3>
               {(data.projectUsage || []).length ? (
-                <div className="df-table-scroll">
-                  <table className="df-table">
-                    <thead>
-                      <tr>
-                        <th>Project</th>
-                        <th>Tokens used</th>
-                        {data.prepaid && <th>Spent (SGD)</th>}
-                        <th>Input</th>
-                        <th>Output</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.projectUsage.map((project) => (
-                        <tr key={project.vm_id}>
-                          <td>
-                            <Link
-                              className="df-purple"
-                              href={`/${project.vm_id}`}
-                            >
-                              {project.project_name}
-                            </Link>
-                          </td>
-                          <td>
-                            {Number(project.used_tokens).toLocaleString()}
-                          </td>
-                          {data.prepaid && (
-                            <td>
-                              {formatCredit(
-                                Number(project.credit_cost_micros || 0),
-                              )}
-                            </td>
+                <div className="df-project-spending">
+                  {data.projectUsage.map((project) => (
+                    <details className="df-project-spend" key={project.vm_id}>
+                      <summary>
+                        <span>{project.project_name}</span>
+                        <span>
+                          {formatCreditBalance(
+                            Number(project.credit_cost_micros || 0) +
+                              Number(project.estimated_credit_micros || 0),
                           )}
-                          <td>
-                            {Number(project.input_tokens).toLocaleString()}
-                          </td>
-                          <td>
-                            {Number(project.output_tokens).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          {Number(project.legacy_runs || 0) > 0
+                            ? " incl. estimates"
+                            : ""}
+                        </span>
+                      </summary>
+                      <p>
+                        <Link className="df-purple" href={`/${project.vm_id}`}>
+                          Open project →
+                        </Link>
+                      </p>
+                      <div className="df-table-scroll">
+                        <table className="df-table">
+                          <caption className="sr-only">
+                            Model spending for {project.project_name}
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th>Model</th>
+                              <th>Input tokens</th>
+                              <th>Output tokens</th>
+                              <th>Total tokens</th>
+                              <th>Charged (SGD)</th>
+                              {Number(project.legacy_runs || 0) > 0 && (
+                                <th>Historical estimate (SGD)</th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(project.models || []).map((model) => (
+                              <tr key={model.model}>
+                                <td>{modelLabel(model.model)}</td>
+                                <td>
+                                  {Number(model.input_tokens).toLocaleString()}
+                                </td>
+                                <td>
+                                  {Number(model.output_tokens).toLocaleString()}
+                                </td>
+                                <td>
+                                  {Number(model.used_tokens).toLocaleString()}
+                                </td>
+                                <td>
+                                  {Number(model.legacy_runs || 0) > 0 &&
+                                  !Number(model.credit_cost_micros || 0)
+                                    ? "—"
+                                    : formatCredit(
+                                        Number(model.credit_cost_micros || 0),
+                                      )}
+                                </td>
+                                {Number(project.legacy_runs || 0) > 0 && (
+                                  <td>
+                                    {Number(model.legacy_runs || 0) > 0
+                                      ? formatCredit(
+                                          Number(
+                                            model.estimated_credit_micros || 0,
+                                          ),
+                                        )
+                                      : "—"}
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {!project.models?.length && (
+                        <p className="df-muted">
+                          No confirmed model usage yet.
+                        </p>
+                      )}
+                    </details>
+                  ))}
                 </div>
               ) : (
                 <TableEmptyState
                   illustration="usage"
                   title="A fresh start for your ideas"
-                  description="Once you start building, you can see how many tokens each project uses here."
+                  description="Once you start building, project spending and model usage appear here."
                 />
               )}
             </section>

@@ -85,7 +85,7 @@ export function PlatformDashboardLayout({
           label: "Profile",
           description: teacher
             ? "Manage your teacher profile and account."
-            : "Your token usage, account and parent top-ups.",
+            : "Your spending, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];
   return (

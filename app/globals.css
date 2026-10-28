@@ -142,7 +142,49 @@
 
 /* Workspace chat styling */
 .studio-chat .aui-thread-root,
-.studio-chat .aui-thread-viewport-footer { background: #f7f7f8; }
-.studio-chat .aui-composer-attachment-dropzone { border-radius: 24px; background: white; box-shadow: 0 2px 6px rgb(0 0 0 / 4%); }
-.studio-chat .aui-composer-input { min-height: 76px; }
-.studio-chat .aui-user-message-content { background: #eaecef; }
+.studio-chat .aui-thread-viewport-footer {
+  background: #f7f7f8;
+}
+.studio-chat .aui-composer-attachment-dropzone {
+  border-radius: 24px;
+  background: white;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 4%);
+}
+.studio-chat .aui-composer-input {
+  min-height: 76px;
+}
+.studio-chat .aui-user-message-content {
+  background: #eaecef;
+}
+
+.df-project-spend {
+  border-top: 1px solid #e2e8f0;
+  padding: 18px 0;
+}
+.df-project-spend summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  font-weight: 700;
+}
+.df-project-spend summary::before {
+  content: "▸";
+}
+.df-project-spend[open] summary::before {
+  content: "▾";
+}
+.df-project-spend summary > span:first-of-type {
+  flex: 1;
+}
+.df-project-spend summary > span:last-of-type {
+  text-align: right;
+}
+.df-project-spend summary:focus-visible {
+  outline: 2px solid #7140f5;
+  outline-offset: 5px;
+}
+.df-project-spend .df-table {
+  min-width: 640px;
+}

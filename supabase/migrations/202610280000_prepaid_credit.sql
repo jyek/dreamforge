@@ -11,7 +11,7 @@ do $$ begin
  then raise exception 'Resolve all usage reservations before converting balances'; end if;
 end $$;
 alter table dreamforge.token_accounts
- add column credit_limit_micros bigint not null default 500000 check(credit_limit_micros>=0),
+ add column credit_limit_micros bigint not null default 10000000 check(credit_limit_micros>=0),
  add column credit_used_micros bigint not null default 0 check(credit_used_micros>=0),
  add column credit_reserved_micros bigint not null default 0 check(credit_reserved_micros>=0);
 -- Proposed goodwill conversion: remaining token x S$5 / 1M tokens.
