@@ -226,7 +226,7 @@ export function ParentTopup({
           </h2>
           <p className="df-muted">
             {prepaid
-              ? "Your child uses credit when they ask AI to help build or change a project. The cost depends on the AI they choose and how much work it does. Prices are shown beside each AI option."
+              ? "Your child uses credit when they ask AI to help build or change a project. The cost depends on the AI they choose and how much work it does."
               : "Tokens measure how much the AI reads and writes while helping your child. Longer conversations and bigger projects can use more tokens."}
           </p>
           {prepaid && (

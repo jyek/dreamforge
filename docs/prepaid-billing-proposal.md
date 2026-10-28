@@ -7,7 +7,7 @@ flag, convert balances, or change live checkout packages until approved.
 
 Use one SGD prepaid credit balance. Basic and Advanced describe models, not
 separate currencies. Parents buy S$10, S$25, S$50 or S$100 of credit. Students switch
-models freely, see their model's category and published prices in the selector,
+models freely, see their model's category in the selector,
 and spend the same balance. There is no Advanced token purchase or conversion
 between wallets. Amounts represent DreamForge service credit, not cash deposits.
 
@@ -59,12 +59,10 @@ higher price. Verify provider availability on staging before activation.
 | GLM 5.3 Flash | Basic, testing | $0.15 | $0.50 | S$0.30375 | S$1.0125 |
 | Safety classifier | Workflow calls | $0.075 | $0.30 | S$0.151875 | S$0.6075 |
 
-The menu shows literal per-token input and output prices, including all existing
-Basic models, not just the Advanced choices. For example, GLM Flash input is
-S$0.00000030375/token and output is S$0.0000010125/token. The tooltip also provides
-rates per million for easier comparison, and discloses Haiku/Luna/Sol long-context rates.
-While the feature is disabled, prices are labelled proposed rather than implying
-that current production token purchases already use them.
+The menu shows model names and categories only, with all Basic choices before
+Advanced choices. Per-token prices and long-context rates are omitted from both
+the menu and its tooltips to keep selection compact. This presentation change
+does not change billing rates or the project spending breakdown.
 
 Usage is priced at the versioned rate, converted with the same FX and marked up
 50%. Reported cached reads and default five-minute cache writes use their own
@@ -147,7 +145,7 @@ students.
 
 A parent-controlled Advanced spending cap and a per-request cost estimate/limit
 would further improve confidence. They are follow-ups, not implemented in this PR.
-The present PR publishes per-token model rates and shows token usage and actual spending by project; it does
+The present PR records versioned model rates and shows token usage and actual spending by project; it does
 not claim to know the final price of a multi-step coding request in advance.
 
 ## Local development
