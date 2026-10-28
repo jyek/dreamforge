@@ -214,13 +214,7 @@ export function ParentTopup({
                   onClick={() => pay(p.id)}
                 >
                   {busy === p.id && <InlineSpinner className="size-4" />}
-                  {busy === p.id
-                    ? "Opening Stripe…"
-                    : sandbox
-                      ? "Test top-up →"
-                      : prepaid
-                        ? "Add credit →"
-                        : "Add tokens →"}
+                  {busy === p.id ? "Opening Stripe…" : "Top up"}
                 </button>
               </article>
             ))}
