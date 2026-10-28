@@ -17,7 +17,9 @@ const report = {
   checks: [],
 };
 let cookie = "",
-  project, browser, page;
+  project,
+  browser,
+  page;
 await fs.mkdir(output, { recursive: true });
 const statePath = path.join(output, "project.json");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -178,9 +180,12 @@ async function prompt(conversationId, text) {
   } finally {
     await reader.cancel().catch(() => {});
   }
+  const streamFailure = events.find(
+    (e) => e.type === "error" || e.type === "abort",
+  );
   assert(
-    !events.some((e) => e.type === "error" || e.type === "abort"),
-    "Stream returned an error or abort",
+    !streamFailure,
+    `Stream returned an error or abort: ${safeError(streamFailure?.errorText || "No detail supplied").slice(0, 240)}`,
   );
   assert(
     events.some((e) => e.type === "finish"),
@@ -268,12 +273,19 @@ try {
     let created;
     if (process.env.E2E_BROWSER_EXECUTABLE) {
       const { chromium } = await import("playwright-core");
-      browser = await chromium.launch({ executablePath: process.env.E2E_BROWSER_EXECUTABLE, headless: true });
+      browser = await chromium.launch({
+        executablePath: process.env.E2E_BROWSER_EXECUTABLE,
+        headless: true,
+      });
       page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       page.setDefaultTimeout(90000);
       await page.goto(origin + "/login");
-      await page.getByPlaceholder("Your username or email").fill(process.env.E2E_LOGIN);
-      await page.getByPlaceholder("At least 8 characters").fill(process.env.E2E_PASSWORD);
+      await page
+        .getByPlaceholder("Your username or email")
+        .fill(process.env.E2E_LOGIN);
+      await page
+        .getByPlaceholder("At least 8 characters")
+        .fill(process.env.E2E_PASSWORD);
       await page.getByRole("button", { name: "Let’s go →" }).click();
       await page.waitForURL("**/home");
       await page.goto(origin + "/projects");
@@ -282,23 +294,41 @@ try {
       await page.route("**/api/projects", async (route) => {
         const req = route.request();
         if (req.method() !== "POST") return route.continue();
-        const response = await route.fetch({ postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }), timeout: 240000 });
+        const response = await route.fetch({
+          postData: JSON.stringify({ ...req.postDataJSON(), e2eRunId }),
+          timeout: 240000,
+        });
         created = await response.json();
         // Capture ownership before navigation can discard the browser response,
         // including when a later UI assertion fails and finally must clean up.
-        project = created.project || (created.id ? { id: created.id } : undefined);
+        project =
+          created.project || (created.id ? { id: created.id } : undefined);
         await route.fulfill({ response });
       });
-      await page.getByRole("button", { name: "Create a project", exact: true }).click();
-      await page.getByLabel("Project name", { exact: true }).fill("E2E Prompting Playground");
-      const response = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/projects" && r.request().method() === "POST", { timeout: 240000 });
-      await page.getByRole("button", { name: "Let’s build →", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Create a project", exact: true })
+        .click();
+      await page
+        .getByLabel("Project name", { exact: true })
+        .fill("E2E Prompting Playground");
+      const response = page.waitForResponse(
+        (r) =>
+          new URL(r.url()).pathname === "/api/projects" &&
+          r.request().method() === "POST",
+        { timeout: 240000 },
+      );
+      await page
+        .getByRole("button", { name: "Let’s build →", exact: true })
+        .click();
       const result = await response;
       assert.equal(result.status(), 200, "UI project creation failed");
     } else {
-      created = await (await request("/api/projects", {
-        name: "E2E Prompting Playground", e2eRunId: randomUUID(),
-      })).json();
+      created = await (
+        await request("/api/projects", {
+          name: "E2E Prompting Playground",
+          e2eRunId: randomUUID(),
+        })
+      ).json();
     }
     project = created.project;
     await fs.writeFile(
@@ -311,21 +341,35 @@ try {
     report.projectUrl = `${origin}/${project.id}`;
     report.initialConversationId = created.conversationId;
     if (page) {
-      await page.waitForURL(`**/${project.id}/${created.conversationId}`, { timeout: 240000 });
-      await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
+      await page.waitForURL(`**/${project.id}/${created.conversationId}`, {
+        timeout: 240000,
+      });
+      await page
+        .getByRole("textbox", { name: "Message input", exact: true })
+        .waitFor();
     }
     return { createdVia: page ? "browser" : "api" };
   });
   await check("created project reloads from saved project list", async () => {
     const { projects } = await (await request("/api/projects")).json();
-    assert(projects.some((p) => p.id === project.id), "Created project missing on reload");
+    assert(
+      projects.some((p) => p.id === project.id),
+      "Created project missing on reload",
+    );
     if (page) {
       await page.goto(origin + "/projects");
-      await page.getByText("E2E Prompting Playground", { exact: true }).first().click();
+      await page
+        .getByText("E2E Prompting Playground", { exact: true })
+        .first()
+        .click();
       await page.waitForURL(`**/${project.id}/**`);
-      await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
+      await page
+        .getByRole("textbox", { name: "Message input", exact: true })
+        .waitFor();
       await page.reload();
-      await page.getByRole("textbox", { name: "Message input", exact: true }).waitFor();
+      await page
+        .getByRole("textbox", { name: "Message input", exact: true })
+        .waitFor();
     }
   });
   await check("read-only reply streams and persists", async () => {
@@ -480,83 +524,169 @@ try {
           fullPage: true,
         });
       } catch (error) {
-        await page.screenshot({ path: path.join(output, "browser-failure.png") }).catch(() => {});
+        await page
+          .screenshot({ path: path.join(output, "browser-failure.png") })
+          .catch(() => {});
         throw error;
       }
     });
-  if (page) await check("preview refresh shows feedback before the response arrives", async () => {
-    const pattern = `**/api/projects/${project.id}/preview/**`;
-    let release;
-    const gate = new Promise((resolve) => { release = resolve; });
-    let intercepted = false;
-    const holdPreview = async (route) => {
-      if (route.request().isNavigationRequest()) {
-        intercepted = true;
-        await gate;
-      }
-      await route.continue();
-    };
-    const reload = page.getByRole("button", { name: "Reload preview", exact: true });
-    await page.route(pattern, holdPreview);
-    try {
-      const pending = page.waitForRequest((request) =>
-        request.isNavigationRequest() && new URL(request.url()).pathname === `/api/projects/${project.id}/preview/`);
-      await reload.click();
-      await pending;
-      await page.getByText("Loading preview…", { exact: true }).waitFor({ timeout: 3000 });
-      assert.equal(await reload.getAttribute("aria-busy"), "true");
-      assert(await reload.locator("svg").evaluate((icon) => icon.classList.contains("animate-spin")));
-      assert(intercepted, "The preview response must still be held while feedback is checked");
-      await page.screenshot({ path: path.join(output, "browser-refresh-loading.png"), fullPage: true });
-    } finally {
-      release();
-      await page.unroute(pattern, holdPreview);
-    }
-    await page.getByText("Loading preview…", { exact: true }).waitFor({ state: "hidden", timeout: 60000 });
-    assert.equal(await reload.getAttribute("aria-busy"), "false");
-    const frame = page.frameLocator("iframe").first();
-    await frame.getByRole("heading", { name: "DreamForge E2E Counter", exact: true }).waitFor();
-    await frame.getByRole("button", { name: "Reset", exact: true }).click();
-    await frame.getByRole("button", { name: "Add one", exact: true }).click();
-    await frame.getByText("1", { exact: true }).waitFor();
-    return { feedbackBeforeResponse: true, interactiveAfterReload: true };
-  });
-  if (page) await check("browser typed prompt receives a reply and survives reload", async () => {
-    const catalog = await (await request("/api/models")).json();
-    const selectedModel = catalog.choices.find((model) => model.id === modelChoice);
-    assert(selectedModel?.available !== false && selectedModel?.name, "Configured E2E model is unavailable");
-    await page.getByRole("button", { name: /^Coding model:/ }).click();
-    await page.getByRole("menuitemradio").filter({ hasText: selectedModel.name }).click();
-    const marker = uiReplyMarker();
-    await page.getByRole("textbox", { name: "Message input", exact: true }).fill(`Reply with exactly ${marker}. Do not use tools or edit files.`);
-    const response = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/chat" && r.request().method() === "POST", { timeout: 240000 });
-    const started = performance.now();
-    await page.getByRole("button", { name: "Send message", exact: true }).click();
-    assert.equal((await response).status(), 200, "Browser prompt request failed");
-    const visibleReply = () => page.locator(".aui-assistant-message-root:visible").getByText(marker, { exact: true }).first();
-    await visibleReply().waitFor({ timeout: 240000 });
-    const replyMs = Math.round(performance.now() - started);
-    let persisted = false;
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const { messages } = await (await request(`/api/projects/${project.id}/conversations/${report.conversationId}`)).json();
-      const replies = messages.filter((m) => m.role === "assistant" && m.parts.some((p) => p.type === "text" && p.text.trim() === marker));
-      assert(replies.length <= 1, "Browser prompt saved duplicate assistant replies");
-      if (replies.length === 1) { persisted = true; break; }
-      await sleep(500);
-    }
-    assert(persisted, "Browser reply was visible but was not saved");
-    await page.reload();
-    await visibleReply().waitFor();
-    await page.screenshot({ path: path.join(output, "browser-prompt-reply.png"), fullPage: true });
-    return { replyMs, persisted: true };
-  });
+  if (page)
+    await check(
+      "preview refresh shows feedback before the response arrives",
+      async () => {
+        const pattern = `**/api/projects/${project.id}/preview/**`;
+        let release;
+        const gate = new Promise((resolve) => {
+          release = resolve;
+        });
+        let intercepted = false;
+        const holdPreview = async (route) => {
+          if (route.request().isNavigationRequest()) {
+            intercepted = true;
+            await gate;
+          }
+          await route.continue();
+        };
+        const reload = page.getByRole("button", {
+          name: "Reload preview",
+          exact: true,
+        });
+        await page.route(pattern, holdPreview);
+        try {
+          const pending = page.waitForRequest(
+            (request) =>
+              request.isNavigationRequest() &&
+              new URL(request.url()).pathname ===
+                `/api/projects/${project.id}/preview/`,
+          );
+          await reload.click();
+          await pending;
+          await page
+            .getByText("Loading preview…", { exact: true })
+            .waitFor({ timeout: 3000 });
+          assert.equal(await reload.getAttribute("aria-busy"), "true");
+          assert(
+            await reload
+              .locator("svg")
+              .evaluate((icon) => icon.classList.contains("animate-spin")),
+          );
+          assert(
+            intercepted,
+            "The preview response must still be held while feedback is checked",
+          );
+          await page.screenshot({
+            path: path.join(output, "browser-refresh-loading.png"),
+            fullPage: true,
+          });
+        } finally {
+          release();
+          await page.unroute(pattern, holdPreview);
+        }
+        await page
+          .getByText("Loading preview…", { exact: true })
+          .waitFor({ state: "hidden", timeout: 60000 });
+        assert.equal(await reload.getAttribute("aria-busy"), "false");
+        const frame = page.frameLocator("iframe").first();
+        await frame
+          .getByRole("heading", { name: "DreamForge E2E Counter", exact: true })
+          .waitFor();
+        await frame.getByRole("button", { name: "Reset", exact: true }).click();
+        await frame
+          .getByRole("button", { name: "Add one", exact: true })
+          .click();
+        await frame.getByText("1", { exact: true }).waitFor();
+        return { feedbackBeforeResponse: true, interactiveAfterReload: true };
+      },
+    );
+  if (page)
+    await check(
+      "browser typed prompt receives a reply and survives reload",
+      async () => {
+        const catalog = await (await request("/api/models")).json();
+        const selectedModel = catalog.choices.find(
+          (model) => model.id === modelChoice,
+        );
+        assert(
+          selectedModel?.available !== false && selectedModel?.name,
+          "Configured E2E model is unavailable",
+        );
+        await page.getByRole("button", { name: /^Coding model:/ }).click();
+        await page
+          .getByRole("menuitemradio")
+          .filter({ hasText: selectedModel.name })
+          .click();
+        const marker = uiReplyMarker();
+        await page
+          .getByRole("textbox", { name: "Message input", exact: true })
+          .fill(
+            `Reply with exactly ${marker}. Do not use tools or edit files.`,
+          );
+        const response = page.waitForResponse(
+          (r) =>
+            new URL(r.url()).pathname === "/api/chat" &&
+            r.request().method() === "POST",
+          { timeout: 240000 },
+        );
+        const started = performance.now();
+        await page
+          .getByRole("button", { name: "Send message", exact: true })
+          .click();
+        assert.equal(
+          (await response).status(),
+          200,
+          "Browser prompt request failed",
+        );
+        const visibleReply = () =>
+          page
+            .locator(".aui-assistant-message-root:visible")
+            .getByText(marker, { exact: true })
+            .first();
+        await visibleReply().waitFor({ timeout: 240000 });
+        const replyMs = Math.round(performance.now() - started);
+        let persisted = false;
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const { messages } = await (
+            await request(
+              `/api/projects/${project.id}/conversations/${report.conversationId}`,
+            )
+          ).json();
+          const replies = messages.filter(
+            (m) =>
+              m.role === "assistant" &&
+              m.parts.some(
+                (p) => p.type === "text" && p.text.trim() === marker,
+              ),
+          );
+          assert(
+            replies.length <= 1,
+            "Browser prompt saved duplicate assistant replies",
+          );
+          if (replies.length === 1) {
+            persisted = true;
+            break;
+          }
+          await sleep(500);
+        }
+        assert(persisted, "Browser reply was visible but was not saved");
+        await page.reload();
+        await visibleReply().waitFor();
+        await page.screenshot({
+          path: path.join(output, "browser-prompt-reply.png"),
+          fullPage: true,
+        });
+        return { replyMs, persisted: true };
+      },
+    );
   report.status = "passed";
 } catch (error) {
   report.status = "failed";
   console.error(`FAIL ${safeError(error)}`);
   process.exitCode = 1;
 } finally {
-  if (page && report.status === "failed") await page.screenshot({ path: path.join(output, "browser-failure.png") }).catch(() => {});
+  if (page && report.status === "failed")
+    await page
+      .screenshot({ path: path.join(output, "browser-failure.png") })
+      .catch(() => {});
   if (project?.id) {
     try {
       report.cleanup = {
