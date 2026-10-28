@@ -203,6 +203,11 @@ export function availableCreditMicros(w: CreditWallet | null | undefined) {
       Number(w?.credit_reserved_micros || 0),
   );
 }
+// Same conversion used by the reviewed wallet migration and legacy top-ups.
+// Display-only until cutover; it does not grant funds or alter usage accounting.
+export function legacyCreditEquivalentMicros(remainingTokens: number) {
+  return Math.max(0, remainingTokens) * 5;
+}
 export const formatCredit = (micros: number) =>
   `S$${(micros / 1000000).toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 export const formatCreditBalance = (micros: number) =>

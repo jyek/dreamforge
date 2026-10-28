@@ -3,7 +3,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
-import { formatCreditBalance } from "@/lib/billing";
+import {
+  formatCreditBalance,
+  legacyCreditEquivalentMicros,
+} from "@/lib/billing";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -76,6 +79,10 @@ export function StudioSidebar({
   }, [role, remainingTokens, creditBalanceMicros]);
   const balance = remainingTokens ?? fetchedBalance;
   const credit = creditBalanceMicros ?? fetchedCredit;
+  const displayedCredit =
+    credit ?? (balance === null ? null : legacyCreditEquivalentMicros(balance));
+  const creditLabel =
+    credit !== null ? "Remaining credit" : "Credit equivalent";
   const account = (
     <>
       <span className="df-studio-avatar" aria-hidden="true">
@@ -85,13 +92,11 @@ export function StudioSidebar({
         <strong>{name || "DreamForge"}</strong>
         {role === "child" ? (
           <small className="df-account-tokens">
-            {credit !== null ? "Remaining credit" : "Tokens"}
+            {creditLabel}
             <span>
-              {credit !== null
-                ? formatCreditBalance(credit)
-                : balance === null
-                  ? "—"
-                  : balance.toLocaleString()}
+              {displayedCredit === null
+                ? "—"
+                : formatCreditBalance(displayedCredit)}
             </span>
           </small>
         ) : (
@@ -152,7 +157,7 @@ export function StudioSidebar({
               aria-label="Open profile"
               title={
                 role === "child"
-                  ? `${name || "Your account"} · ${credit !== null ? `Credit ${formatCreditBalance(credit)}` : `Tokens ${balance === null ? "—" : balance.toLocaleString()}`} · Profile`
+                  ? `${name || "Your account"} · ${creditLabel} ${displayedCredit === null ? "—" : formatCreditBalance(displayedCredit)} · Profile`
                   : `${name || "Your account"} · Profile`
               }
             >

@@ -313,3 +313,14 @@ test("local Stripe session metadata is ignored by production and bound to its lo
     }
   }
 });
+
+test("legacy sidebar credit equivalent matches conversion without granting or changing a wallet", async () => {
+  const { legacyCreditEquivalentMicros, formatCreditBalance } =
+    await import("../lib/billing");
+  assert.equal(
+    formatCreditBalance(legacyCreditEquivalentMicros(6127031)),
+    "S$30.64",
+  );
+  assert.equal(legacyCreditEquivalentMicros(0), 0);
+  assert.equal(legacyCreditEquivalentMicros(-50), 0);
+});

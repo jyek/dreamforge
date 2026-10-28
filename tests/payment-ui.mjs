@@ -137,10 +137,16 @@ try {
   );
   const dashboard = await context.newPage();
   await dashboard.goto(origin);
-  await dashboard.getByText("850", { exact: true }).waitFor();
+  await dashboard
+    .locator(".df-account-tokens span")
+    .getByText("S$0.00", { exact: true })
+    .waitFor();
   const project = await context.newPage();
   await project.goto(origin + "/?screen=project");
-  await project.getByText("850", { exact: true }).waitFor();
+  await project
+    .locator(".df-account-tokens span")
+    .getByText("S$0.00", { exact: true })
+    .waitFor();
   let checks = 0;
   let release;
   const held = new Promise((r) => (release = r));
@@ -174,9 +180,15 @@ try {
     .waitFor();
   await pay.getByText("1,000,850 tokens", { exact: true }).waitFor();
   await dashboard.bringToFront();
-  await dashboard.getByText("1,000,850", { exact: true }).waitFor();
+  await dashboard
+    .locator(".df-account-tokens span")
+    .getByText("S$5.00", { exact: true })
+    .waitFor();
   await project.bringToFront();
-  await project.getByText("1,000,850", { exact: true }).waitFor();
+  await project
+    .locator(".df-account-tokens span")
+    .getByText("S$5.00", { exact: true })
+    .waitFor();
   console.log(
     "PASS verified payment confirmation and new balance; dashboard and project sidebar update across tabs",
   );
