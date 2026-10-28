@@ -203,7 +203,7 @@ export function ParentTopup({
               : TOPUP_PACKAGES
             ).map((p) => (
               <article key={p.id} className="df-card df-stat">
-                <span className="df-pill">{p.name}</span>
+                <span className="df-pill">One-time top up</span>
                 <strong>S${p.amount / 100}</strong>
                 {!prepaid && (
                   <p>{(p.tokens / 1000000).toLocaleString()} million tokens</p>
