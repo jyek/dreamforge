@@ -187,9 +187,6 @@ export function PlatformDashboard({
       Number(p.estimated_credit_micros || 0),
     0,
   );
-  const hasHistoricalEstimates = (data?.projectUsage || []).some(
-    (p) => Number(p.legacy_runs || 0) > 0,
-  );
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
@@ -523,10 +520,7 @@ export function PlatformDashboard({
                   />
                 </div>
                 <div>
-                  <span>
-                    Total project spend
-                    {hasHistoricalEstimates ? " (incl. estimates)" : ""}
-                  </span>
+                  <span>Total project spend</span>
                   <strong>{formatCreditBalance(projectSpend)}</strong>
                 </div>
               </div>
@@ -554,9 +548,6 @@ export function PlatformDashboard({
                             Number(project.credit_cost_micros || 0) +
                               Number(project.estimated_credit_micros || 0),
                           )}
-                          {Number(project.legacy_runs || 0) > 0
-                            ? " incl. estimates"
-                            : ""}
                         </span>
                       </summary>
                       <p>
