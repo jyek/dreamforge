@@ -10,7 +10,7 @@ test("unresolved profile shows a loader without a signed-out view or account act
   assert.match(html, /Loading profile/);
   assert.doesNotMatch(
     html,
-    /Sign in|Project explorer|Open profile|Remaining credit|—/,
+    /Sign in|Project explorer|Open profile|Credit left:|—/,
   );
 });
 test("loaded child profile hides credit until loaded, including the profile tooltip", () => {
@@ -18,7 +18,7 @@ test("loaded child profile hides credit until loaded, including the profile tool
     <StudioSidebar name="Ollie" role="child" navigation={null} />,
   );
   assert.match(html, /Ollie/);
-  assert.doesNotMatch(html, /Remaining credit|Credit equivalent|—|S\$/);
+  assert.doesNotMatch(html, /Credit left:|Credit equivalent|—|S\$/);
 });
 test("a loaded zero balance is shown as S$0.00 rather than treated as missing", () => {
   const html = renderToStaticMarkup(
@@ -29,7 +29,7 @@ test("a loaded zero balance is shown as S$0.00 rather than treated as missing", 
       navigation={null}
     />,
   );
-  assert.match(html, /Remaining credit/);
+  assert.match(html, /Credit left:/);
   assert.match(html, /S\$0\.00/);
   assert.doesNotMatch(html, /Loading profile|—/);
 });

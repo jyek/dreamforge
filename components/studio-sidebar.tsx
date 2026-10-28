@@ -100,7 +100,7 @@ export function StudioSidebar({
   const displayedCredit =
     credit ?? (balance === null ? null : legacyCreditEquivalentMicros(balance));
   const creditLabel =
-    credit !== null ? "Remaining credit" : "Credit equivalent";
+    credit !== null ? "Credit left:" : "Credit equivalent";
   const account = (
     <>
       <span className="df-studio-avatar" aria-hidden="true">
