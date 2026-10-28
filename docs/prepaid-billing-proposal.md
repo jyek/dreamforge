@@ -155,9 +155,15 @@ not claim to know the final price of a multi-step coding request in advance.
 The actual app runs from this checkout at http://localhost:3000. It uses private,
 Git-ignored .env.local settings. By explicit user choice, the current local
 instance connects to production Supabase so existing projects appear; editing
-those projects therefore affects the real VMs and records. No production
-migration has been applied, and prepaid billing/Stripe checkout remain disabled
-for this production-connected local run until the new wallet schema is approved.
+those projects therefore affects the real VMs and records. On 29 October 2026, at the user's explicit request to use the shared production
+Stripe sandbox, the prepaid schema was applied to this database after a private
+backup. Three stale uncertain usage holds and one orphaned E2E reservation were
+released with a private audit receipt; no coding run was active. Existing token
+balances were converted at the proposed S$5 per million rate. The local instance
+now enables prepaid billing and Stripe sandbox checkout with S$10/25/50/100 packs.
+No code has been merged or deployed to production by this change. The deployed
+production webhook still needs the new code and prepaid flag before it can deliver
+new cash packages independently of the local payment-return confirmation.
 
 A separate development database can be used with NODE_ENV=development,
 DREAMFORGE_LOCAL_DATABASE=true and a loopback DATABASE_URL; only that combination
