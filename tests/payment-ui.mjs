@@ -341,12 +341,12 @@ try {
   const modelPage = await cash.newPage();
   const choices = [
     ["haiku", "Claude Haiku 5.5"],
-    ["luna", "GPT-6 Luna"],
-    ["glm", "GLM 5.3 Flash"],
-    ["gemini-lite", "Gemini 3.5 Flash-Lite"],
     ["sonnet", "Claude Sonnet 5.5"],
+    ["luna", "GPT-6 Luna"],
     ["sol", "GPT-6.1 Sol"],
+    ["gemini-lite", "Gemini 3.5 Flash-Lite"],
     ["gemini", "Gemini 3.8 Flash"],
+    ["glm", "GLM 5.3 Flash"],
   ].map(([id, name]) => ({
     id,
     name,
@@ -364,17 +364,19 @@ try {
     .getByRole("menuitemradio")
     .filter({ hasText: "Claude Sonnet 5.5" });
   await sonnet.waitFor();
-  await modelPage
-    .getByRole("menuitemradio")
-    .filter({ hasText: "GLM 5.3 Flash" })
-    .getByText("Input S$0.00000030375 / token", { exact: true })
-    .waitFor();
-  await sonnet
-    .getByText("Output S$0.00002025 / token", { exact: true })
-    .waitFor();
-  assert.match(
-    await sonnet.getAttribute("title"),
-    /S\$4.05 input \/ S\$20.25 output/,
+  const menuText = await modelPage.getByRole("menu").innerText();
+  assert.doesNotMatch(menuText, /S\$|per token|Input|Output/);
+  assert.deepEqual(
+    await modelPage.getByRole("menuitemradio").allTextContents(),
+    [
+      "Claude Haiku 5.5Basic",
+      "GPT-6 LunaBasic",
+      "Gemini 3.5 Flash-LiteBasic",
+      "GLM 5.3 FlashBasic",
+      "Claude Sonnet 5.5Advanced",
+      "GPT-6.1 SolAdvanced",
+      "Gemini 3.8 FlashAdvanced",
+    ],
   );
   assert.match(await sonnet.getAttribute("title"), /Advanced/);
   await sonnet.click();

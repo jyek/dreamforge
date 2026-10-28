@@ -1,34 +1,10 @@
 "use client";
-import { billingRate, formatTokenRate } from "@/lib/billing";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useModelSettings } from "./model-settings";
 import { useAuiState } from "@assistant-ui/react";
-import {
-  isModelChoice,
-  MODEL_CHOICES,
-  MODELS,
-  modelTier,
-  DEFAULT_MODEL_CHOICE,
-} from "@/lib/model-catalog";
-const longThreshold = (id: string) =>
-  id === "haiku" ? 100000 : ["sol", "luna"].includes(id) ? 272000 : null;
-const priceHint = (id: string) => {
-  const choice = isModelChoice(id) ? id : DEFAULT_MODEL_CHOICE;
-  const r = billingRate(MODELS[choice].id),
-    threshold = longThreshold(id);
-  const long = threshold ? billingRate(MODELS[choice].id, threshold + 1) : null;
-  return `S$${r.input} input / S$${r.output} output per 1M tokens${long ? `; above ${threshold! / 1000}K input: S$${long.input} / S$${long.output}` : ""}`;
-};
-const longPrice = (id: string) => {
-  const t = longThreshold(id);
-  if (!t || !isModelChoice(id)) return null;
-  const r = billingRate(MODELS[id].id, t + 1);
-  return `Above ${t / 1000}K input: ${formatTokenRate(r.input)} in · ${formatTokenRate(r.output)} out / token`;
-};
-const tokenPrice = (id: string) =>
-  billingRate(MODELS[isModelChoice(id) ? id : DEFAULT_MODEL_CHOICE].id);
+import { isModelChoice, MODEL_CHOICES, modelTier } from "@/lib/model-catalog";
 type Model = { id: string; name: string; paid: boolean; available?: boolean };
 const label = (model: Model) => model.name.replace(/\s*\(free\)$/, "");
 export function ModelSelector() {
@@ -43,7 +19,6 @@ export function ModelSelector() {
     [open, setOpen] = useState(false);
   const { choice: selected, setChoice: setSelected } = useModelSettings();
   const running = useAuiState(({ thread }) => thread.isRunning);
-  const [prepaid, setPrepaid] = useState(false);
   const [position, setPosition] = useState({ left: 0, bottom: 0 });
   const trigger = useRef<HTMLButtonElement>(null),
     menu = useRef<HTMLDivElement>(null);
@@ -53,7 +28,6 @@ export function ModelSelector() {
       .then((r) => r.json())
       .then((data) => {
         setModels(data.choices || data.models);
-        setPrepaid(!!data.prepaid);
       })
       .catch(() => {});
     return () => controller.abort();
@@ -168,51 +142,48 @@ export function ModelSelector() {
             className="fixed z-[100] w-[380px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1.5 text-slate-800 shadow-[0_8px_32px_rgba(15,23,42,0.12)]"
           >
             <p className="px-3 pt-2 pb-2.5 text-xs font-medium text-slate-400">
-              Model · {prepaid ? "SGD per token" : "Proposed SGD per token"}
+              Model
             </p>
             <div className="max-h-[50vh] overflow-y-auto">
-              {models.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={selected === model.id}
-                  disabled={model.available === false}
-                  title={`${priceHint(model.id)} · ${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
-                  onClick={() => {
-                    if (isModelChoice(model.id)) setSelected(model.id);
-                    setOpen(false);
-                    trigger.current?.focus();
-                  }}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
-                >
-                  <span className="min-w-0 flex-1 text-sm font-medium">
-                    <span className="block">{label(model)}</span>
-                    <span className="mt-1 block text-[10px] leading-4 font-normal text-slate-500">
-                      <span className="block">
-                        Input {formatTokenRate(tokenPrice(model.id).input)} /
-                        token
-                      </span>
-                      <span className="block">
-                        Output {formatTokenRate(tokenPrice(model.id).output)} /
-                        token
-                      </span>
-                      {longPrice(model.id) && (
-                        <span className="block">{longPrice(model.id)}</span>
-                      )}
+              {[...models]
+                .sort(
+                  (a, b) =>
+                    Number(
+                      isModelChoice(a.id) && modelTier(a.id) === "advanced",
+                    ) -
+                    Number(
+                      isModelChoice(b.id) && modelTier(b.id) === "advanced",
+                    ),
+                )
+                .map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={selected === model.id}
+                    disabled={model.available === false}
+                    title={`${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
+                    onClick={() => {
+                      if (isModelChoice(model.id)) setSelected(model.id);
+                      setOpen(false);
+                      trigger.current?.focus();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                  >
+                    <span className="min-w-0 flex-1 text-sm font-medium">
+                      <span className="block">{label(model)}</span>
                     </span>
-                  </span>
-                  <span className="ml-auto text-xs text-slate-400">
-                    {isModelChoice(model.id) &&
-                    modelTier(model.id) === "advanced"
-                      ? "Advanced"
-                      : "Basic"}
-                  </span>
-                  {selected === model.id && (
-                    <CheckIcon className="size-4 shrink-0 text-slate-700" />
-                  )}
-                </button>
-              ))}
+                    <span className="ml-auto text-xs text-slate-400">
+                      {isModelChoice(model.id) &&
+                      modelTier(model.id) === "advanced"
+                        ? "Advanced"
+                        : "Basic"}
+                    </span>
+                    {selected === model.id && (
+                      <CheckIcon className="size-4 shrink-0 text-slate-700" />
+                    )}
+                  </button>
+                ))}
             </div>
           </div>,
           document.body,
