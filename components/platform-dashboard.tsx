@@ -522,18 +522,6 @@ export function PlatformDashboard({
                   <strong>{formatCreditBalance(projectSpend)}</strong>
                 </div>
               </div>
-              {data.prepaid && (
-                <p className="df-muted">
-                  Spent:{" "}
-                  {formatCredit(Number(data.wallet?.credit_used_micros || 0))} ·
-                  Held for running or unconfirmed requests:{" "}
-                  {formatCredit(
-                    Number(data.wallet?.credit_reserved_micros || 0),
-                  )}
-                  . A reservation is a temporary hold; only confirmed usage is
-                  charged.
-                </p>
-              )}
               {(data.projectUsage || []).length ? (
                 <div className="df-project-spending">
                   {data.projectUsage.map((project) => (
