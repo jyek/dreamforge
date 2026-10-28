@@ -178,13 +178,19 @@
 .df-project-spend summary > span:first-of-type {
   flex: 1;
 }
-.df-project-spend summary > span:last-of-type {
-  text-align: right;
-}
 .df-project-spend summary:focus-visible {
   outline: 2px solid #7140f5;
   outline-offset: 5px;
 }
 .df-project-spend .df-table {
   min-width: 640px;
+}
+
+.df-project-spend .df-table :is(th, td):nth-child(n + 2) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.df-project-spend .df-table tfoot :is(th, td) {
+  font-weight: 700;
+  border-top: 2px solid #e2e8f0;
 }

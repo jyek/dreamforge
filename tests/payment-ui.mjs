@@ -293,12 +293,15 @@ try {
   await account
     .getByRole("heading", { name: "Your spending", exact: true })
     .waitFor();
-  await account.getByText("Total project spend", { exact: true }).waitFor();
+  await account.getByText("Total spend", { exact: true }).waitFor();
   await account.locator(".df-project-spend summary").click();
   await account
     .getByRole("cell", { name: "GLM 5.3 Flash", exact: true })
     .waitFor();
-  await account.getByRole("cell", { name: "S$0.05", exact: true }).waitFor();
+  await account
+    .locator("tbody")
+    .getByRole("cell", { name: "S$0.05", exact: true })
+    .waitFor();
   await account
     .locator(".df-account-tokens span")
     .filter({ hasText: /^S\$1\.00$/ })

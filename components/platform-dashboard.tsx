@@ -514,13 +514,10 @@ export function PlatformDashboard({
             <section className="df-card df-profile-usage df-profile-module">
               <div className="df-profile-summary">
                 <div>
-                  <ProfileModuleHeader
-                    title="Your spending"
-                    description="Spending by project, with tokens and cost for each model. All amounts are in Singapore dollars."
-                  />
+                  <ProfileModuleHeader title="Your spending" />
                 </div>
                 <div>
-                  <span>Total project spend</span>
+                  <span>Total spend</span>
                   <strong>{formatCreditBalance(projectSpend)}</strong>
                 </div>
               </div>
@@ -536,19 +533,12 @@ export function PlatformDashboard({
                   charged.
                 </p>
               )}
-              <h3>Usage by project</h3>
               {(data.projectUsage || []).length ? (
                 <div className="df-project-spending">
                   {data.projectUsage.map((project) => (
                     <details className="df-project-spend" key={project.vm_id}>
                       <summary>
                         <span>{project.project_name}</span>
-                        <span>
-                          {formatCreditBalance(
-                            Number(project.credit_cost_micros || 0) +
-                              Number(project.estimated_credit_micros || 0),
-                          )}
-                        </span>
                       </summary>
                       <div className="df-table-scroll">
                         <table className="df-table">
@@ -588,6 +578,28 @@ export function PlatformDashboard({
                               </tr>
                             ))}
                           </tbody>
+                          <tfoot>
+                            <tr>
+                              <th scope="row">Project total</th>
+                              <td>
+                                {Number(project.input_tokens).toLocaleString()}
+                              </td>
+                              <td>
+                                {Number(project.output_tokens).toLocaleString()}
+                              </td>
+                              <td>
+                                {Number(project.used_tokens).toLocaleString()}
+                              </td>
+                              <td>
+                                {formatCredit(
+                                  Number(project.credit_cost_micros || 0) +
+                                    Number(
+                                      project.estimated_credit_micros || 0,
+                                    ),
+                                )}
+                              </td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </div>
                       {!project.models?.length && (
