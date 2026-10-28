@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { InlineSpinner } from "./dream-loading";
 import { DreamForgeBrand } from "./dreamforge-brand";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
 import {
@@ -99,8 +98,7 @@ export function StudioSidebar({
   const credit = creditBalanceMicros ?? fetchedCredit;
   const displayedCredit =
     credit ?? (balance === null ? null : legacyCreditEquivalentMicros(balance));
-  const creditLabel =
-    credit !== null ? "Credit left:" : "Credit equivalent";
+  const creditLabel = credit !== null ? "Credit left:" : "Credit equivalent";
   const account = (
     <>
       <span className="df-studio-avatar" aria-hidden="true">
@@ -169,10 +167,14 @@ export function StudioSidebar({
             <div
               role="status"
               aria-label="Loading profile"
+              aria-busy="true"
               className="df-sidebar-account-loading"
             >
-              <InlineSpinner />
-              <span className="df-account-details">Loading profile…</span>
+              <span aria-hidden="true" className="df-account-skeleton-avatar" />
+              <span aria-hidden="true" className="df-account-skeleton-lines">
+                <span />
+                <span />
+              </span>
             </div>
           ) : accountError ? (
             <div className="df-account-details" role="status">

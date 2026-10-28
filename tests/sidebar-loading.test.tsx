@@ -8,6 +8,9 @@ test("unresolved profile shows a loader without a signed-out view or account act
     <StudioSidebar accountLoading navigation={null} />,
   );
   assert.match(html, /Loading profile/);
+  assert.match(html, /df-account-skeleton-avatar/);
+  assert.match(html, /df-account-skeleton-lines/);
+  assert.doesNotMatch(html, />Loading profile/);
   assert.doesNotMatch(
     html,
     /Sign in|Project explorer|Open profile|Credit left:|—/,

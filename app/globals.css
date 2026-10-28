@@ -195,10 +195,60 @@
   border-top: 2px solid #e2e8f0;
 }
 
+/* Match the loaded account footprint without flashing placeholder text. */
 .df-sidebar-account-loading {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  color: #6b647b;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px 12px;
+  animation: df-account-loading-pulse 1.8s ease-in-out infinite;
+}
+.df-account-skeleton-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #eee9f5;
+}
+.df-account-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.df-account-skeleton-lines > span {
+  height: 8px;
+  width: 64px;
+  max-width: 100%;
+  border-radius: 4px;
+  background: #eee9f5;
+}
+.df-account-skeleton-lines > span + span {
+  width: 96px;
+  height: 6px;
+}
+@keyframes df-account-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .df-sidebar-account-loading {
+    animation: none;
+  }
+}
+@media (min-width: 761px) {
+  .df-studio-sidebar[data-collapsed="true"] .df-sidebar-account-loading {
+    justify-content: center;
+    padding: 4px;
+    gap: 0;
+  }
+  .df-studio-sidebar[data-collapsed="true"] .df-account-skeleton-lines {
+    display: none;
+  }
 }
