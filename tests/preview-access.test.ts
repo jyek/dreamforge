@@ -59,3 +59,20 @@ test("asset capabilities are project-scoped, tamper-resistant and never authoriz
     else process.env.SUPABASE_SERVICE_ROLE_KEY = previous;
   }
 });
+
+test("preview HTML signals display readiness once, independently of slow assets", () => {
+  const page = rewritePreview('<html><body><h1>Ready</h1><img src="https://assets.invalid/slow.png"></body></html>', 'vm-fixture', 'fixture', true);
+  assert.match(page, /data-dreamforge-preview-ready/);
+  assert.match(page, /dreamforge:preview-html-ready/);
+  assert.equal(page.indexOf('data-dreamforge-preview-ready') < page.indexOf('</body>'), true);
+  assert.equal(rewritePreview(page, 'vm-fixture', 'fixture', true).match(/data-dreamforge-preview-ready/g)?.length, 1);
+  assert.doesNotMatch(rewritePreview('body {}', 'vm-fixture', 'fixture'), /preview-html-ready/);
+});
+test("preview display signals require the currently attached iframe", async () => {
+  const { isPreviewReadyMessage, PREVIEW_READY_MESSAGE } = await import('../lib/preview-ready');
+  const frame = {} as Window;
+  assert.equal(isPreviewReadyMessage({source:frame,data:{type:PREVIEW_READY_MESSAGE}},frame),true);
+  assert.equal(isPreviewReadyMessage({source:{} as Window,data:{type:PREVIEW_READY_MESSAGE}},frame),false);
+  assert.equal(isPreviewReadyMessage({source:null,data:{type:PREVIEW_READY_MESSAGE}},null),false);
+  assert.equal(isPreviewReadyMessage({source:frame,data:{type:'other'}},frame),false);
+});

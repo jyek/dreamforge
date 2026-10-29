@@ -1,4 +1,5 @@
 "use client";
+import { isPreviewReadyMessage } from "@/lib/preview-ready";
 import { InlineSpinner, SimpleLoading } from "@/components/dream-loading";
 
 import Link from "next/link";
@@ -713,6 +714,14 @@ function AppPreview({
     }
   }, [activity.ready, activity.generation]);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  useEffect(() => {
+    const ready = (event: MessageEvent) => {
+      if (isPreviewReadyMessage(event, iframeRef.current?.contentWindow))
+        setIframeLoaded(true);
+    };
+    window.addEventListener("message", ready);
+    return () => window.removeEventListener("message", ready);
+  }, [iframeRef, project.previewUrl]);
 
   useEffect(() => {
     setIframeLoaded(false);

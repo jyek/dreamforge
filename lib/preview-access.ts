@@ -1,3 +1,4 @@
+import { PREVIEW_READY_MESSAGE } from "./preview-ready";
 import { PROJECT_CONTENT_POLICY } from "./project-content-policy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 export const previewEntryPath = (project: string) =>
@@ -68,10 +69,19 @@ export function rewritePreview(
     /(?<![A-Za-z0-9/])\/(?!api\/projects\/)([A-Za-z0-9_/-]+\.(?:png|jpe?g|gif|svg|webp|ico|woff2?|ttf|mp3|wav))/g,
     (_all, path) => `${prefix}/${path}`,
   );
-  return result.replace(
+  result = result.replace(
     /url\((['"]?)\/(?!api\/projects\/)([^)'"\s]+)\1\)/g,
     (_all, quote, path) => `url(${quote}${prefix}/${path}${quote})`,
   );
+  if (html && !result.includes("data-dreamforge-preview-ready")) {
+    // Signal after the HTML is parsed, without waiting for slow remote assets.
+    // The parent accepts this only from its current iframe; it is not test evidence.
+    const ready = `<script data-dreamforge-preview-ready>if(window.parent!==window)window.parent.postMessage({type:${JSON.stringify(PREVIEW_READY_MESSAGE)}},"*");</script>`;
+    result = /<\/body\s*>/i.test(result)
+      ? result.replace(/<\/body\s*>/i, ready + "</body>")
+      : result + ready;
+  }
+  return result;
 }
 export function previewCsp(origin: string) {
   return `sandbox allow-scripts allow-forms allow-popups allow-downloads; ${PROJECT_CONTENT_POLICY}; base-uri ${origin}; frame-ancestors 'self'`;
