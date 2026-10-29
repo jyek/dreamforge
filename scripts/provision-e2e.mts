@@ -13,7 +13,7 @@ if (!process.env.DATABASE_URL)
     "Configure the target DATABASE_URL before provisioning a dedicated test account.",
   );
 const origin = new URL(
-  process.env.E2E_BASE_URL || "https://dreamforge.vercel.app",
+  process.env.E2E_BASE_URL || "https://dreamforge2.vercel.app",
 ).origin;
 const username = `e2e_${randomBytes(6).toString("hex")}`,
   email = `${username}@tests.dreamforge.invalid`,

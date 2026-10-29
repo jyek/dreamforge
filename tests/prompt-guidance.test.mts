@@ -1,6 +1,11 @@
+// @suite database
 import assert from "node:assert/strict";
-import "dotenv/config";
-import { database } from "../lib/database";
+import pg from "pg";
+import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
+const pool = new pg.Pool({
+  connectionString: process.env.TEST_DATABASE_URL,
+  options: APPLICATION_DATABASE_OPTIONS,
+});
 import { guidanceSQL } from "../lib/prompt-guidance";
 const fixtures = [
   {
@@ -35,7 +40,7 @@ const fixtures = [
   },
 ];
 for (const fixture of fixtures) {
-  const { rows } = await database().query(
+  const { rows } = await pool.query(
     `select ${guidanceSQL} as guidance from (select $1::text as content,$2::text[] as categories,$3::text as decision) r`,
     [fixture.content, fixture.categories, fixture.decision],
   );
@@ -44,4 +49,4 @@ for (const fixture of fixtures) {
 console.log(
   "Guidance SQL checks passed: coaching, specific prompts, language and safety categories.",
 );
-await database().end();
+await pool.end();

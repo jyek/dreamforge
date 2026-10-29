@@ -1,3 +1,4 @@
+// @suite browser
 import { bounded } from "../lib/bounded";
 import { test } from "node:test";
 import assert from "node:assert/strict";

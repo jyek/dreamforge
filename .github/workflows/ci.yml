@@ -47,12 +47,16 @@ jobs:
         env:
           TEST_BROWSER_EXECUTABLE: /usr/bin/google-chrome
         run: npm run test:admin-ui
+      - name: Test protected preview in a browser
+        env:
+          TEST_BROWSER_EXECUTABLE: /usr/bin/google-chrome
+        run: npm run test:preview-browser
       - name: Build production app
         run: npm run build
 
   live-e2e:
     name: Live project journey
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
     needs: test-and-build
     runs-on: ubuntu-24.04
     timeout-minutes: 30

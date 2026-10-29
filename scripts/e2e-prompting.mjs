@@ -275,7 +275,7 @@ try {
       const { chromium } = await import("playwright-core");
       browser = await chromium.launch({
         executablePath: process.env.E2E_BROWSER_EXECUTABLE,
-        headless: true,
+        headless: process.env.E2E_PAYMENT_JOURNEY !== "true",
       });
       page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       page.setDefaultTimeout(90000);
@@ -372,6 +372,42 @@ try {
         .waitFor();
     }
   });
+  let paymentPool;
+  if (process.env.E2E_PAYMENT_JOURNEY === "true") {
+    assert.equal(
+      report.userId,
+      process.env.E2E_PAYMENT_USER_ID,
+      "Payment tests require their newly provisioned account",
+    );
+    const { default: pg } = await import("pg");
+    const { APPLICATION_DATABASE_OPTIONS } =
+      await import("../lib/database-options.mjs");
+    paymentPool = new pg.Pool({
+      connectionString: process.env.E2E_PAYMENT_DATABASE_URL,
+      options: APPLICATION_DATABASE_OPTIONS,
+      ssl: {
+        rejectUnauthorized: true,
+        ca: await fs.readFile("config/supabase-ca.crt", "utf8"),
+      },
+      max: 1,
+      connectionTimeoutMillis: 10000,
+    });
+    try {
+      const { paymentStep } = await import("./e2e-payment-step.mjs");
+      await paymentStep({
+        page,
+        request,
+        project,
+        conversation,
+        check,
+        output,
+        userId: report.userId,
+        pool: paymentPool,
+      });
+    } finally {
+      await paymentPool.end();
+    }
+  }
   await check("read-only reply streams and persists", async () => {
     const id = await conversation("reply");
     const result = await prompt(
@@ -677,6 +713,37 @@ try {
         return { replyMs, persisted: true };
       },
     );
+  if (process.env.E2E_PAYMENT_JOURNEY === "true")
+    await check("funded prompt charges the same prepaid wallet", async () => {
+      const balance = await (await request("/api/platform/balance")).json();
+      assert(
+        Number.isFinite(balance.availableCreditMicros),
+        "Credit wallet must be available",
+      );
+      const { wallet } = await (
+        await request("/api/platform/dashboard")
+      ).json();
+      assert.equal(Number(wallet.credit_limit_micros), 10000000);
+      assert(
+        Number(wallet.credit_used_micros) > 0,
+        "Model work must record a settled debit",
+      );
+      assert.equal(
+        Number(wallet.credit_reserved_micros),
+        0,
+        "Completed work must release all holds",
+      );
+      assert.equal(
+        balance.availableCreditMicros,
+        10000000 - Number(wallet.credit_used_micros),
+      );
+      assert(
+        balance.availableCreditMicros > 0 &&
+          balance.availableCreditMicros < 10000000,
+        "Successful model work must debit the topped-up balance",
+      );
+      return { availableCreditMicros: balance.availableCreditMicros };
+    });
   report.status = "passed";
 } catch (error) {
   report.status = "failed";

@@ -2,6 +2,8 @@ import { localDevelopmentBilling } from "@/lib/local-development";
 import { database } from "@/lib/database";
 import { checkOrigin, tokenHash } from "@/lib/platform-auth";
 import { paymentsEnabled, purchasePackages } from "@/lib/topup-packages";
+import { createCheckout } from "@/lib/stripe-checkout";
+import { randomUUID } from "node:crypto";
 export async function POST(req: Request) {
   if (!paymentsEnabled())
     return Response.json(
@@ -11,9 +13,22 @@ export async function POST(req: Request) {
   if (!checkOrigin(req))
     return Response.json({ error: "Invalid request" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
+  if (!body || typeof body !== "object")
+    return Response.json({ error: "Choose a package." }, { status: 400 });
   const pack = purchasePackages().find((p) => p.id === body.package);
   if (!pack || typeof body.token !== "string")
     return Response.json({ error: "Choose a package." }, { status: 400 });
+  if (
+    body.attemptId !== undefined &&
+    (typeof body.attemptId !== "string" ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+        body.attemptId,
+      ))
+  )
+    return Response.json(
+      { error: "Invalid checkout attempt." },
+      { status: 400 },
+    );
   const { rows } = await database().query(
     "select child_id from topup_requests where token_hash=$1 and expires_at>now()",
     [tokenHash(body.token)],
@@ -46,20 +61,16 @@ export async function POST(req: Request) {
       : { "metadata[child_id]": rows[0].child_id }),
     "metadata[package]": pack.id,
   });
-  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-    signal: AbortSignal.timeout(15000),
-  });
-  const result = await response.json();
-  return response.ok
-    ? Response.json({ url: result.url })
-    : Response.json(
-        { error: "Payment service is unavailable. Please try again." },
-        { status: 503 },
-      );
+  // A browser retry reuses its attempt ID. Different purchases get new IDs.
+  const key = tokenHash(
+    `${body.token}:${pack.id}:${body.attemptId || randomUUID()}`,
+  );
+  try {
+    return Response.json({ url: await createCheckout(params, key) });
+  } catch {
+    return Response.json(
+      { error: "Payment service is unavailable. Please try again." },
+      { status: 503 },
+    );
+  }
 }
