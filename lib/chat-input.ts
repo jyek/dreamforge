@@ -4,8 +4,7 @@ import type { ModelChoice } from "./model-catalog";
 export const DEMO_PROMPT_LIMIT = 32_000;
 export const DEMO_CONVERSATION_BYTES = 3_500_000;
 const IMAGE_BYTES = 2 * 1024 * 1024;
-export const supportsImages = (choice: ModelChoice) =>
-  choice === "deepseek" || choice === "glm";
+export const supportsImages = (_choice: ModelChoice) => true;
 export class ChatInputError extends Error {}
 
 /** Image bytes have their own size limit and never count as prompt text. */
@@ -47,7 +46,7 @@ export function demoChatInput(
     throw new ChatInputError("Enter a prompt or attach an image.");
   if (images.length && !supportsImages(choice))
     throw new ChatInputError(
-      "Choose DeepSeek V4.1 Flash or GLM 5.3 Flash to use image attachments. Cohere supports text only. Auto can use images once it switches to GLM.",
+      "Choose an available image-capable model. Cohere supports text only. Auto can use images once it switches to GLM.",
     );
   return {
     prompt: prompt.trim()

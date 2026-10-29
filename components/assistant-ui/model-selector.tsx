@@ -4,30 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useModelSettings } from "./model-settings";
 import { useAuiState } from "@assistant-ui/react";
-import {
-  isModelChoice,
-  MODEL_CHOICES,
-  MODELS,
-  modelLabel,
-} from "@/lib/model-catalog";
-type Model = { id: string; name: string; paid: boolean };
+import { isModelChoice, MODEL_CHOICES, modelTier } from "@/lib/model-catalog";
+type Model = { id: string; name: string; paid: boolean; available?: boolean };
 const label = (model: Model) => model.name.replace(/\s*\(free\)$/, "");
 export function ModelSelector() {
   const [models, setModels] = useState<Model[]>(
       MODEL_CHOICES.map((choice) => ({
         id: choice.id,
         name: choice.label,
-        paid: choice.id !== "auto" && choice.id !== "free",
+        paid: true,
+        available: modelTier(choice.id) === "basic",
       })),
     ),
     [open, setOpen] = useState(false);
   const { choice: selected, setChoice: setSelected } = useModelSettings();
   const running = useAuiState(({ thread }) => thread.isRunning);
-  const currentModel = useAuiState(
-    ({ thread }) =>
-      thread.messages.at(-1)?.metadata?.custom?.model as string | undefined,
-  );
-  const [autoModel, setAutoModel] = useState<string | null>(null);
   const [position, setPosition] = useState({ left: 0, bottom: 0 });
   const trigger = useRef<HTMLButtonElement>(null),
     menu = useRef<HTMLDivElement>(null);
@@ -37,7 +28,6 @@ export function ModelSelector() {
       .then((r) => r.json())
       .then((data) => {
         setModels(data.choices || data.models);
-        setAutoModel(data.autoModel || null);
       })
       .catch(() => {});
     return () => controller.abort();
@@ -70,13 +60,18 @@ export function ModelSelector() {
         trigger.current?.focus();
       }
     };
-    document.addEventListener("pointerdown", outside);
+    const leaveWindow = () => setOpen(false);
+    // Capture outside clicks even when the composer stops event propagation.
+    document.addEventListener("pointerdown", outside, true);
+    // Clicks in the preview iframe belong to another document.
+    window.addEventListener("blur", leaveWindow);
     document.addEventListener("keydown", escape);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
     return () => {
       cancelAnimationFrame(frame);
-      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("pointerdown", outside, true);
+      window.removeEventListener("blur", leaveWindow);
       document.removeEventListener("keydown", escape);
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
@@ -84,17 +79,7 @@ export function ModelSelector() {
   }, [open]);
   if (!models.length) return null;
   const active = models.find((model) => model.id === selected) || models[0];
-  const routedModel = running && currentModel ? currentModel : autoModel;
-  const autoProvider =
-    routedModel === MODELS.free.id
-      ? "Cohere"
-      : routedModel === MODELS.glm.id
-        ? "GLM"
-        : null;
-  const activeLabel =
-    selected === "auto" && autoProvider
-      ? `Auto (${autoProvider})`
-      : label(active);
+  const activeLabel = label(active);
   return (
     <>
       <button
@@ -102,11 +87,7 @@ export function ModelSelector() {
         type="button"
         disabled={running}
         aria-label={`Coding model: ${activeLabel}`}
-        title={
-          selected === "auto" && routedModel
-            ? modelLabel(routedModel)
-            : label(active)
-        }
+        title={`${label(active)} · ${modelTier(selected) === "advanced" ? "Advanced" : "Basic"}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? "coding-model-menu" : undefined}
@@ -145,7 +126,7 @@ export function ModelSelector() {
                 event.currentTarget.querySelectorAll<HTMLButtonElement>(
                   '[role="menuitemradio"]',
                 ),
-              );
+              ).filter((button) => !button.disabled);
               const index = buttons.indexOf(
                 document.activeElement as HTMLButtonElement,
               );
@@ -169,27 +150,45 @@ export function ModelSelector() {
               Model
             </p>
             <div className="max-h-[50vh] overflow-y-auto">
-              {models.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={selected === model.id}
-                  onClick={() => {
-                    if (isModelChoice(model.id)) setSelected(model.id);
-                    setOpen(false);
-                    trigger.current?.focus();
-                  }}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
-                >
-                  <span className="min-w-0 flex-1 text-sm font-medium whitespace-nowrap">
-                    {label(model)}
-                  </span>
-                  {selected === model.id && (
-                    <CheckIcon className="size-4 shrink-0 text-slate-700" />
-                  )}
-                </button>
-              ))}
+              {[...models]
+                .sort(
+                  (a, b) =>
+                    Number(
+                      isModelChoice(a.id) && modelTier(a.id) === "advanced",
+                    ) -
+                    Number(
+                      isModelChoice(b.id) && modelTier(b.id) === "advanced",
+                    ),
+                )
+                .map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={selected === model.id}
+                    disabled={model.available === false}
+                    title={`${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
+                    onClick={() => {
+                      if (isModelChoice(model.id)) setSelected(model.id);
+                      setOpen(false);
+                      trigger.current?.focus();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                  >
+                    <span className="min-w-0 flex-1 text-sm font-medium">
+                      <span className="block">{label(model)}</span>
+                    </span>
+                    <span className="ml-auto text-xs text-slate-400">
+                      {isModelChoice(model.id) &&
+                      modelTier(model.id) === "advanced"
+                        ? "Advanced"
+                        : "Basic"}
+                    </span>
+                    {selected === model.id && (
+                      <CheckIcon className="size-4 shrink-0 text-slate-700" />
+                    )}
+                  </button>
+                ))}
             </div>
           </div>,
           document.body,

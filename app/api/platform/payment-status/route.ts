@@ -1,6 +1,11 @@
+import { prepaidBillingEnabled, availableCreditMicros } from "@/lib/billing";
 import { database } from "@/lib/database";
 import { checkOrigin, tokenHash } from "@/lib/platform-auth";
-import { creditCheckout, type CheckoutSession } from "@/lib/payment-credit";
+import {
+  creditCheckout,
+  paymentChildId,
+  type CheckoutSession,
+} from "@/lib/payment-credit";
 import { paymentsEnabled } from "@/lib/topup-packages";
 
 const headers = { "Cache-Control": "private, no-store" };
@@ -29,7 +34,7 @@ async function status(token: unknown, session: unknown, reconcile: boolean) {
   const childId = links[0].child_id;
   const readCredit = () =>
     db.query(
-      `select p.tokens,greatest(0,a.token_limit-a.used_tokens-a.reserved_tokens)::text as remaining
+      `select p.tokens,${prepaidBillingEnabled() ? "p.credit_micros,a.credit_limit_micros,a.credit_used_micros,a.credit_reserved_micros," : ""}greatest(0,a.token_limit-a.used_tokens-a.reserved_tokens)::text as remaining
      from payments p join token_accounts a on a.child_id=p.child_id
      where p.child_id=$1 and p.stripe_session_id=$2`,
       [childId, session],
@@ -47,7 +52,7 @@ async function status(token: unknown, session: unknown, reconcile: boolean) {
       );
       if (!response.ok) throw Error("Stripe lookup unavailable");
       const checkout = (await response.json()) as CheckoutSession;
-      if (checkout.id !== session || checkout.metadata?.child_id !== childId)
+      if (checkout.id !== session || paymentChildId(checkout) !== childId)
         return Response.json(
           { error: "This payment does not match this top-up link." },
           { status: 400, headers },
@@ -69,6 +74,19 @@ async function status(token: unknown, session: unknown, reconcile: boolean) {
       credited: !!rows[0],
       tokens: Number(rows[0]?.tokens || 0),
       remaining: rows[0] ? Number(rows[0].remaining) : null,
+      ...(prepaidBillingEnabled()
+        ? {
+            creditAddedMicros: rows[0]
+              ? rows[0].credit_micros == null
+                ? null
+                : Number(rows[0].credit_micros)
+              : null,
+            availableCreditMicros: rows[0]
+              ? availableCreditMicros(rows[0])
+              : null,
+            prepaid: true,
+          }
+        : {}),
     },
     { headers },
   );

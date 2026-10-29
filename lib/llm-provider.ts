@@ -42,6 +42,7 @@ type StreamLlmResponseParams = {
     inputTokens?: number;
     outputTokens?: number;
     modelId?: string;
+    inputTokenDetails?: { cacheReadTokens?: number; cacheWriteTokens?: number };
   }) => Promise<void>;
   onStreamError?: () => Promise<void>;
   apiKey?: string;
@@ -133,9 +134,10 @@ export const streamLlmResponse = async ({
     });
     const modelName =
       modelOverride || process.env["LLM_MODEL"] || "gpt-5.3-codex";
-    const model = baseURL
-      ? openaiProvider.chat(modelName)
-      : openaiProvider.responses(modelName);
+    const model =
+      baseURL && modelChoice !== "sol" && modelChoice !== "luna"
+        ? openaiProvider.chat(modelName)
+        : openaiProvider.responses(modelName);
     const routedModel =
       !routing && baseURL && modelName === "cohere/north-mini-code:free"
         ? withQuotaFallback(
@@ -150,11 +152,19 @@ export const streamLlmResponse = async ({
         // Settle the first call and reserve the recovery separately. A retry
         // cannot bypass the wallet or Stop, and its tokens are never counted twice.
         const tokens = usage as {
-          inputTokens?: { total?: number };
+          inputTokens?: {
+            total?: number;
+            cacheRead?: number;
+            cacheWrite?: number;
+          };
           outputTokens?: { total?: number };
         };
         await afterStep?.({
           inputTokens: tokens.inputTokens?.total,
+          inputTokenDetails: {
+            cacheReadTokens: tokens.inputTokens?.cacheRead,
+            cacheWriteTokens: tokens.inputTokens?.cacheWrite,
+          },
           outputTokens: tokens.outputTokens?.total,
           modelId: routing?.state.usedModel || modelName,
         });
@@ -177,7 +187,10 @@ export const streamLlmResponse = async ({
         editRecorded ||= toolResults.some((result) =>
           successfulProjectEdit(result.toolName, result.output),
         );
-        await afterStep?.({ ...usage, modelId: response.modelId });
+        await afterStep?.({
+          ...usage,
+          modelId: routing?.state.usedModel || response.modelId,
+        });
       },
       providerOptions: {
         openai: {
@@ -216,7 +229,10 @@ export const streamLlmResponse = async ({
       editRecorded ||= toolResults.some((result) =>
         successfulProjectEdit(result.toolName, result.output),
       );
-      await afterStep?.({ ...usage, modelId: response.modelId });
+      await afterStep?.({
+        ...usage,
+        modelId: response.modelId,
+      });
     },
     stopWhen: stepCountIs(stepLimit),
   });

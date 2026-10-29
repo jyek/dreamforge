@@ -14,7 +14,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { ProjectItem } from "@/lib/project-types";
 import { ProjectRename } from "@/components/assistant-ui/project-rename";
-import { VmTerminal } from "@/components/assistant-ui/vm-terminal";
 import { ProjectConversationsProvider } from "@/lib/project-conversations-context";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { ShareDialog } from "@/components/assistant-ui/share-dialog";
@@ -31,7 +30,6 @@ import { useProjectActivity } from "@/components/assistant-ui/use-project-activi
 import { ProjectCode } from "@/components/assistant-ui/project-code";
 import {
   GlobeIcon,
-  TerminalIcon,
   Maximize2Icon,
   Minimize2Icon,
   MessageSquareIcon,
@@ -232,14 +230,29 @@ export function ProjectWorkspaceShell({
     display_name: string;
     role: "teacher" | "child";
   } | null>(null);
+  const [profileStatus, setProfileStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [profileRetry, setProfileRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/platform/auth", { signal: controller.signal })
-      .then((r) => r.json())
-      .then((d) => setProfile(d.user || null))
-      .catch(() => {});
+    setProfileStatus("loading");
+    fetch("/api/platform/auth", {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (r) => {
+        if (!r.ok) throw Error("Profile unavailable");
+        const d = await r.json();
+        if (controller.signal.aborted) return;
+        setProfile(d.user || null);
+        setProfileStatus("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setProfileStatus("error");
+      });
     return () => controller.abort();
-  }, []);
+  }, [profileRetry]);
   const [projectSearch, setProjectSearch] = useState("");
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const onProjectRenamed = useCallback((id: string, name: string) => {
@@ -322,6 +335,9 @@ export function ProjectWorkspaceShell({
       hideCollapseControl
       label="Project sidebar"
       name={profile?.display_name}
+      accountLoading={profileStatus === "loading"}
+      accountError={profileStatus === "error"}
+      onRetryAccount={() => setProfileRetry((n) => n + 1)}
       role={profile?.role}
       className="df-workspace-sidebar"
       navigation={
@@ -669,16 +685,14 @@ function AppPreview({
   project: ProjectItem;
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
 }) {
-  const [view, setView] = useState<"preview" | "code" | "terminal">("preview");
+  const [view, setView] = useState<"preview" | "code">("preview");
   useEffect(() => {
     const handleView = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; view: string }>)
         .detail;
       if (
         detail?.projectId === project.id &&
-        (detail.view === "code" ||
-          detail.view === "terminal" ||
-          detail.view === "preview")
+        (detail.view === "code" || detail.view === "preview")
       )
         setView(detail.view);
     };
@@ -718,38 +732,30 @@ function AppPreview({
                 [
                   { id: "preview", label: "Preview", Icon: GlobeIcon },
                   { id: "code", label: "Code", Icon: CodeIcon },
-                  { id: "terminal", label: "Terminal", Icon: TerminalIcon },
                 ] as const
-              )
-                .filter(
-                  ({ id }) =>
-                    id !== "terminal" ||
-                    (!project.readOnly && project.shellAllowed === true),
-                )
-                .map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    disabled={!activity.ready && id === "code"}
-                    role="tab"
-                    aria-selected={view === id}
-                    aria-controls={`workspace-${id}`}
-                    title={label}
-                    onClick={() => {
-                      setView(id);
-                      if (id === "terminal" && activity.idle) void activity.resume();
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
-                      view === id
-                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
-                        : "text-slate-500 hover:text-slate-800",
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                    <span className="hidden sm:inline">{label}</span>
-                    <span className="sr-only sm:hidden">{label}</span>
-                  </button>
-                ))}
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  disabled={!activity.ready && id === "code"}
+                  role="tab"
+                  aria-selected={view === id}
+                  aria-controls={`workspace-${id}`}
+                  title={label}
+                  onClick={() => {
+                    setView(id);
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
+                    view === id
+                      ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-200"
+                      : "text-slate-500 hover:text-slate-800",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sr-only sm:hidden">{label}</span>
+                </button>
+              ))}
             </div>
             {view === "preview" ? (
               <BrowserControls
@@ -869,21 +875,6 @@ function AppPreview({
           <ProjectCode projectId={project.id} />
         </div>
       )}
-      {view === "terminal" &&
-        project.shellAllowed === true && (
-          <div
-            id="workspace-terminal"
-            role="tabpanel"
-            aria-label="Terminal"
-            className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
-          >
-            <VmTerminal
-              projectId={project.id}
-              session="shell-1"
-              className="min-h-0 flex-1 p-1"
-            />
-          </div>
-        )}
     </div>
   );
 }

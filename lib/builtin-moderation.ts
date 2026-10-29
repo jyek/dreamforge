@@ -41,14 +41,22 @@ export async function builtinModeration(
         project.owner_id,
         active.projectId,
         bound,
+        "openai/gpt-oss-safeguard-20b",
+        2048,
       );
     }
   }
-  const settle = async (input?: number, output?: number) => {
+  const settle = async (
+    input?: number,
+    output?: number,
+    cacheReadTokens?: number,
+  ) => {
     if (reservation) {
       const id = reservation;
       reservation = undefined;
-      await settleUsage(id, input, output, "openai/gpt-oss-safeguard-20b");
+      await settleUsage(id, input, output, "openai/gpt-oss-safeguard-20b", {
+        cacheReadTokens,
+      });
     }
   };
   try {
@@ -70,7 +78,11 @@ export async function builtinModeration(
         reasoning: { effort: "low", exclude: true },
       }),
     );
-    await settle(result.usage?.prompt_tokens, result.usage?.completion_tokens);
+    await settle(
+      result.usage?.prompt_tokens,
+      result.usage?.completion_tokens,
+      result.usage?.prompt_tokens_details?.cached_tokens,
+    );
     if (result.error) throw new ModerationServiceError("response_error");
     const choice = result.choices?.[0];
     if (choice?.finish_reason === "length")

@@ -1,3 +1,4 @@
+import { CREDIT_TOPUPS, prepaidBillingEnabled } from "./billing";
 import { paymentKeyMatchesMode } from "./payment-mode";
 // Proposed pilot packages; live checkout also requires the explicit payment flag.
 export const TOPUP_PACKAGES = [
@@ -9,3 +10,21 @@ export const paymentsEnabled = () =>
   process.env.DREAMFORGE_PAYMENTS_ENABLED === "true" &&
   paymentKeyMatchesMode() &&
   !!process.env.STRIPE_WEBHOOK_SECRET;
+
+export const allPurchasePackages = () => [
+  ...TOPUP_PACKAGES.map((p) => ({
+    ...p,
+    creditMicros: p.tokens * 5,
+    creditPurchase: false,
+  })),
+  ...CREDIT_TOPUPS.map((p) => ({
+    ...p,
+    tokens: 0,
+    creditMicros: p.amount * 10000,
+    creditPurchase: true,
+  })),
+];
+export const purchasePackages = () =>
+  allPurchasePackages().filter(
+    (p) => p.creditPurchase === prepaidBillingEnabled(),
+  );

@@ -11,28 +11,22 @@ import {
   isModelChoice,
   modelLabel,
   type ModelChoice,
+  DEFAULT_MODEL_CHOICE,
 } from "@/lib/model-catalog";
 const Context = createContext<{
   ready: boolean;
   choice: ModelChoice;
   setChoice: (choice: ModelChoice) => void;
-}>({ ready: false, choice: "glm", setChoice: () => {} });
+}>({ ready: false, choice: DEFAULT_MODEL_CHOICE, setChoice: () => {} });
 export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [choice, setValue] = useState<ModelChoice>("glm");
+  const [choice, setValue] = useState<ModelChoice>(DEFAULT_MODEL_CHOICE);
   useEffect(() => {
     try {
       const saved = localStorage.getItem("dreamforge:model-choice");
-      if (
-        saved === "qwen" ||
-        saved === "qwen-large" ||
-        (saved === "auto" &&
-          localStorage.getItem("dreamforge:model-default-version") !== "glm-v1")
-      ) {
-        setValue("glm");
-        localStorage.setItem("dreamforge:model-choice", "glm");
-      } else if (isModelChoice(saved)) setValue(saved);
-      localStorage.setItem("dreamforge:model-default-version", "glm-v1");
+      if (isModelChoice(saved)) setValue(saved);
+      else
+        localStorage.setItem("dreamforge:model-choice", DEFAULT_MODEL_CHOICE);
     } catch {}
     setReady(true);
   }, []);

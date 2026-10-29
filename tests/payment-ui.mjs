@@ -40,15 +40,20 @@ await writeFile(
   `export default function Layout({children}){return <html><body>{children}</body></html>}`,
 );
 await writeFile(
+  dir + "/app/model-fixture.tsx",
+  `"use client";import {AssistantRuntimeProvider,useLocalRuntime} from '@assistant-ui/react';import {ModelSettingsProvider} from '${root}/components/assistant-ui/model-settings';import {ModelSelector} from '${root}/components/assistant-ui/model-selector';export function ModelFixture(){const runtime=useLocalRuntime({async run(){return {content:[{type:'text',text:'Fixture'}]}}});return <AssistantRuntimeProvider runtime={runtime}><ModelSettingsProvider><ModelSelector/><button onPointerDown={(event)=>event.stopPropagation()}>Outside menu</button><iframe title="Preview fixture" srcDoc="<button>Preview area</button>"/></ModelSettingsProvider></AssistantRuntimeProvider>;}`,
+);
+await writeFile(
   dir + "/app/page.tsx",
   `
+import {ModelFixture} from './model-fixture';
 import {ParentTopup} from '${root}/components/parent-topup';
 import {PlatformDashboard} from '${root}/components/platform-dashboard';
 import {StudioSidebar} from '${root}/components/studio-sidebar';
 export default async function Page({searchParams}){
- const {screen}=await searchParams;
- const data={user:{display_name:'Test builder',role:'child'},classes:[],projects:[],children:[],wallet:{token_limit:'1000',used_tokens:'100',reserved_tokens:'50',input_tokens:'50',output_tokens:'50'},unconfirmed:[],paymentsEnabled:true,projectUsage:[]};
- return screen==='pay'?<ParentTopup token="fixture-link" paid enabled sandbox sessionId="cs_test_fixture"/>:screen==='project'?<StudioSidebar name="Test builder" role="child" navigation={<span>Project</span>}/>:<PlatformDashboard initialData={data} initialSection="profile"/>;
+ const {screen}=await searchParams; const prepaid=screen?.startsWith("credit-");
+ const data={user:{display_name:'Test builder',role:'child'},classes:[],projects:[],children:[],wallet:{token_limit:'1000',used_tokens:'100',reserved_tokens:'50',input_tokens:'50',output_tokens:'50',credit_limit_micros:'1000000',credit_used_micros:'0',credit_reserved_micros:'0'},prepaid,unconfirmed:[],paymentsEnabled:true,projectUsage:[]};
+ return screen==='models'?<ModelFixture/>:(screen==='pay'||screen==='credit-pay')?<ParentTopup prepaid={prepaid} token="fixture-link" paid enabled sandbox sessionId="cs_test_fixture"/>:(screen==='project'||screen==='credit-project')?<StudioSidebar name="Test builder" role="child" navigation={<span>Project</span>}/>:<PlatformDashboard initialData={screen==='credit-dashboard'?undefined:data} initialSection="profile"/>;
 }`,
 );
 const reservation = createServer();
@@ -132,10 +137,16 @@ try {
   );
   const dashboard = await context.newPage();
   await dashboard.goto(origin);
-  await dashboard.getByText("850", { exact: true }).waitFor();
+  await dashboard
+    .locator(".df-account-tokens span")
+    .getByText("S$0.00", { exact: true })
+    .waitFor();
   const project = await context.newPage();
   await project.goto(origin + "/?screen=project");
-  await project.getByText("850", { exact: true }).waitFor();
+  await project
+    .locator(".df-account-tokens span")
+    .getByText("S$0.00", { exact: true })
+    .waitFor();
   let checks = 0;
   let release;
   const held = new Promise((r) => (release = r));
@@ -169,9 +180,15 @@ try {
     .waitFor();
   await pay.getByText("1,000,850 tokens", { exact: true }).waitFor();
   await dashboard.bringToFront();
-  await dashboard.getByText("1,000,850", { exact: true }).waitFor();
+  await dashboard
+    .locator(".df-account-tokens span")
+    .getByText("S$5.00", { exact: true })
+    .waitFor();
   await project.bringToFront();
-  await project.getByText("1,000,850", { exact: true }).waitFor();
+  await project
+    .locator(".df-account-tokens span")
+    .getByText("S$5.00", { exact: true })
+    .waitFor();
   console.log(
     "PASS verified payment confirmation and new balance; dashboard and project sidebar update across tabs",
   );
@@ -204,6 +221,202 @@ try {
     .waitFor();
   console.log(
     "PASS failed confirmation stays unconfirmed and explicit retry recovers",
+  );
+  const cash = await browser.newContext();
+  let available = 1000000;
+  const cashWallet = () => ({
+    token_limit: "1000",
+    used_tokens: "100",
+    reserved_tokens: "50",
+    input_tokens: "50",
+    output_tokens: "50",
+    credit_limit_micros: String(available + 50000),
+    credit_used_micros: "50000",
+    credit_reserved_micros: "0",
+  });
+  await cash.route("**/api/platform/balance", (r) =>
+    r.fulfill({
+      json: { remaining: 850, prepaid: true, availableCreditMicros: available },
+    }),
+  );
+  await cash.route("**/api/platform/dashboard", (r) =>
+    r.fulfill({
+      json: {
+        user: { display_name: "Test builder", role: "child" },
+        classes: [],
+        projects: [],
+        children: [],
+        wallet: cashWallet(),
+        unconfirmed: [],
+        paymentsEnabled: true,
+        projectUsage: [
+          {
+            vm_id: "vm-usagefixture",
+            project_name: "Counter",
+            used_tokens: "100",
+            input_tokens: "50",
+            output_tokens: "50",
+            credit_cost_micros: "50000",
+            estimated_credit_micros: "0",
+            legacy_runs: "0",
+            models: [
+              {
+                model: "z-ai/glm-5.3-flash",
+                input_tokens: "50",
+                output_tokens: "50",
+                used_tokens: "100",
+                credit_cost_micros: "50000",
+                estimated_credit_micros: "0",
+                legacy_runs: "0",
+              },
+            ],
+          },
+        ],
+        prepaid: true,
+      },
+    }),
+  );
+  await cash.route("**/api/platform/payment-status", (r) =>
+    r.fulfill({
+      json: {
+        credited: true,
+        tokens: 0,
+        remaining: 850,
+        prepaid: true,
+        creditAddedMicros: 10000000,
+        availableCreditMicros: 11000000,
+      },
+    }),
+  );
+  const account = await cash.newPage();
+  await account.goto(origin + "/?screen=credit-dashboard");
+  await account
+    .getByRole("heading", { name: "Your spending", exact: true })
+    .waitFor();
+  await account.getByText("Total spend", { exact: true }).waitFor();
+  await account.locator(".df-project-spend summary").click();
+  await account
+    .getByRole("cell", { name: "GLM 5.3 Flash", exact: true })
+    .waitFor();
+  await account
+    .locator("tbody")
+    .getByRole("cell", { name: "S$0.05", exact: true })
+    .waitFor();
+  await account
+    .locator(".df-account-tokens span")
+    .filter({ hasText: /^S\$1\.00$/ })
+    .waitFor();
+  const studio = await cash.newPage();
+  await studio.goto(origin + "/?screen=credit-project");
+  await studio.getByText("S$1.00", { exact: true }).waitFor();
+  available = 11000000;
+  const paid = await cash.newPage();
+  await paid.goto(origin + "/?screen=credit-pay");
+  await paid
+    .getByText("S$10.00 added to the account.", { exact: true })
+    .waitFor();
+  await paid.getByText("S$11.00", { exact: true }).waitFor();
+  for (const amount of ["S$10", "S$25", "S$50", "S$100"])
+    await paid.getByText(amount, { exact: true }).waitFor();
+  assert.equal(await paid.getByText("S$5", { exact: true }).count(), 0);
+  await account.bringToFront();
+  await account
+    .locator(".df-account-tokens span")
+    .filter({ hasText: /^S\$11\.00$/ })
+    .waitFor();
+  const usageRow = account
+    .getByRole("row")
+    .filter({ hasText: "GLM 5.3 Flash" });
+  await usageRow.getByRole("cell", { name: "100", exact: true }).waitFor();
+  await usageRow.getByRole("cell", { name: "S$0.05", exact: true }).waitFor();
+  await studio.bringToFront();
+  await studio.getByText("S$11.00", { exact: true }).waitFor();
+  assert.equal(
+    await paid
+      .getByText("0 tokens added to the account.", { exact: true })
+      .count(),
+    0,
+  );
+  console.log(
+    "PASS one prepaid balance, cash checkout confirmation, and automatic credit refresh across dashboard and project",
+  );
+  const modelPage = await cash.newPage();
+  const choices = [
+    ["haiku", "Claude Haiku 5.5"],
+    ["sonnet", "Claude Sonnet 5.5"],
+    ["luna", "GPT-6 Luna"],
+    ["sol", "GPT-6.1 Sol"],
+    ["gemini-lite", "Gemini 3.5 Flash-Lite"],
+    ["gemini", "Gemini 3.8 Flash"],
+    ["glm", "GLM 5.3 Flash"],
+  ].map(([id, name]) => ({
+    id,
+    name,
+    paid: true,
+    available: true,
+  }));
+  await modelPage.route("**/api/models", (r) =>
+    r.fulfill({ json: { choices, prepaid: true } }),
+  );
+  await modelPage.goto(origin + "/?screen=models");
+  await modelPage
+    .getByRole("button", { name: "Coding model: Claude Haiku 5.5" })
+    .click();
+  const sonnet = modelPage
+    .getByRole("menuitemradio")
+    .filter({ hasText: "Claude Sonnet 5.5" });
+  await sonnet.waitFor();
+  const menuText = await modelPage.getByRole("menu").innerText();
+  assert.doesNotMatch(menuText, /S\$|per token|Input|Output/);
+  assert.deepEqual(
+    await modelPage.getByRole("menuitemradio").allTextContents(),
+    [
+      "Claude Haiku 5.5Basic",
+      "GPT-6 LunaBasic",
+      "Gemini 3.5 Flash-LiteBasic",
+      "GLM 5.3 FlashBasic",
+      "Claude Sonnet 5.5Advanced",
+      "GPT-6.1 SolAdvanced",
+      "Gemini 3.8 FlashAdvanced",
+    ],
+  );
+  assert.match(await sonnet.getAttribute("title"), /Advanced/);
+  await sonnet.click();
+  await modelPage
+    .getByRole("button", { name: "Coding model: Claude Sonnet 5.5" })
+    .waitFor();
+  await modelPage
+    .getByRole("button", { name: "Coding model: Claude Sonnet 5.5" })
+    .click();
+  const sol = modelPage
+    .getByRole("menuitemradio")
+    .filter({ hasText: "GPT-6.1 Sol" });
+  assert.match(await sol.getAttribute("title"), /Advanced/);
+  await sol.click();
+  await modelPage
+    .getByRole("button", { name: "Coding model: GPT-6.1 Sol" })
+    .waitFor();
+  await modelPage
+    .getByRole("button", { name: "Coding model: GPT-6.1 Sol" })
+    .click();
+  await modelPage
+    .getByRole("button", { name: "Outside menu", exact: true })
+    .click();
+  await modelPage
+    .getByRole("menu", { name: "Coding models" })
+    .waitFor({ state: "hidden" });
+  await modelPage
+    .getByRole("button", { name: "Coding model: GPT-6.1 Sol" })
+    .click();
+  await modelPage
+    .frameLocator('iframe[title="Preview fixture"]')
+    .getByRole("button", { name: "Preview area" })
+    .click();
+  await modelPage
+    .getByRole("menu", { name: "Coding models" })
+    .waitFor({ state: "hidden" });
+  console.log(
+    "PASS model tier ordering, clean labels, selection and outside-click dismissal including iframe",
   );
 } finally {
   if (browser) await browser.close();

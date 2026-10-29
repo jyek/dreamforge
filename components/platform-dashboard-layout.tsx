@@ -61,15 +61,19 @@ export const BUILDER_SECTIONS = [
 export function PlatformDashboardLayout({
   teacher,
   name,
+  accountLoading = false,
   remainingTokens,
+  creditBalanceMicros,
   section,
   onSectionChange,
   children,
   headerAction,
 }: {
   teacher: boolean;
+  accountLoading?: boolean;
   name?: string;
   remainingTokens?: number;
+  creditBalanceMicros?: number;
   section: string;
   onSectionChange: (section: string) => void;
   children: ReactNode;
@@ -83,7 +87,7 @@ export function PlatformDashboardLayout({
           label: "Profile",
           description: teacher
             ? "Manage your teacher profile and account."
-            : "Your token usage, account and parent top-ups.",
+            : "Your spending, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];
   return (
@@ -91,7 +95,9 @@ export function PlatformDashboardLayout({
       <StudioSidebar
         onProfileOpen={() => setNavOpen(false)}
         name={name}
+        accountLoading={accountLoading}
         remainingTokens={remainingTokens}
+        creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}
         label={teacher ? "Teacher sidebar" : "Builder sidebar"}
         className={navOpen ? "is-open" : ""}

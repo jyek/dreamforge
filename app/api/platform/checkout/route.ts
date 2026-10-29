@@ -1,6 +1,7 @@
+import { localDevelopmentBilling } from "@/lib/local-development";
 import { database } from "@/lib/database";
 import { checkOrigin, tokenHash } from "@/lib/platform-auth";
-import { paymentsEnabled, TOPUP_PACKAGES } from "@/lib/topup-packages";
+import { paymentsEnabled, purchasePackages } from "@/lib/topup-packages";
 export async function POST(req: Request) {
   if (!paymentsEnabled())
     return Response.json(
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
   if (!checkOrigin(req))
     return Response.json({ error: "Invalid request" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
-  const pack = TOPUP_PACKAGES.find((p) => p.id === body.package);
+  const pack = purchasePackages().find((p) => p.id === body.package);
   if (!pack || typeof body.token !== "string")
     return Response.json({ error: "Choose a package." }, { status: 400 });
   const { rows } = await database().query(
@@ -35,9 +36,16 @@ export async function POST(req: Request) {
     cancel_url: `${site}/pay/${body.token}`,
     "line_items[0][price_data][currency]": "sgd",
     "line_items[0][price_data][unit_amount]": String(pack.amount),
-    "line_items[0][price_data][product_data][name]": `DreamForge ${pack.name} — ${pack.tokens.toLocaleString()} tokens`,
+    "line_items[0][price_data][product_data][name]": pack.creditPurchase
+      ? `DreamForge ${pack.name}`
+      : `DreamForge ${pack.name} — ${pack.tokens.toLocaleString()} tokens`,
     "line_items[0][quantity]": "1",
-    "metadata[child_id]": rows[0].child_id,
+    ...(localDevelopmentBilling()
+      ? {
+          "metadata[local_child_id]": rows[0].child_id,
+          "metadata[local_origin]": site,
+        }
+      : { "metadata[child_id]": rows[0].child_id }),
     "metadata[package]": pack.id,
   });
   const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
