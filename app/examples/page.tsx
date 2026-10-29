@@ -4,15 +4,12 @@ import {
 } from "@/components/dreamforge-brand";
 import { database } from "@/lib/database";
 import Link from "next/link";
-import { platformEnabled } from "@/lib/platform-auth";
 // Project examples come from the live database, not the build environment.
 export const dynamic = "force-dynamic";
 
 export default async function Examples() {
   const { rows } = await database().query(
-    platformEnabled()
-      ? "select vm_id,metadata from projects where is_example order by updated_at desc"
-      : "select vm_id,metadata from projects order by updated_at desc",
+    "select vm_id,metadata from projects where is_example order by metadata->>'exampleOrder' nulls last,updated_at desc",
   );
   return (
     <main className="df-page">
@@ -38,7 +35,9 @@ export default async function Examples() {
             >
               <DreamForgeProjectArt variant={index} />
               <h3>{p.metadata.name}</h3>
-              <p className="df-muted">Demo example</p>
+              <p className="df-muted">
+                {p.metadata.description || "Demo example"}
+              </p>
               <footer>Explore ↗</footer>
             </Link>
           ))}
