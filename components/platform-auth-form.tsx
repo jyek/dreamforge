@@ -5,10 +5,12 @@ import Link from "next/link";
 import { DreamForgeBrand, DreamForgeArt } from "./dreamforge-brand";
 export function PlatformAuthForm({
   signup = false,
+  admin = false,
   teacherInvite = "",
   returnTo = "",
 }: {
   signup?: boolean;
+  admin?: boolean;
   teacherInvite?: string;
   returnTo?: string;
 }) {
@@ -34,7 +36,8 @@ export function PlatformAuthForm({
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
       window.location.assign(
-        /^\/classrooms\/invite\/[A-Za-z0-9_-]{20,100}$/.test(returnTo)
+        returnTo === "/admin" ||
+          /^\/classrooms\/invite\/[A-Za-z0-9_-]{20,100}$/.test(returnTo)
           ? returnTo
           : "/home",
       );
@@ -54,27 +57,36 @@ export function PlatformAuthForm({
       </header>
       <section className="df-auth">
         <div className="df-auth-copy">
-          <p className="df-eyebrow">Your imagination is the starting point</p>
+          <p className="df-eyebrow">
+            {admin
+              ? "Site administration"
+              : "Your imagination is the starting point"}
+          </p>
           <h1 className="df-title">
-            Dream it.
+            {admin ? "Choose it." : "Dream it."}
             <br />
-            <span className="df-highlight">Build it.</span>
+            <span className="df-highlight">
+              {admin ? "Showcase it." : "Build it."}
+            </span>
             <br />
-            Make it yours.
+            {admin ? "Inspire others." : "Make it yours."}
           </h1>
           <p className="df-muted">
-            Turn your big ideas into little games, brilliant apps, and things
-            that make you smile.
+            {admin
+              ? "Sign in with an administrator account to manage the examples gallery."
+              : "Turn your big ideas into little games, brilliant apps, and things that make you smile."}
           </p>
           <DreamForgeArt />
         </div>
         <div className="df-card df-auth-card">
           <span className="df-pill">
-            {teacherInvite
-              ? "Teacher invitation"
-              : signup
-                ? "Let’s make something"
-                : "Your creative corner"}
+            {admin
+              ? "Administrator sign-in"
+              : teacherInvite
+                ? "Teacher invitation"
+                : signup
+                  ? "Let’s make something"
+                  : "Your creative corner"}
           </span>
           <h2 style={{ fontSize: 28, margin: "20px 0 8px" }}>
             {signup
@@ -88,7 +100,9 @@ export function PlatformAuthForm({
               ? teacherInvite
                 ? "Create your account to start a class."
                 : "Start building today. You can join a class now or later."
-              : "Your next big idea is waiting for you."}
+              : admin
+                ? "Use your existing DreamForge admin account."
+                : "Your next big idea is waiting for you."}
           </p>
           <form
             className="df-form"
@@ -181,22 +195,33 @@ export function PlatformAuthForm({
             <button className="df-button" disabled={busy || !ready}>
               {busy && <InlineSpinner className="size-4" />}
               {busy
-                ? "Opening your creative corner…"
+                ? admin
+                  ? "Signing in…"
+                  : "Opening your creative corner…"
                 : signup
                   ? "Create account →"
-                  : "Let’s go →"}
+                  : admin
+                    ? "Sign in to admin →"
+                    : "Let’s go →"}
             </button>
           </form>
-          <p
-            className="df-muted"
-            style={{ fontSize: 13, textAlign: "center", marginTop: 24 }}
-          >
-            {signup ? "Already a builder? " : "New here? "}
-            <Link className="df-purple" href={signup ? "/login" : "/signup"}>
-              {signup ? "Sign in" : "Create an account"}
-            </Link>
-          </p>
-          {!signup && (
+          {!admin && (
+            <>
+              <p
+                className="df-muted"
+                style={{ fontSize: 13, textAlign: "center", marginTop: 24 }}
+              >
+                {signup ? "Already a builder? " : "New here? "}
+                <Link
+                  className="df-purple"
+                  href={signup ? "/login" : "/signup"}
+                >
+                  {signup ? "Sign in" : "Create an account"}
+                </Link>
+              </p>
+            </>
+          )}
+          {!signup && !admin && (
             <p
               style={{ fontSize: 11, textAlign: "center" }}
               className="df-muted"

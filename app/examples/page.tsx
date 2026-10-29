@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Examples() {
   const { rows } = await database().query(
-    "select vm_id,metadata from projects where is_example order by metadata->>'exampleOrder' nulls last,updated_at desc",
+    "select vm_id,metadata from projects where is_example order by case when metadata->>'exampleOrder' ~ '^[0-9]{1,9}$' then (metadata->>'exampleOrder')::integer end nulls last,updated_at desc",
   );
   return (
     <main className="df-page">

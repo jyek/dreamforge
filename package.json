@@ -24,7 +24,8 @@
     "build:verified": "npm run test:unit && node scripts/check-runtime-starter.mjs --if-production && npm run build",
     "test:payments-ui": "node tests/payment-ui.mjs",
     "runtime:check-starter": "node --env-file-if-exists=.env.local scripts/check-runtime-starter.mjs",
-    "test:e2e:startup": "node scripts/e2e-startup.mjs"
+    "test:e2e:startup": "node scripts/e2e-startup.mjs",
+    "test:admin-ui": "node tests/admin-ui.mjs"
   },
   "prettier": {
     "plugins": [

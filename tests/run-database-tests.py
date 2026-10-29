@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix='dreamforge-tests-') as tmp:
             'node', '--import', 'tsx', '--test', '--test-timeout=120000',
             'tests/quota-safety.test.ts', 'tests/execution.test.ts',
             'tests/schema-migration.test.ts', 'tests/payment-credit.test.ts',
-            'tests/prepaid-wallet.test.ts',
+            'tests/prepaid-wallet.test.ts', 'tests/admin-showcase.test.ts',
         ], cwd=root, env=env, timeout=300, check=True)
     finally:
         print('Database fixture: stop PostgreSQL', flush=True)

@@ -17,6 +17,7 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
   );
 
   const platformRoute = [
+    "admin",
     "login",
     "signup",
     "dashboard",
