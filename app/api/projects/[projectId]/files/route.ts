@@ -1,6 +1,5 @@
-import { prepareProjectRuntime } from "@/lib/prepare-project-runtime";
+import { prepareProjectWorkspace } from "@/lib/prepare-project-runtime";
 import { authorizeProject } from "@/lib/project-access";
-import { devVm } from "@/lib/project-vm";
 import { WORKDIR } from "@/lib/vars";
 import { snapshotInProgress } from "@/lib/execution";
 import { runtimeFailure } from "@/lib/runtime-readiness";
@@ -42,8 +41,7 @@ export async function GET(
         { error: "Project snapshot is being prepared." },
         { status: 409 },
       );
-    await prepareProjectRuntime(projectId);
-    const vm = devVm(projectId);
+    const vm = await prepareProjectWorkspace(projectId);
     const result = await vm.exec({
       command: `cd ${quote(WORKDIR)} && find . -maxdepth 8 \\( -name node_modules -o -name .npm -o -name .cache -o -name .pnpm-store -o -name .yarn -o -name .next -o -name .git -o -name '.env*' -o -name .ssh \\) -prune -o -type f -size -256k -print0`,
       timeoutMs: 15000,
@@ -88,7 +86,12 @@ export async function GET(
   } catch (error) {
     const failure = runtimeFailure(error);
     return Response.json(
-      { error: failure.body.state === "blocked" ? failure.body.error : "Could not load project files. Please try again." },
+      {
+        error:
+          failure.body.state === "blocked"
+            ? failure.body.error
+            : "Could not load project files. Please try again.",
+      },
       { status: failure.status },
     );
   }

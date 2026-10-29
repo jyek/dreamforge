@@ -5,6 +5,40 @@ import {
   projectCreationFailure,
 } from "../lib/project-creation-response";
 import { assertTestProject } from "../lib/e2e-cleanup";
+import { preparedStarterSnapshot } from "../lib/prepared-starter";
+
+test("production blank projects require a valid prepared starter before allocating compute", () => {
+  const snapshot = "00000000-0000-4000-8000-000000000001";
+  for (const value of [undefined, "", "   ", "not-a-snapshot"]) {
+    assert.throws(
+      () =>
+        preparedStarterSnapshot(undefined, {
+          VERCEL_ENV: "production",
+          RUNTIME_BASE_SNAPSHOT: value,
+        }),
+      (error: unknown) =>
+        (error as { code: string }).code === "hosting_starter_not_configured",
+    );
+  }
+  assert.equal(
+    preparedStarterSnapshot(undefined, {
+      VERCEL_ENV: "production",
+      RUNTIME_BASE_SNAPSHOT: ` ${snapshot} `,
+    }),
+    snapshot,
+  );
+  assert.equal(preparedStarterSnapshot(undefined, {}), undefined);
+  assert.equal(
+    preparedStarterSnapshot("https://github.com/example/app", {
+      VERCEL_ENV: "production",
+    }),
+    undefined,
+  );
+  assert.match(
+    projectCreationFailure({ code: "hosting_starter_not_configured" }).error,
+    /workspaces are temporarily unavailable/,
+  );
+});
 test("creation handles empty, non-JSON and incomplete responses without parser errors", async () => {
   for (const response of [
     new Response(null, { status: 500 }),

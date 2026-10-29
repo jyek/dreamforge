@@ -736,7 +736,6 @@ function AppPreview({
               ).map(({ id, label, Icon }) => (
                 <button
                   key={id}
-                  disabled={!activity.ready && id === "code"}
                   role="tab"
                   aria-selected={view === id}
                   aria-controls={`workspace-${id}`}

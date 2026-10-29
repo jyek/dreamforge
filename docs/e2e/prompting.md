@@ -2,6 +2,8 @@
 
 Run commands from the repository root.
 
+For the startup path without model calls, run `E2E_BROWSER_EXECUTABLE="/path/to/chrome" npm run test:e2e:startup` with the same dedicated account settings. Override `E2E_BASE_URL` to test a local production build or a preview deployment. This creates one marked disposable project, holds preview readiness at `starting`, checks that Code loads actual source and the prompt input accepts text, then releases readiness and checks the preview document. It records creation/source timing and a screenshot in `.e2e-results/startup/`, and verifies project deletion in `finally`. A failed cleanup retains `project.json` for recovery. No prompt is submitted and no model tokens are spent.
+
 ```bash
 npm run test:prompting
 npm run test:e2e:prompting

@@ -13,8 +13,15 @@ export async function wakeVm(
 ) {
   const info = await vm.data();
   if (info.state === "paused" || info.state === "stopped") {
-    await vm.start();
-    await startServer();
+    const resumed = await vm.start();
+    // A normal wake keeps the existing server and compilation cache. Only a
+    // cold boot (including a failed memory restore) needs a new process.
+    if (
+      info.state === "stopped" ||
+      (resumed as { memoryRestored?: boolean } | undefined)?.memoryRestored ===
+        false
+    )
+      await startServer();
   }
 }
 
@@ -23,7 +30,10 @@ export async function resumeProjectRuntime(
   sandbox: {
     state: string;
     wake: (options: { wait: false; signal: AbortSignal }) => Promise<unknown>;
-    restart: (options: { wait: false; signal: AbortSignal }) => Promise<unknown>;
+    restart: (options: {
+      wait: false;
+      signal: AbortSignal;
+    }) => Promise<unknown>;
   },
   startServer: () => Promise<void>,
   signal: AbortSignal,
@@ -70,7 +80,8 @@ export function runtimeFailure(error: unknown) {
       body: {
         state: "blocked",
         ready: false,
-        error: "The workspace is still stopping. Preview, files and terminal are unavailable until project hosting completes recovery. Please contact DreamForge support if this persists.",
+        error:
+          "The workspace is still stopping. Preview, files and terminal are unavailable until project hosting completes recovery. Please contact DreamForge support if this persists.",
       },
     };
   if (failure?.code === "operation_failed" || failure?.code === "host_unknown")

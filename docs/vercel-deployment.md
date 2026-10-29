@@ -23,6 +23,10 @@ Configure the required production values from `.env.example` in Vercel's environ
 
 Apply required SQL migrations using a server-authorised connection before enabling account features that depend on them. The existing `adorable` database schema and internal `/adorable` VM state paths remain compatible with live projects. Do not rename these values as part of deployment setup.
 
+Blank projects in Production require `RUNTIME_BASE_SNAPSHOT`; a missing or invalid setting fails before compute is allocated instead of cloning and installing packages in the user's request. Build a clean memory snapshot with `npm run bootstrap`, configure its ID in the target environment, then run `npm run runtime:check-starter` with that environment's Runtime key and snapshot ID before deploying. The check creates one disposable workspace, verifies writable storage, installed dependencies, compiled preview and the inherited server process, pauses and wakes it, then deletes it in `finally`. It consumes a small amount of Runtime compute. Use `npm run runtime:check-starter -- --metadata-only` for a read-only state/expiry check. Repeat the full check whenever changing the starter setting; starter validation is deliberately outside individual project creation requests.
+
+Source browsing is available while preview health checks run. File requests prepare workspace permissions without starting or waiting for the preview server. Runtime preparation reuses an existing named server process without opening a terminal WebSocket; ordinary pause/wake retains the process and compilation cache. Cold boots and missing processes still recover the server.
+
 ## Domains
 
 Once a production deployment is Ready, add the desired domain under Settings → Domains and connect it to Production. Domain assignment is managed in Vercel; renaming source folders does not transfer or release a `vercel.app` address. Enable automatic production-domain assignment if pushes to `main` should update the public site.
@@ -33,7 +37,7 @@ The production domain is currently `dreamforge2.vercel.app`. Set `DREAMFORGE_SIT
 
 The `DreamForge CI` GitHub Actions workflow runs on pull requests and pushes to `main`. Its `Tests and build` job installs dependencies, runs deterministic harness and safety tests, checks quota accounting and execution recovery against a temporary local PostgreSQL database, and builds the production app. These checks need no production credentials and create no Runtime VMs or production projects.
 
-Vercel's build command is `npm run build:verified`: deterministic tests must pass before `next build` starts, and both must succeed before Vercel releases the deployment. A failed test or build leaves the existing production deployment serving traffic. Keep the Build Command override disabled in Vercel so the repository's command is used.
+Vercel's build command is `npm run build:verified`: deterministic tests must pass before `next build` starts, and both must succeed before Vercel releases the deployment. Production builds also run the disposable prepared-starter check against their actual Runtime key and snapshot setting before building. Local and Preview builds skip this live check. A failed test, starter check or build leaves the existing production deployment serving traffic. Keep the Build Command override disabled in Vercel so the repository's command is used.
 
 To also require the database checks before releasing, once the first workflow has run, open Vercel's project Settings → Deployment Checks and select `Tests and build`. Vercel will then wait for the full GitHub Actions check before assigning production domains. See [Vercel Deployment Checks](https://vercel.com/docs/deployment-checks). Without this setting, the database tests run in GitHub Actions but are not part of Vercel's release gate.
 

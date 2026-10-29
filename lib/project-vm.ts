@@ -1,7 +1,10 @@
 import { requestSandboxCreation } from "./runtime-provisioning";
 import { database } from "./database";
 import { prepareProjectRuntime } from "./prepare-project-runtime";
-import { assertWorkspaceAvailable, resumeProjectRuntime } from "./runtime-readiness";
+import {
+  assertWorkspaceAvailable,
+  resumeProjectRuntime,
+} from "./runtime-readiness";
 import { randomUUID } from "crypto";
 import type { Vm } from "./project-runtime";
 import {
@@ -16,6 +19,7 @@ import {
   TEMPLATE_COMPATIBILITY_COMMAND,
 } from "./blank-project.mjs";
 import { activityCommand } from "../scripts/activity-bridge.mjs";
+import { preparedStarterSnapshot } from "./prepared-starter";
 import {
   PROJECT_STATE_DIR,
   APP_SESSION,
@@ -30,13 +34,12 @@ export const prodVm = projectVm;
 const quote = (value: string) => "'" + value.replace(/'/g, "'\\''") + "'";
 
 export async function startDevServer(vm: Vm) {
-  const session = await vm.pty.open({
+  await vm.pty.ensure({
     slug: APP_SESSION,
     exec: `cd ${WORKDIR} && npm run dev -- --hostname 0.0.0.0 > /adorable/dev.log 2>&1`,
     cols: 120,
     rows: 30,
   });
-  session.detach();
 }
 export async function restartDevServer(vm: Vm) {
   await vm.pty.close(APP_SESSION).catch(() => {});
@@ -67,7 +70,8 @@ export async function createProjectVms(
   sourceRepoUrl?: string,
 ): Promise<CreatedProjectVms> {
   const projectId = `vm-${randomUUID().replaceAll("-", "")}`;
-  const prepared = Boolean(process.env.RUNTIME_BASE_SNAPSHOT) && !sourceRepoUrl;
+  const snapshot = preparedStarterSnapshot(sourceRepoUrl);
+  const prepared = Boolean(snapshot);
   let sandboxId: string | undefined;
   let sandbox: Awaited<ReturnType<typeof runtimeSandbox>>;
   try {
@@ -79,7 +83,7 @@ export async function createProjectVms(
       idlePauseSeconds: PROJECT_IDLE_SECONDS,
       autoWake: true,
       labels: { application: "dreamforge", projectId, role: "dev" },
-      ...(prepared ? { snapshot: process.env.RUNTIME_BASE_SNAPSHOT } : {}),
+      ...(snapshot ? { snapshot } : {}),
     });
     sandbox = await runtime().sandboxes.get(sandboxId, { timeoutMs: 15000 });
     if (sandbox.state !== "running")
@@ -115,15 +119,28 @@ export async function createProjectVms(
     throw error;
   }
   try {
-    await bindRuntime(projectId, sandbox.id);
+    // Both operations are independent. Settle both before cleanup on failure,
+    // so a late binding/preview cannot outlive a failed creation request.
+    const [binding, issuedPreview] = await Promise.allSettled([
+      bindRuntime(projectId, sandbox.id),
+      sandbox.previews.create(VM_PORT, {
+        visibility: "private",
+        ttlSeconds: 7 * 86400,
+      }),
+    ]);
+    if (binding.status === "rejected") throw binding.reason;
+    if (issuedPreview.status === "rejected") throw issuedPreview.reason;
+    const preview = issuedPreview.value;
     const vm = devVm(projectId);
-    const setup = await vm.exec({
-      command: `sudo mkdir -p ${PROJECT_STATE_DIR}/conversations && sudo chown -R $(id -u):$(id -g) ${PROJECT_STATE_DIR}`,
-      timeoutMs: 30000,
-    });
-    if (setup.statusCode !== 0)
-      throw Error("Could not prepare workspace storage");
-    if (!process.env.RUNTIME_BASE_SNAPSHOT || sourceRepoUrl) {
+    // Prepared starters already contain writable storage and a verified
+    // manifest. Validate these once with runtime:check-starter before release.
+    if (!prepared) {
+      const setup = await vm.exec({
+        command: `sudo mkdir -p ${PROJECT_STATE_DIR}/conversations && sudo chown -R $(id -u):$(id -g) ${PROJECT_STATE_DIR}`,
+        timeoutMs: 30000,
+      });
+      if (setup.statusCode !== 0)
+        throw Error("Could not prepare workspace storage");
       const repo = sourceRepoUrl || TEMPLATE_REPO;
       const install = await vm.exec({
         command: `git clone --depth 1 ${quote(repo)} /tmp/dreamforge-source && cp -a /tmp/dreamforge-source/. ${WORKDIR}/ && rm -rf /tmp/dreamforge-source && cd ${WORKDIR} && npm install --no-audit --no-fund`,
@@ -141,21 +158,11 @@ export async function createProjectVms(
       if (reset.statusCode !== 0)
         throw Error("Could not prepare a blank project");
     }
-    if (prepared) {
-      const manifest = JSON.parse(
-        await vm.fs.readTextFile("/adorable/starter.json"),
-      );
-      if (manifest.version !== "next-shadcn-v1")
-        throw Error("Unsupported prepared starter version.");
-    } else {
+    if (!prepared) {
       const activity = await vm.exec({ command: activityCommand });
       if (activity.statusCode !== 0)
         throw Error("Could not prepare preview activity tracking");
     }
-    const preview = await sandbox.previews.create(VM_PORT, {
-      visibility: "private",
-      ttlSeconds: 7 * 86400,
-    });
     if (!prepared) await prepareProjectRuntime(projectId);
     await database().query(
       "update runtime_bindings set preview=$2 where project_id=$1",

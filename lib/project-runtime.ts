@@ -57,10 +57,13 @@ const terminalPath = (slug: string | number) => {
     throw Error("Invalid terminal session");
   return `/adorable/terminals/${slug}.json`;
 };
-class ProjectVm {
-  constructor(readonly id: string) {}
+export class ProjectVm {
+  constructor(
+    readonly id: string,
+    private readonly loadSandbox = runtimeSandbox,
+  ) {}
   private sandboxPromise?: ReturnType<typeof runtimeSandbox>;
-  private sandbox = () => (this.sandboxPromise ??= runtimeSandbox(this.id));
+  private sandbox = () => (this.sandboxPromise ??= this.loadSandbox(this.id));
   fs = {
     readTextFile: async (path: string) =>
       (await this.sandbox()).files.readText(path),
@@ -186,7 +189,10 @@ class ProjectVm {
     }
     return { sandbox, processId, process: guestProcess! };
   }
-  private async session(options: PtyOptions, create: boolean): Promise<PtySession> {
+  private async session(
+    options: PtyOptions,
+    create: boolean,
+  ): Promise<PtySession> {
     const { sandbox, processId } = await this.namedTerminal(options, create);
     const terminal: Terminal = await sandbox.terminal({
       processId,
@@ -206,18 +212,32 @@ class ProjectVm {
     };
   }
   pty = {
+    // Preparing a server needs a process, not a terminal WebSocket. Existing
+    // named processes are reused, including after a memory-preserving wake.
+    ensure: async (options: PtyOptions) => {
+      await this.namedTerminal(options, true);
+    },
     input: async (slug: string): Promise<PtySession> => {
-      const { process } = await this.namedTerminal({
-        slug,
-        exec: slug === "dev" ? undefined : "cd /workspace && exec bash -l",
-      }, true);
+      const { process } = await this.namedTerminal(
+        {
+          slug,
+          exec: slug === "dev" ? undefined : "cd /workspace && exec bash -l",
+        },
+        true,
+      );
       // HTTP input is acknowledged before returning; it does not replace the
       // output WebSocket or close a socket with keystrokes still queued.
       return {
         detach: () => {},
         write: (data) => process.write(data, { timeoutMs: 10000 }),
-        resize: ({ cols, rows }) => process.resize(cols, rows, { timeoutMs: 10000 }),
-        signal: (signal) => process.kill(signal === "sigint" ? "SIGINT" : "SIGKILL", { timeoutMs: 10000 }).then(() => {}),
+        resize: ({ cols, rows }) =>
+          process.resize(cols, rows, { timeoutMs: 10000 }),
+        signal: (signal) =>
+          process
+            .kill(signal === "sigint" ? "SIGINT" : "SIGKILL", {
+              timeoutMs: 10000,
+            })
+            .then(() => {}),
       };
     },
     open: (options: PtyOptions) => this.session(options, true),
@@ -283,8 +303,7 @@ export async function deleteRuntime(projectId: string) {
   );
   if (!rows[0]) return; // An unmigrated legacy VM stays archived.
   await runtime().sandboxes.delete(rows[0].sandbox_id);
-  await database().query(
-    "delete from runtime_bindings where project_id=$1",
-    [projectId],
-  );
+  await database().query("delete from runtime_bindings where project_id=$1", [
+    projectId,
+  ]);
 }
