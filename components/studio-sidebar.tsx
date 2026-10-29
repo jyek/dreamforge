@@ -78,7 +78,7 @@ export function StudioSidebar({
   }, [role, creditBalanceMicros]);
   const credit = creditBalanceMicros ?? fetchedCredit;
   const displayedCredit = credit;
-  const creditLabel = "Credit left:";
+  const creditLabel = "Credits left:";
   const account = (
     <>
       <span className="df-studio-avatar" aria-hidden="true">
