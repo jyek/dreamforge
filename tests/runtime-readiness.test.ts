@@ -90,3 +90,18 @@ test("a wake that could not restore memory recovers the server", async () => {
   );
   assert.deepEqual(calls, ["wake", "server"]);
 });
+
+test("an expired workspace disk is a permanent blocker, not a slow wake", () => {
+  const failure = runtimeFailure({
+    code: "not_resumable",
+    message: "private provider diagnostics",
+  });
+  assert.equal(failure.status, 409);
+  assert.equal(failure.body.state, "blocked");
+  assert.equal(failure.body.ready, false);
+  assert.match(failure.body.error, /saved backup/);
+  assert.doesNotMatch(
+    failure.body.error,
+    /try again|preserved|private provider/,
+  );
+});

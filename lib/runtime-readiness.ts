@@ -74,6 +74,16 @@ export async function previewResponding(
 
 export function runtimeFailure(error: unknown) {
   const failure = error as { code?: string; message?: string } | null;
+  if (failure?.code === "not_resumable")
+    return {
+      status: 409,
+      body: {
+        state: "blocked",
+        ready: false,
+        error:
+          "Project hosting no longer has this workspace’s disk. Restore this project from a saved backup before opening its preview.",
+      },
+    };
   if (failure?.code === "WORKSPACE_STOPPING")
     return {
       status: 503,
