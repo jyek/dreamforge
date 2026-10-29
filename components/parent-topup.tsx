@@ -6,7 +6,6 @@ import {
   formatCredit,
   formatCreditBalance,
 } from "@/lib/billing";
-import { TOPUP_PACKAGES } from "@/lib/topup-packages";
 import { notifyBalanceChanged } from "@/lib/balance-refresh";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
@@ -16,23 +15,18 @@ export function ParentTopup({
   paid,
   sessionId,
   sandbox = false,
-  prepaid = false,
 }: {
   token: string;
   enabled: boolean;
   paid: boolean;
   sessionId?: string;
   sandbox?: boolean;
-  prepaid?: boolean;
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState("");
   const [credit, setCredit] = useState<{
     creditAddedMicros?: number | null;
     availableCreditMicros?: number;
-    prepaid?: boolean;
-    tokens: number;
-    remaining: number;
   } | null>(null);
   const [checking, setChecking] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -61,9 +55,6 @@ export function ParentTopup({
         const data = await r.json();
         if (r.ok && data.credited && !stopped) {
           setCredit({
-            tokens: data.tokens,
-            remaining: data.remaining,
-            prepaid: data.prepaid,
             creditAddedMicros: data.creditAddedMicros,
             availableCreditMicros: data.availableCreditMicros,
           });
@@ -117,13 +108,11 @@ export function ParentTopup({
       <header className="df-header">
         <DreamForgeBrand />
       </header>
-      <section className={`df-pay ${prepaid ? "df-pay--prepaid" : ""}`}>
+      <section className="df-pay df-pay--prepaid">
         <p className="df-eyebrow">For parents & guardians</p>
         <h1 className="df-title">Fuel their next big idea.</h1>
         <p className="df-muted">
-          {prepaid
-            ? "Add credit so your child can keep creating with AI in DreamForge."
-            : "Add a token allowance to your child’s DreamForge account."}
+          Add credit so your child can keep creating with AI in DreamForge.
         </p>
         {(sandbox || paid) && (
           <div className="df-payment-notices">
@@ -143,20 +132,14 @@ export function ParentTopup({
                 {credit !== null ? (
                   <>
                     <strong>
-                      {credit.prepaid
-                        ? credit.creditAddedMicros == null
-                          ? "This earlier token purchase was already credited. Your current prepaid balance is shown below."
-                          : `${formatCredit(credit.creditAddedMicros)} added to the account.`
-                        : `${credit.tokens.toLocaleString()} tokens added to the account.`}
+                      {credit.creditAddedMicros == null
+                        ? "This earlier purchase was already credited. Your current balance is shown below."
+                        : `${formatCredit(credit.creditAddedMicros)} added to the account.`}
                     </strong>
                     <p>
                       New available balance:{" "}
                       <strong>
-                        {credit.prepaid
-                          ? formatCreditBalance(
-                              credit.availableCreditMicros || 0,
-                            )
-                          : `${credit.remaining.toLocaleString()} tokens`}
+                        {formatCreditBalance(credit.availableCreditMicros || 0)}
                       </strong>
                       .
                     </p>
@@ -168,7 +151,7 @@ export function ParentTopup({
                   <>
                     <p>
                       {paymentError ||
-                        "Confirming your payment and adding tokens…"}
+                        "Confirming your payment and adding credit…"}
                     </p>
                     {checking ? (
                       <InlineSpinner className="size-4" />
@@ -186,11 +169,7 @@ export function ParentTopup({
             )}
           </div>
         )}
-        {!enabled && (
-          <p className="df-notice">
-            These are proposed pilot packages. Payments are not enabled yet.
-          </p>
-        )}
+        {!enabled && <p className="df-notice">Payments are not enabled yet.</p>}
         {error && (
           <p className="df-error" role="alert">
             {error}
@@ -198,16 +177,10 @@ export function ParentTopup({
         )}
         {!(paid && credit === null) && (
           <div className="df-stats">
-            {(prepaid
-              ? CREDIT_TOPUPS.map((p) => ({ ...p, tokens: 0 }))
-              : TOPUP_PACKAGES
-            ).map((p) => (
+            {CREDIT_TOPUPS.map((p) => (
               <article key={p.id} className="df-card df-stat">
                 <span className="df-pill">One-time top up</span>
                 <strong>S${p.amount / 100}</strong>
-                {!prepaid && (
-                  <p>{(p.tokens / 1000000).toLocaleString()} million tokens</p>
-                )}
                 <button
                   className="df-button"
                   disabled={!enabled || !!busy}
@@ -221,20 +194,16 @@ export function ParentTopup({
           </div>
         )}
         <div className="df-card">
-          <h2 style={{ marginTop: 0 }}>
-            {prepaid ? "How your balance is used" : "What counts as a token?"}
-          </h2>
+          <h2 style={{ marginTop: 0 }}>How your balance is used</h2>
           <p className="df-muted">
-            {prepaid
-              ? "Your child uses credit when they ask AI to help build or change a project. The cost depends on the AI they choose and how much work it does."
-              : "Tokens measure how much the AI reads and writes while helping your child. Longer conversations and bigger projects can use more tokens."}
+            Your child uses credit when they ask AI to help build or change a
+            project. The cost depends on the AI they choose and how much work it
+            does.
           </p>
-          {prepaid && (
-            <p className="df-muted">
-              We set aside some credit while the AI works. When it finishes,
-              only the amount used is charged. The rest stays available.
-            </p>
-          )}
+          <p className="df-muted">
+            We set aside some credit while the AI works. When it finishes, only
+            the amount used is charged. The rest stays available.
+          </p>
           <p className="df-muted">
             You pay securely through Stripe. Credit is added after payment is
             confirmed. This payment link lets you top up without giving access

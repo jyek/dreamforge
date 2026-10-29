@@ -91,8 +91,8 @@ test("provider timeout abort clears progress and ends with a visible error", asy
   assert.equal(chunks.at(-1).type, "error");
 });
 test("quota explanation survives screening instead of becoming a generic failure", async () => {
-  const message =
-    "You need more tokens to finish this request. Please top up your token balance, then try again.";
+  const { CREDIT_LIMIT_MESSAGE: message } =
+    await import("../lib/trusted-errors");
   const source = new ReadableStream({
     start(c) {
       c.enqueue({ type: "error", errorText: message });
@@ -231,8 +231,8 @@ test("a blocked later segment never streams and ends with a visible error", asyn
 });
 
 test("trusted quota errors survive the stream and arbitrary provider text stays private", async () => {
-  const { TOKEN_LIMIT_MESSAGE } = await import("../lib/trusted-errors");
-  for (const message of [TOKEN_LIMIT_MESSAGE, "untrusted provider secret"]) {
+  const { CREDIT_LIMIT_MESSAGE } = await import("../lib/trusted-errors");
+  for (const message of [CREDIT_LIMIT_MESSAGE, "untrusted provider secret"]) {
     const source = new ReadableStream({
       start(c) {
         c.enqueue({ type: "error", errorText: message });
@@ -252,7 +252,7 @@ test("trusted quota errors survive the stream and arbitrary provider text stays 
     }
     assert.equal(
       chunks.at(-1).errorText,
-      message === TOKEN_LIMIT_MESSAGE
+      message === CREDIT_LIMIT_MESSAGE
         ? message
         : "This request could not finish. Please try again.",
     );

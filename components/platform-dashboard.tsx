@@ -66,7 +66,6 @@ type Data = {
     display_name?: string;
   }[];
   paymentsEnabled: boolean;
-  prepaid?: boolean;
   projectUsage: ProjectSpending[];
 };
 async function api(url: string, body?: unknown) {
@@ -172,14 +171,6 @@ export function PlatformDashboard({
     }
   }
   const teacher = (data?.user || initialUser)?.role === "teacher";
-  const remaining = data?.wallet
-    ? Math.max(
-        0,
-        Number(data.wallet.token_limit) -
-          Number(data.wallet.used_tokens) -
-          Number(data.wallet.reserved_tokens),
-      )
-    : 0;
   const projectSpend = (data?.projectUsage || []).reduce(
     (sum, p) =>
       sum +
@@ -191,11 +182,8 @@ export function PlatformDashboard({
     <PlatformDashboardLayout
       teacher={!!teacher}
       accountLoading={!data && !initialUser}
-      remainingTokens={
-        !teacher && data?.wallet && !data.prepaid ? remaining : undefined
-      }
       creditBalanceMicros={
-        !teacher && data?.wallet && data.prepaid
+        !teacher && data?.wallet
           ? availableCreditMicros(data.wallet)
           : undefined
       }
@@ -302,32 +290,21 @@ export function PlatformDashboard({
               {teacher && (data.unconfirmed || []).length > 0 && (
                 <section
                   className="df-notice df-token-hold"
-                  aria-label={
-                    data.prepaid
-                      ? "Credit awaiting confirmation"
-                      : "Tokens awaiting confirmation"
-                  }
+                  aria-label="Credit awaiting confirmation"
                 >
                   <div className="df-inline">
                     <Clock3 size={18} aria-hidden="true" />
-                    <strong>
-                      {data.prepaid
-                        ? "Credit waiting for confirmation"
-                        : "Tokens waiting for confirmation"}
-                    </strong>
+                    <strong>Credit waiting for confirmation</strong>
                   </div>
                   <p>
                     These AI requests ended without reporting their token usage.{" "}
                     <strong>
-                      {data.prepaid
-                        ? formatCredit(
-                            data.unconfirmed.reduce(
-                              (n, r) =>
-                                n + Number(r.credit_reserved_micros || 0),
-                              0,
-                            ),
-                          )
-                        : `${data.unconfirmed.reduce((n, r) => n + Number(r.reserved_tokens), 0).toLocaleString()} tokens`}
+                      {formatCredit(
+                        data.unconfirmed.reduce(
+                          (n, r) => n + Number(r.credit_reserved_micros || 0),
+                          0,
+                        ),
+                      )}
                     </strong>{" "}
                     are temporarily set aside and have not been charged.
                   </p>
@@ -339,9 +316,8 @@ export function PlatformDashboard({
                     >
                       <span>
                         {r.display_name} ·{" "}
-                        {data.prepaid
-                          ? `${formatCredit(Number(r.credit_reserved_micros || 0))} held`
-                          : `${Number(r.reserved_tokens).toLocaleString()} tokens held`}
+                        {formatCredit(Number(r.credit_reserved_micros || 0))}{" "}
+                        held
                       </span>
                       <button
                         disabled={busy}
@@ -622,10 +598,8 @@ export function PlatformDashboard({
                   title="More room for big ideas"
                   description={
                     data.paymentsEnabled
-                      ? data.prepaid
-                        ? "Ask a parent to add prepaid credit. One balance works with Basic and Advanced models."
-                        : "Ask a parent to add tokens. Create a private link, then copy it and share it with them."
-                      : "Parent top-ups aren’t available yet. You can keep building with any tokens you have left."
+                      ? "Ask a parent to add credit. Create a private link, then copy it and share it with them."
+                      : "Parent top-ups aren’t available yet. You can keep building with any credit you have left."
                   }
                 />
               </div>

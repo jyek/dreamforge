@@ -167,7 +167,7 @@ export function ModelSelector() {
                     role="menuitemradio"
                     aria-checked={selected === model.id}
                     disabled={model.available === false}
-                    title={`${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Available after prepaid billing launch" : ""}`}
+                    title={`${isModelChoice(model.id) && modelTier(model.id) === "advanced" ? "Advanced" : "Basic"}${model.available === false ? " · Unavailable" : ""}`}
                     onClick={() => {
                       if (isModelChoice(model.id)) setSelected(model.id);
                       setOpen(false);

@@ -1,8 +1,4 @@
-import {
-  prepaidBillingEnabled,
-  availableCreditMicros,
-  creditWalletSelect,
-} from "@/lib/billing";
+import { availableCreditMicros, creditWalletSelect } from "@/lib/billing";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
 export async function GET() {
@@ -20,12 +16,8 @@ export async function GET() {
   return Response.json(
     {
       remaining: Number(rows[0]?.remaining || 0),
-      ...(prepaidBillingEnabled()
-        ? {
-            prepaid: true,
-            availableCreditMicros: availableCreditMicros(rows[0]),
-          }
-        : {}),
+      prepaid: true,
+      availableCreditMicros: availableCreditMicros(rows[0]),
     },
     { headers: { "Cache-Control": "no-store" } },
   );

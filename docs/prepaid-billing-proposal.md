@@ -113,19 +113,9 @@ account-by-account conversion totals against a dry-run audit before applying.
 Drain active runs and resolve holds through the supported review/recovery flow;
 do not discard unknown usage simply to force the migration to pass.
 
-Deploy the compatible application with `DREAMFORGE_PREPAID_BILLING_ENABLED=false`.
-The PR preview and its live Basic journey can use the existing database without
-activating proposed billing. Review the rate card and conversion, test on a
-separate database, block new generation and checkout traffic throughout the cutover window, apply the migration, then enable the
-flag. Old token-package checkouts that finish after conversion receive their
-promised tokens' conversion value. The unique Stripe session ID prevents old
-receipts from being applied twice. New checkouts then sell monetary credit only.
+Dollar billing is the only supported mode. Apply the wallet migration before deploying this application; there is no environment switch back to token allowances. Existing token counters remain for usage history, never as spendable funds. Old token-package checkouts that finish after conversion receive their promised tokens' conversion value in the dollar wallet. The unique Stripe session ID prevents old receipts from being applied twice. New checkouts sell S$10, S$25, S$50 or S$100 credit only.
 
-Do not turn the flag back off or roll back to a token-only build after credit
-spending starts: that would expose the old allowance again. Revert through a
-compatible build while preserving the monetary ledger. Future changes should
-separate the schema readiness switch from feature availability if independent
-model disabling is needed.
+The shared Supabase database was converted on 28 October 2026. The 29 October audit confirmed all six existing accounts have dollar wallets, preserved previously credited payments and did not reapply the conversion. New accounts receive S$10 by database default. Preserve the monetary ledger when deploying or reverting compatible builds; never reset a converted account from its historical token counters.
 
 ## Verification and follow-ups
 
@@ -159,9 +149,8 @@ backup. Three stale uncertain usage holds and one orphaned E2E reservation were
 released with a private audit receipt; no coding run was active. Existing token
 balances were converted at the proposed S$5 per million rate. The local instance
 now enables prepaid billing and Stripe sandbox checkout with S$10/25/50/100 packs.
-No code has been merged or deployed to production by this change. The deployed
-production webhook still needs the new code and prepaid flag before it can deliver
-new cash packages independently of the local payment-return confirmation.
+The dollar-only application delivers cash packages through both the verified
+Stripe webhook and payment-return confirmation. No billing feature flag is required.
 
 A separate development database can be used with NODE_ENV=development,
 DREAMFORGE_LOCAL_DATABASE=true and a loopback DATABASE_URL; only that combination

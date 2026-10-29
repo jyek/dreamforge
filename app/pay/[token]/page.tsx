@@ -1,4 +1,3 @@
-import { prepaidBillingEnabled } from "@/lib/billing";
 import { paymentMode } from "@/lib/payment-mode";
 import { notFound } from "next/navigation";
 import { database } from "@/lib/database";
@@ -26,7 +25,6 @@ export default async function Pay({
       paid={(await searchParams).paid === "1"}
       sessionId={(await searchParams).session_id}
       sandbox={paymentMode() === "sandbox"}
-      prepaid={prepaidBillingEnabled()}
     />
   );
 }

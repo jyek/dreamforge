@@ -1,10 +1,5 @@
 import { groupProjectSpending } from "./project-spending";
-import {
-  prepaidBillingEnabled,
-  creditWalletSelect,
-  USD_TO_SGD,
-  MARKUP_PERCENT,
-} from "./billing";
+import { creditWalletSelect, USD_TO_SGD, MARKUP_PERCENT } from "./billing";
 import {
   classroomTeacherSQL,
   teacherStudentAccessSQL,
@@ -37,7 +32,7 @@ export async function loadDashboardData(user: Profile, section?: string) {
       unconfirmed: [],
       projectUsage: [],
       paymentsEnabled: paymentsEnabled(),
-      prepaid: prepaidBillingEnabled(),
+      prepaid: true,
     };
   }
   const { rows: projects } = await db.query(
@@ -61,20 +56,20 @@ export async function loadDashboardData(user: Profile, section?: string) {
   const { rows: unconfirmed } =
     user.role === "teacher"
       ? await db.query(
-          `select r.id,r.reserved_tokens,${prepaidBillingEnabled() ? "r.credit_reserved_micros," : ""}pr.display_name from usage_runs r join profiles pr on pr.id=r.child_id where r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")}`,
+          `select r.id,r.reserved_tokens,r.credit_reserved_micros,pr.display_name from usage_runs r join profiles pr on pr.id=r.child_id where r.state='uncertain' and ${teacherStudentAccessSQL("r.child_id")}`,
           [user.id],
         )
       : await db.query(
-          `select id,reserved_tokens${prepaidBillingEnabled() ? ",credit_reserved_micros" : ""} from usage_runs where child_id=$1 and state='uncertain'`,
+          `select id,reserved_tokens,credit_reserved_micros from usage_runs where child_id=$1 and state='uncertain'`,
           [user.id],
         );
   const { rows: projectModelUsage } =
     user.role === "child"
       ? await db.query(
           `select p.vm_id,p.metadata->>'name' as project_name,coalesce(r.model,'') as model,
-    ${prepaidBillingEnabled() ? "coalesce(sum(r.credit_cost_micros) filter(where r.state='settled'),0)" : "0"}::text as credit_cost_micros,
-    ceil(coalesce(sum(r.estimated_cost_usd) filter(where r.state='settled' ${prepaidBillingEnabled() ? "and r.credit_cost_micros is null" : ""}),0)*${USD_TO_SGD * (1 + MARKUP_PERCENT / 100) * 1000000})::text as estimated_credit_micros,
-    count(r.id) filter(where r.state='settled' ${prepaidBillingEnabled() ? "and r.credit_cost_micros is null" : ""})::text as legacy_runs,
+    coalesce(sum(r.credit_cost_micros) filter(where r.state='settled'),0)::text as credit_cost_micros,
+    ceil(coalesce(sum(r.estimated_cost_usd) filter(where r.state='settled' and r.credit_cost_micros is null),0)*${USD_TO_SGD * (1 + MARKUP_PERCENT / 100) * 1000000})::text as estimated_credit_micros,
+    count(r.id) filter(where r.state='settled' and r.credit_cost_micros is null)::text as legacy_runs,
     coalesce(sum(case when r.state='settled' then coalesce(r.input_tokens,0)+coalesce(r.output_tokens,0) else 0 end),0)::text as used_tokens,
     coalesce(sum(case when r.state='settled' then r.input_tokens else 0 end),0)::text as input_tokens,
     coalesce(sum(case when r.state='settled' then r.output_tokens else 0 end),0)::text as output_tokens
@@ -92,6 +87,6 @@ export async function loadDashboardData(user: Profile, section?: string) {
     unconfirmed,
     wallet: wallet[0] || null,
     paymentsEnabled: paymentsEnabled(),
-    prepaid: prepaidBillingEnabled(),
+    prepaid: true,
   };
 }

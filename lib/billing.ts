@@ -1,6 +1,4 @@
 /** Proposed retail SGD rates, versioned independently of provider cost estimates. */
-export const prepaidBillingEnabled = () =>
-  process.env.DREAMFORGE_PREPAID_BILLING_ENABLED === "true";
 export const BILLING_VERSION = "sgd-2026-10-cost-plus-50-v1";
 // Explicit planning conversion, frozen with this price version; not a live FX quote.
 const FX_NUMERATOR = BigInt(135),
@@ -203,17 +201,10 @@ export function availableCreditMicros(w: CreditWallet | null | undefined) {
       Number(w?.credit_reserved_micros || 0),
   );
 }
-// Same conversion used by the reviewed wallet migration and legacy top-ups.
-// Display-only until cutover; it does not grant funds or alter usage accounting.
-export function legacyCreditEquivalentMicros(remainingTokens: number) {
-  return Math.max(0, remainingTokens) * 5;
-}
 export const formatCredit = (micros: number) =>
   `S$${(micros / 1000000).toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 export const formatCreditBalance = (micros: number) =>
   `S$${(micros / 1000000).toLocaleString("en-SG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-// This projection keeps the review deployment compatible with the existing DB.
+// Dollar wallet columns are required for every deployment.
 export const creditWalletSelect = (prefix = "") =>
-  prepaidBillingEnabled()
-    ? `${prefix}credit_limit_micros,${prefix}credit_used_micros,${prefix}credit_reserved_micros`
-    : "null::bigint as credit_limit_micros,null::bigint as credit_used_micros,null::bigint as credit_reserved_micros";
+  `${prefix}credit_limit_micros,${prefix}credit_used_micros,${prefix}credit_reserved_micros`;
