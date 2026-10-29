@@ -17,20 +17,18 @@ const migration = readFileSync(
 const teacher = "00000000-0000-4000-9000-000000000001",
   child = "00000000-0000-4000-9000-000000000002",
   classId = "00000000-0000-4000-9000-000000000003";
-async function fixture(
-  run: (client: pg.PoolClient, uri: string) => Promise<void>,
-) {
+async function fixture(run: (client: pg.Client, uri: string) => Promise<void>) {
   const name = `schema_${randomUUID().replaceAll("-", "")}`;
   const url = new URL(process.env.TEST_DATABASE_URL!);
-  const admin = new pg.Pool({ connectionString: url.toString() });
+  const admin = new pg.Client({ connectionString: url.toString() });
+  await admin.connect();
   await admin.query(`create database "${name}"`);
   url.pathname = `/${name}`;
-  const pool = new pg.Pool({
+  const client = new pg.Client({
     connectionString: url.toString(),
     options: APPLICATION_DATABASE_OPTIONS,
-    max: 1,
   });
-  const client = await pool.connect();
+  await client.connect();
   try {
     await client.query(
       "create schema auth;create table auth.users(id uuid primary key)",
@@ -94,8 +92,8 @@ async function fixture(
     await run(client, url.toString());
   } finally {
     await client.query("rollback").catch(() => {});
-    client.release();
-    await pool.end();
+    // Await the socket closing before DROP DATABASE can terminate it.
+    await client.end();
     try {
       await admin.query(`drop database "${name}" with (force)`);
     } finally {
@@ -265,7 +263,7 @@ test("native backup connects to the requested database and restores data with pr
     const destination = new URL(uri);
     destination.pathname = "/restore_" + randomUUID().replaceAll("-", "");
     const name = destination.pathname.slice(1);
-    let recovery: pg.Pool | undefined;
+    let recovery: pg.Client | undefined;
     let created = false;
     try {
       const env = {
@@ -290,11 +288,11 @@ test("native backup connects to the requested database and restores data with pr
       );
       await client.query(`create database "${name}"`);
       created = true;
-      recovery = new pg.Pool({
+      recovery = new pg.Client({
         connectionString: destination.toString(),
         options: APPLICATION_DATABASE_OPTIONS,
-        max: 1,
       });
+      await recovery.connect();
       await recovery.query(
         "create schema auth;create table auth.users(id uuid primary key)",
       );
