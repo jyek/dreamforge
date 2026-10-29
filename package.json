@@ -16,7 +16,7 @@
     "test:e2e:setup": "tsx scripts/provision-e2e.mts",
     "test:e2e:prompting": "node scripts/e2e-prompting.mjs",
     "test:safety-execution": "npm run test:safety-unit && npm run test:database",
-    "test:preview-browser": "tsx --test tests/preview-browser.test.ts && node --import tsx tests/isolated-next-preview.mjs",
+    "test:preview-browser": "node scripts/run-test-suite.mjs browser && node --import tsx tests/isolated-next-preview.mjs",
     "runtime:prepare": "tsx scripts/prepare-project-runtimes.mts",
     "test:safety-unit": "tsx --test tests/preview-access.test.ts tests/preview-asset-cache.test.ts tests/runtime-preview.test.ts tests/project-readiness.test.ts tests/managed-chat.test.ts tests/child-policy.test.ts tests/project-repository.test.ts tests/safety-mode.test.ts tests/builtin-moderation.test.ts tests/moderation-decision.test.ts tests/provider-privacy.test.ts tests/runtime-snapshot-name.test.ts tests/runtime-resume.test.ts tests/runtime-server.test.ts tests/runtime-readiness.test.ts tests/terminal-input.test.ts tests/prepaid-billing.test.ts tests/project-spending.test.ts tests/sidebar-loading.test.tsx",
     "test:database": "python3 tests/run-database-tests.py",
@@ -25,7 +25,8 @@
     "test:payments-ui": "node tests/payment-ui.mjs",
     "runtime:check-starter": "node --env-file-if-exists=.env.local scripts/check-runtime-starter.mjs",
     "test:e2e:startup": "node scripts/e2e-startup.mjs",
-    "test:admin-ui": "node tests/admin-ui.mjs"
+    "test:admin-ui": "node tests/admin-ui.mjs",
+    "test:e2e:payments": "node scripts/e2e-payments.mjs"
   },
   "prettier": {
     "plugins": [

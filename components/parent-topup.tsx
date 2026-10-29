@@ -1,6 +1,6 @@
 "use client";
 import { InlineSpinner } from "./dream-loading";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CREDIT_TOPUPS,
   formatCredit,
@@ -24,6 +24,7 @@ export function ParentTopup({
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState("");
+  const checkoutAttempt = useRef<{ package: string; id: string } | null>(null);
   const [credit, setCredit] = useState<{
     creditAddedMicros?: number | null;
     availableCreditMicros?: number;
@@ -89,11 +90,18 @@ export function ParentTopup({
   async function pay(id: string) {
     setError("");
     setBusy(id);
+    if (checkoutAttempt.current?.package !== id)
+      checkoutAttempt.current = { package: id, id: crypto.randomUUID() };
     try {
       const r = await fetch("/api/platform/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, package: id }),
+        body: JSON.stringify({
+          token,
+          package: id,
+          attemptId: checkoutAttempt.current.id,
+        }),
+        signal: AbortSignal.timeout(20000),
       });
       const data = await r.json();
       if (!r.ok) throw Error(data.error);

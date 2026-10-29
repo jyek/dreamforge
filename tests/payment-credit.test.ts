@@ -1,3 +1,4 @@
+// @suite database
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import pg from "pg";

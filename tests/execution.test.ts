@@ -1,3 +1,4 @@
+// @suite database
 import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
 import assert from "node:assert/strict";
 import { test, after } from "node:test";

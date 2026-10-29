@@ -276,6 +276,35 @@ try {
   console.log(
     "PASS unconfirmed payment remains pending; failed confirmation can be retried without another payment",
   );
+  const attempts = [];
+  await cash.route("**/api/platform/checkout", (route) => {
+    attempts.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 503,
+      json: { error: "Payment service is unavailable. Please try again." },
+    });
+  });
+  for (const amount of ["S$10", "S$10", "S$25"]) {
+    const response = paid.waitForResponse("**/api/platform/checkout");
+    await paid
+      .locator("article")
+      .filter({ has: paid.getByText(amount, { exact: true }) })
+      .getByRole("button", { name: "Top up", exact: true })
+      .click();
+    await response;
+    await paid
+      .getByRole("alert")
+      .getByText("Payment service is unavailable. Please try again.", {
+        exact: true,
+      })
+      .waitFor();
+  }
+  assert.match(attempts[0].attemptId, /^[a-f0-9-]{36}$/);
+  assert.equal(attempts[0].attemptId, attempts[1].attemptId);
+  assert.notEqual(attempts[0].attemptId, attempts[2].attemptId);
+  console.log(
+    "PASS checkout failure offers retry, reuses its attempt ID, and gives a different package a new attempt",
+  );
   const modelPage = await cash.newPage();
   const choices = [
     ["haiku", "Claude Haiku 5.5"],

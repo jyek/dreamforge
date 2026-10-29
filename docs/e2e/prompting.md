@@ -2,6 +2,12 @@
 
 Run commands from the repository root.
 
+`npm run test:unit` recursively discovers all `tests/**/*.test.{ts,tsx,mts,js,mjs,cts,cjs}` files. Tests default to the unit suite; `// @suite database` and `// @suite browser` explicitly route integration tests to their isolated runners. Fixture processes strip deployment credentials, preload hooks and feature flags. Database SQL tests must use the fixture connection, never `dotenv/config`.
+
+See [payment verification](./payments.md) for checkout failure handling, automatic payment/accounting checks and the real sandbox top-up-to-prompt journey.
+
+The current live target is `https://dreamforge2.vercel.app`. The retired `dreamforge.vercel.app` alias returns Vercel `DEPLOYMENT_NOT_FOUND`; an explicit `E2E_BASE_URL` always wins. The runner does not silently switch hosts after a failure.
+
 For the startup path without model calls, run `E2E_BROWSER_EXECUTABLE="/path/to/chrome" npm run test:e2e:startup` with the same dedicated account settings. Override `E2E_BASE_URL` to test a local production build or a preview deployment. This creates one marked disposable project, holds preview readiness at `starting`, checks that Code loads actual source and the prompt input accepts text, then releases readiness and checks the preview document. It records creation/source timing and a screenshot in `.e2e-results/startup/`, and verifies project deletion in `finally`. A failed cleanup retains `project.json` for recovery. No prompt is submitted and no model tokens are spent.
 
 ```bash
@@ -82,3 +88,8 @@ E2E_BROWSER_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Ch
 ```
 
 Browser checks run before cleanup; afterward the report's project URL is historical. Do not run a separate browser check after the project has already been deleted.
+
+
+## Hardening verification on 29 October 2026
+
+The full browser journey passed against `https://dreamforge2.vercel.app` after correcting the stale local target. Project creation took 7.630s. The read-only reply delivered first feedback in 665ms and first model text in 2.608s; completion took 2.922s. The code edit delivered first feedback in 548ms, first model text in 100.307s and completion in 101.248s. The long gap between feedback and text remains a latency concern despite functional success. Browser counter interactions, refresh feedback, a typed follow-up and saved history all passed. The disposable project and one snapshot were removed. This verifies the deployed prompting journey, not the new local checkout changes or a real Stripe sandbox payment.

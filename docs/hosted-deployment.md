@@ -2,7 +2,7 @@
 
 # Historical hosted deployment
 
-The current deployment is direct Vercel hosting at https://dreamforge.vercel.app with Supabase storage. See [vercel-deployment.md](./vercel-deployment.md). The Freestyle application backend and Sites proxy described below are the previous deployment.
+The current deployment is direct Vercel hosting at https://dreamforge2.vercel.app with Supabase storage. The retired `dreamforge.vercel.app` alias returns `DEPLOYMENT_NOT_FOUND`. See [the historical Vercel deployment notes](./history/vercel-deployment.md). The Freestyle application backend and Sites proxy described below are the previous deployment.
 
 The existing `dreamforge-studio-demo.jyek.chatgpt.site` URL serves the actual Adorable Next.js app through a streaming Sites Worker proxy. The Worker lives at `/Users/justinyek/Documents/Game/sites/dreamforge-studio-demo/worker/index.js`. It forwards HTML, assets, API requests, AI response streams and terminal streams to the backend; there is no substitute frontend or browser-local chat simulation.
 
