@@ -533,7 +533,7 @@ export function PlatformDashboard({
                                   {Number(model.used_tokens).toLocaleString()}
                                 </td>
                                 <td>
-                                  {formatCredit(
+                                  {formatCreditBalance(
                                     Number(model.credit_cost_micros || 0) +
                                       Number(
                                         model.estimated_credit_micros || 0,
@@ -556,7 +556,7 @@ export function PlatformDashboard({
                                 {Number(project.used_tokens).toLocaleString()}
                               </td>
                               <td>
-                                {formatCredit(
+                                {formatCreditBalance(
                                   Number(project.credit_cost_micros || 0) +
                                     Number(
                                       project.estimated_credit_micros || 0,
