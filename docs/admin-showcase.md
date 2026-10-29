@@ -1,12 +1,16 @@
 # Admin showcase
 
-Visit `/admin` and sign in with an existing DreamForge account. A separate, server-owned `dreamforge.platform_admins` membership is required; being a teacher is not sufficient. Neither signup nor profile APIs can grant membership. Anonymous users and non-admins cannot call the admin APIs. Admin writes require a same-origin JSON request, and all responses disable caching.
+Visit `/admin` and sign in with an existing DreamForge account. A separate, server-owned `dreamforge.platform_admins` membership is required; being a teacher is not sufficient. Signup and profile APIs cannot grant membership. Admin writes require a same-origin JSON request, and responses disable caching.
 
-The panel lists projects and owners, previews app pages without giving access to private conversations, and supports showing, hiding and ordering examples. Changes are recorded in `dreamforge.admin_audit_log`.
+The panel lists projects and owners, previews app pages without opening private conversations, and supports showing, hiding and ordering examples. Changes are recorded in `dreamforge.admin_audit_log`.
 
-Selecting a personal project creates a fixed, read-only copy with a fresh empty conversation. The original remains private and editable. Source environments, hidden configuration/cache directories, Git history and conversations are excluded. Copying refuses active/unrecovered coding runs and captures files under the same project lock used by coding. A failed copy deletes its new VM/snapshot and never features the original. Later original edits do not automatically update the example. Hiding an example is reversible and does not delete files. Existing copies remain manageable if their source is later removed.
+Gallery visibility is a separate `projects.is_showcased` tag. Personal projects keep their owner, editing access and private conversations. Selecting one does not create a copy or turn it into an `is_example` project. Gallery links open `/showcase/<projectId>`, which serves only the live app preview anonymously. Conversations, source-file APIs, runtime control and the original editor still require their existing permissions. Edits to a showcased project update its public preview.
 
-Apply `202610290000_admin_showcase.sql` before deployment. Grant/revoke admin membership only from a trusted server database connection. For example, after verifying the intended account:
+Public asset capabilities use a separate signature namespace. Hiding a project revokes new public HTML and asset requests, even if an asset capability has not expired. Removing a capability’s public prefix cannot convert it into a private workspace capability.
+
+Apply the admin and live-showcase migrations before deployment. The live-showcase migration preserves the selection/order and links previously copied personal examples to their originals. Old copies are retained but no longer appear as duplicate gallery entries. The production administrator selected by the owner is `jyek`; its existing role and password are unchanged.
+
+Grant/revoke admin membership only from a trusted server database connection, after verifying the intended account:
 
 ```sql
 insert into dreamforge.platform_admins(profile_id)
@@ -14,6 +18,4 @@ select id from dreamforge.profiles where username = 'verified_username'
 on conflict do nothing;
 ```
 
-The production administrator selected by the owner is `jyek`. Its teacher role and existing password are unchanged. The existing Space Explorer demo is linked to its original for management; no duplicate copy is created on first use.
-
-Database tests cover admin/non-admin access, CSRF, browser-role denial, reversible selection, original ownership/chat preservation, copy reuse, ordering validation, orphaned copies and audit records. Browser fixtures exercise the real panel and login components without changing production accounts or examples.
+Database tests cover admin/non-admin access, CSRF, browser-role denial, reversible public tagging without changing ownership or chat, ordering, audit records and public access revocation. Browser fixtures exercise the real panel and login components without changing production accounts or examples.

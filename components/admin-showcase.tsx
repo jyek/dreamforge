@@ -85,11 +85,7 @@ export function AdminShowcase({
     update(
       { action: p.featured ? "hide" : "feature", projectId: p.id },
       p.id,
-      p.featured
-        ? "Removing this example…"
-        : p.owned && !p.exampleId
-          ? "Creating a separate example copy. This may take a minute…"
-          : "Updating the examples gallery…",
+      p.featured ? "Removing this example…" : "Updating the examples gallery…",
     );
   function move(index: number, direction: number) {
     const next = [...shown];
@@ -129,9 +125,10 @@ export function AdminShowcase({
         <div>
           <h1>Choose what inspires.</h1>
           <p>
-            Pick the projects shown in the examples gallery. Personal projects
-            become separate, read-only copies; their conversations stay private.
-            Later edits to the original are not published automatically.
+            Tag personal projects to show their live preview in the public
+            gallery. They stay editable in the owner’s studio, and conversations
+            stay private. Edits to a showcased project update its public
+            preview.
           </p>
         </div>
       </div>
@@ -236,7 +233,7 @@ export function AdminShowcase({
                     <div className={styles.name}>{p.name}</div>
                     <div className={styles.muted}>
                       {p.owned
-                        ? "Personal project · separate example copy"
+                        ? "Personal project · live preview"
                         : "Example library"}
                     </div>
                     <a
@@ -262,11 +259,7 @@ export function AdminShowcase({
                       ) : p.featured ? (
                         <Eye size={15} />
                       ) : null}
-                      {p.featured
-                        ? "Shown"
-                        : p.owned && !p.exampleId
-                          ? "Create example"
-                          : "Show"}
+                      {p.featured ? "Shown" : "Show"}
                     </button>
                   </td>
                 </tr>

@@ -12,27 +12,39 @@ export function browserPreviewUrl(project: string, requestUrl?: string) {
       : "http://localhost:3000");
   return new URL(previewEntryPath(project), origin).toString();
 }
-function signature(project: string, expires: string) {
+function signature(
+  project: string,
+  expires: string,
+  audience: "workspace" | "showcase" = "workspace",
+) {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) throw Error("Preview signing is not configured.");
   return createHmac("sha256", secret)
-    .update(`dreamforge-assets-v1:${project}:${expires}`)
+    .update(
+      `${audience === "showcase" ? "dreamforge-showcase-assets-v1" : "dreamforge-assets-v1"}:${project}:${expires}`,
+    )
     .digest("base64url");
 }
-export function assetCapability(project: string) {
+export function assetCapability(
+  project: string,
+  audience: "workspace" | "showcase" = "workspace",
+) {
   const expires = String(Math.floor(Date.now() / 60000) * 60000 + 15 * 60000);
-  return `${expires}.${signature(project, expires)}`;
+  return `${audience === "showcase" ? "showcase." : ""}${expires}.${signature(project, expires, audience)}`;
 }
 export function validAssetCapability(project: string, token: string) {
   try {
-    const [expires, sig] = token.split(".");
+    const audience = token.startsWith("showcase.") ? "showcase" : "workspace";
+    const parts = token.split(".");
+    if (parts.length !== (audience === "showcase" ? 3 : 2)) return false;
+    const [expires, sig] = audience === "showcase" ? parts.slice(1) : parts;
     if (
       !/^\d+$/.test(expires) ||
       Number(expires) < Date.now() ||
       Number(expires) > Date.now() + 16 * 60000
     )
       return false;
-    const expected = signature(project, expires);
+    const expected = signature(project, expires, audience);
     return (
       expected.length === sig?.length &&
       timingSafeEqual(Buffer.from(sig), Buffer.from(expected))

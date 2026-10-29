@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Examples() {
   const { rows } = await database().query(
-    "select vm_id,metadata from projects where is_example order by case when metadata->>'exampleOrder' ~ '^[0-9]{1,9}$' then (metadata->>'exampleOrder')::integer end nulls last,updated_at desc",
+    "select vm_id,metadata from projects where is_showcased order by case when metadata->>'exampleOrder' ~ '^[0-9]{1,9}$' then (metadata->>'exampleOrder')::integer end nulls last,updated_at desc",
   );
   return (
     <main className="df-page">
@@ -23,15 +23,14 @@ export default async function Examples() {
         <p className="df-eyebrow">A little inspiration</p>
         <h1 className="df-title">Big ideas start small.</h1>
         <p className="df-muted">
-          Explore these separate demo examples. Your own creations belong in
-          your studio.
+          Explore games, apps and websites made with DreamForge.
         </p>
         <div className="df-projects" style={{ marginTop: 35 }}>
           {rows.map((p, index) => (
-            <Link
+            <a
               className="df-card df-project"
               key={p.vm_id}
-              href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
+              href={`/showcase/${p.vm_id}`}
             >
               <DreamForgeProjectArt variant={index} />
               <h3>{p.metadata.name}</h3>
@@ -39,7 +38,7 @@ export default async function Examples() {
                 {p.metadata.description || "Demo example"}
               </p>
               <footer>Explore ↗</footer>
-            </Link>
+            </a>
           ))}
         </div>
       </div>

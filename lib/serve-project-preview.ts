@@ -12,6 +12,7 @@ export async function serveProjectPreview(
   req: Request,
   projectId: string,
   path: string[] = [],
+  audience: "workspace" | "showcase" = "workspace",
 ) {
   try {
     let preview = await runtimePreview(projectId);
@@ -38,7 +39,12 @@ export async function serveProjectPreview(
     const html = await upstream.text();
     if (html.length > 4000000) throw Error("Preview too large");
     return new Response(
-      rewritePreview(html, projectId, assetCapability(projectId), true),
+      rewritePreview(
+        html,
+        projectId,
+        assetCapability(projectId, audience),
+        true,
+      ),
       {
         status: upstream.status,
         headers: {

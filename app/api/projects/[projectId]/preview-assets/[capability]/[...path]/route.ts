@@ -1,3 +1,4 @@
+import { isPubliclyShowcased } from "@/lib/public-showcase";
 import { previewAssetEtag, matchesAssetEtag } from "@/lib/preview-asset-cache";
 import { runtimePreview } from "@/lib/project-runtime";
 import {
@@ -19,10 +20,16 @@ export async function GET(
   if (
     !/^vm-[a-z0-9]+$/.test(projectId) ||
     !validAssetCapability(projectId, capability) ||
+    (capability.startsWith("showcase.") &&
+      !(await isPubliclyShowcased(projectId))) ||
+    (capability.startsWith("showcase.") && path[0]?.toLowerCase() === "api") ||
     !previewAssetPath(asset) ||
     path.some((p) => !p || p === ".." || p === "." || p.includes("\\"))
   )
-    return new Response("Asset unavailable.", { status: 403 });
+    return new Response("Asset unavailable.", {
+      status: 403,
+      headers: { "Cache-Control": "no-store" },
+    });
   try {
     const preview = await runtimePreview(projectId);
     const upstream = await fetch(new URL(asset, preview.baseUrl), {

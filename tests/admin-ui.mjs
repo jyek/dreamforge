@@ -141,9 +141,9 @@ try {
   });
   const context = await browser.newContext();
   let projects = structuredClone(fixture),
-    copyRelease,
+    saveRelease,
     failNext = false;
-  const copyGate = new Promise((resolve) => (copyRelease = resolve)),
+  const saveGate = new Promise((resolve) => (saveRelease = resolve)),
     requests = [];
   await context.route("**/api/admin/showcase", async (route) => {
     const body = route.request().postDataJSON();
@@ -164,13 +164,13 @@ try {
       );
     else {
       if (body.projectId === "vm-owned" && body.action === "feature")
-        await copyGate;
+        await saveGate;
       projects = projects.map((p) =>
         p.id === body.projectId
           ? {
               ...p,
               featured: body.action === "feature",
-              exampleId: p.exampleId || "vm-newcopy",
+              exampleId: p.id,
             }
           : p,
       );
@@ -202,7 +202,7 @@ try {
     .click();
   await page
     .getByRole("status")
-    .getByText("Creating a separate example copy. This may take a minute…")
+    .getByText("Updating the examples gallery…")
     .waitFor();
   assert.equal(
     await page
@@ -210,7 +210,7 @@ try {
       .isDisabled(),
     true,
   );
-  copyRelease();
+  saveRelease();
   await page
     .getByRole("status")
     .getByText("Saved. The examples gallery is up to date.")
@@ -249,7 +249,7 @@ try {
     1,
   );
   console.log(
-    "PASS admin search, preview links, ordering, separate-copy progress, show/hide and error recovery",
+    "PASS admin search, preview links, ordering, live-tag progress, show/hide and error recovery",
   );
   await context.route("**/api/platform/auth", async (route) => {
     const data = route.request().postDataJSON();

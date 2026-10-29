@@ -14,8 +14,7 @@ const admin = "00000000-0000-4000-8000-000000000301",
   teacher = "00000000-0000-4000-8000-000000000302",
   child = "00000000-0000-4000-8000-000000000303";
 const original = "vm-adminprivate",
-  demo = "vm-admindemo",
-  copy = "vm-admincopy";
+  demo = "vm-admindemo";
 const profile = (id: string): Profile => ({
   id,
   role: id === child ? "child" : "teacher",
@@ -82,16 +81,10 @@ test("only explicit server-owned admin membership grants access; anonymous, stud
       403,
     );
     await assert.rejects(() => loadAdminProjects(id), /Administrator/);
-    let copied = false;
     await assert.rejects(
-      () =>
-        changeShowcase(id, "feature", original, undefined, async () => {
-          copied = true;
-          return copy;
-        }),
+      () => changeShowcase(id, "feature", original),
       /Administrator/,
     );
-    assert.equal(copied, false);
   }
   assert.equal(
     (
@@ -165,98 +158,63 @@ test("browser roles cannot read or grant admin permissions or alter audit record
     }
   }
 });
-test("show/hide is reversible; private projects use separate copies and never expose their chats or lose edit ownership", async () => {
+test("personal projects are publicly tagged without copying, changing ownership or exposing chat", async () => {
+  const { isPubliclyShowcased } = await import("../lib/public-showcase");
   await changeShowcase(admin, "feature", demo);
-  assert.equal(
-    (await pool.query("select is_example from projects where vm_id=$1", [demo]))
-      .rows[0].is_example,
-    true,
-  );
+  assert.equal(await isPubliclyShowcased(demo), true);
   await changeShowcase(admin, "hide", demo);
-  assert.equal(
-    (await pool.query("select is_example from projects where vm_id=$1", [demo]))
-      .rows[0].is_example,
-    false,
-  );
-  let copies = 0;
-  const create = async (source: string, actor: string) => {
-    copies++;
-    assert.equal(source, original);
-    assert.equal(actor, admin);
-    await pool.query(
-      "insert into projects(vm_id,metadata,is_example) values($1,$2,false)",
-      [
-        copy,
-        JSON.stringify({
-          name: "Private game",
-          showcaseSourceId: source,
-          showcaseCopiedAt: new Date().toISOString(),
-        }),
-      ],
-    );
-    return copy;
-  };
-  await changeShowcase(admin, "feature", original, undefined, create);
+  assert.equal(await isPubliclyShowcased(demo), false);
+  const before = (await pool.query("select count(*)::int as n from projects"))
+    .rows[0].n;
+  await changeShowcase(admin, "feature", original);
   const source = (
     await pool.query(
-      "select owner_id,is_example from projects where vm_id=$1",
+      "select owner_id,is_example,is_showcased from projects where vm_id=$1",
       [original],
     )
   ).rows[0];
   assert.equal(source.owner_id, child);
   assert.equal(source.is_example, false);
-  const data = await loadAdminProjects(admin);
-  const row = data.find((x) => x.id === original)!;
-  assert.equal(row.exampleId, copy);
-  assert.equal(row.featured, true);
+  assert.equal(source.is_showcased, true);
   assert.equal(
-    data.some((x) => x.id === copy),
-    false,
+    (await pool.query("select count(*)::int as n from projects")).rows[0].n,
+    before,
   );
+  const row = (await loadAdminProjects(admin)).find((x) => x.id === original)!;
+  assert.equal(row.exampleId, original);
+  assert.equal(row.featured, true);
   assert.doesNotMatch(
-    JSON.stringify(data),
+    JSON.stringify(row),
     /private learner chat|private-conversation/,
   );
-  await changeShowcase(admin, "hide", original, undefined, create);
-  await changeShowcase(admin, "feature", original, undefined, create);
-  assert.equal(copies, 1);
-  assert.equal(
-    (
-      await pool.query(
-        "select count(*)::int as n from conversations where vm_id=$1",
-        [original],
-      )
-    ).rows[0].n,
-    1,
-  );
-  assert.equal(
-    (
-      await pool.query(
-        "select count(*)::int as n from conversations where vm_id=$1",
-        [copy],
-      )
-    ).rows[0].n,
-    0,
-  );
+  await changeShowcase(admin, "hide", original);
+  assert.equal(await isPubliclyShowcased(original), false);
+  const messages = (
+    await pool.query("select messages from conversations where vm_id=$1", [
+      original,
+    ])
+  ).rows[0].messages;
+  assert.match(JSON.stringify(messages), /private learner chat/);
+  await changeShowcase(admin, "feature", original);
 });
 test("ordering validates the whole current showcase and writes an audit trail without private content", async () => {
   await changeShowcase(admin, "feature", demo);
   const ids = (
-    await pool.query("select vm_id from projects where is_example")
+    await pool.query("select vm_id from projects where is_showcased")
   ).rows.map((r) => r.vm_id);
   await assert.rejects(
-    () => changeShowcase(admin, "reorder", undefined, [copy, copy]),
+    () => changeShowcase(admin, "reorder", undefined, [original, original]),
     /exactly once/,
   );
   await assert.rejects(
     () => changeShowcase(admin, "reorder", undefined, []),
     /showcase changed/,
   );
-  const wanted = [copy, ...ids.filter((id) => id !== copy)];
+  const wanted = [original, ...ids.filter((id) => id !== original)];
   await changeShowcase(admin, "reorder", undefined, wanted);
   const order = (
     await pool.query(
-      "select vm_id from projects where is_example order by (metadata->>'exampleOrder')::int",
+      "select vm_id from projects where is_showcased order by (metadata->>'exampleOrder')::int",
     )
   ).rows.map((r) => r.vm_id);
   assert.deepEqual(order, wanted);
@@ -269,14 +227,42 @@ test("ordering validates the whole current showcase and writes an audit trail wi
   assert(audit.some((r) => r.action === "showcase.reordered"));
   assert.doesNotMatch(JSON.stringify(audit), /private learner chat/);
 });
-test("a showcased copy can still be managed after its original project is deleted", async () => {
-  await pool.query("delete from projects where vm_id=$1", [original]);
-  const data = await loadAdminProjects(admin);
-  assert.equal(data.find((x) => x.id === copy)?.featured, true);
-  await changeShowcase(admin, "hide", copy);
-  assert.equal(
-    (await pool.query("select is_example from projects where vm_id=$1", [copy]))
-      .rows[0].is_example,
-    false,
-  );
+test("hiding a public project revokes public HTML and asset access immediately", async () => {
+  const { GET: entry } =
+    await import("../app/showcase/[projectId]/[[...path]]/route");
+  const { GET: asset } =
+    await import("../app/api/projects/[projectId]/preview-assets/[capability]/[...path]/route");
+  const { assetCapability, validAssetCapability } =
+    await import("../lib/preview-access");
+  const old = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "admin-fixture-signing";
+  try {
+    const capability = assetCapability(original, "showcase");
+    assert.equal(validAssetCapability(original, capability), true);
+    await changeShowcase(admin, "hide", original);
+    assert.equal(
+      (
+        await entry(
+          new Request("https://fixture.invalid/showcase/" + original),
+          { params: Promise.resolve({ projectId: original }) },
+        )
+      ).status,
+      404,
+    );
+    assert.equal(
+      (
+        await asset(new Request("https://fixture.invalid/asset"), {
+          params: Promise.resolve({
+            projectId: original,
+            capability,
+            path: ["_next", "static", "app.js"],
+          }),
+        })
+      ).status,
+      403,
+    );
+  } finally {
+    if (old === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = old;
+  }
 });

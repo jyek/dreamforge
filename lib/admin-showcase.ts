@@ -25,46 +25,32 @@ export async function loadAdminProjects(
   if (!(await isPlatformAdmin(actorId)))
     throw new AdminShowcaseError("Administrator access is required.", 403);
   const { rows } = await database().query(
-    "select p.vm_id,p.owner_id,p.is_example,p.metadata,p.updated_at,pr.display_name as owner_name from projects p left join profiles pr on pr.id=p.owner_id order by p.updated_at desc",
+    "select p.vm_id,p.owner_id,p.is_showcased,p.metadata,p.updated_at,pr.display_name as owner_name from projects p left join profiles pr on pr.id=p.owner_id order by p.updated_at desc",
   );
   const sourceIds = new Set(rows.map((r) => r.vm_id));
-  const copies = new Map(
-    rows
-      .filter((r) => r.metadata.showcaseSourceId)
-      .map((r) => [r.metadata.showcaseSourceId, r]),
-  );
   return rows
     .filter(
       (r) =>
         !r.metadata.showcaseSourceId ||
         !sourceIds.has(r.metadata.showcaseSourceId),
     )
-    .map((r) => {
-      const example = r.owner_id ? copies.get(r.vm_id) : r;
-      return {
-        id: r.vm_id,
-        name: r.metadata.name || "Untitled project",
-        owner: r.owner_name || "Example library",
-        owned: !!r.owner_id,
-        exampleId: example?.vm_id || null,
-        featured: !!example?.is_example,
-        order: Number(example?.metadata.exampleOrder || 999),
-        description: example?.metadata.description || "",
-        copiedAt: r.owner_id
-          ? example?.metadata.showcaseCopiedAt || null
-          : null,
-      };
-    });
+    .map((r) => ({
+      id: r.vm_id,
+      name: r.metadata.name || "Untitled project",
+      owner: r.owner_name || "Example library",
+      owned: !!r.owner_id,
+      exampleId: r.vm_id,
+      featured: r.is_showcased,
+      order: Number(r.metadata.exampleOrder || 999),
+      description: r.metadata.description || "",
+      copiedAt: null,
+    }));
 }
 export async function changeShowcase(
   actorId: string,
   action: unknown,
   projectId?: unknown,
   order?: unknown,
-  createCopy: (sourceId: string, actorId: string) => Promise<string> = async (
-    source,
-    actor,
-  ) => (await import("./showcase-copy")).createShowcaseCopy(source, actor),
 ) {
   if (!(await isPlatformAdmin(actorId)))
     throw new AdminShowcaseError("Administrator access is required.", 403);
@@ -94,7 +80,7 @@ export async function changeShowcase(
       )
         throw new AdminShowcaseError("Administrator access is required.", 403);
       const { rows } = await db.query(
-        "select vm_id from projects where is_example for update",
+        "select vm_id from projects where is_showcased for update",
       );
       if (
         rows.length !== order.length ||
@@ -143,24 +129,14 @@ export async function changeShowcase(
       ).rowCount)
   )
     throw new AdminShowcaseError("Project not found.", 404);
-  let exampleId = source.vm_id;
-  if (source.owner_id) {
-    const {
-      rows: [copy],
-    } = await database().query(
-      "select vm_id from projects where metadata->>'showcaseSourceId'=$1",
-      [projectId],
-    );
-    if (!copy && action === "hide") return;
-    exampleId = copy?.vm_id || (await createCopy(projectId, actorId));
-  }
+  const exampleId = source.vm_id;
   const db = await database().connect();
   try {
     await db.query("begin");
     await db.query(
       "select pg_advisory_xact_lock(hashtext('admin-showcase-order'))",
     );
-    // Check again after a potentially long copy and before publishing it.
+    // Recheck membership after waiting for another administrative write.
     if (
       !(
         await db.query("select 1 from platform_admins where profile_id=$1", [
@@ -169,21 +145,20 @@ export async function changeShowcase(
       ).rowCount
     )
       throw new AdminShowcaseError("Administrator access is required.", 403);
-    await db.query(
-      "select vm_id from projects where vm_id=$1 and owner_id is null for update",
-      [exampleId],
-    );
+    await db.query("select vm_id from projects where vm_id=$1 for update", [
+      exampleId,
+    ]);
     const {
       rows: [position],
     } = await db.query(
-      "select coalesce(max(case when metadata->>'exampleOrder' ~ '^[0-9]{1,9}$' then (metadata->>'exampleOrder')::integer else 0 end),0)+1 as next from projects where is_example",
+      "select coalesce(max(case when metadata->>'exampleOrder' ~ '^[0-9]{1,9}$' then (metadata->>'exampleOrder')::integer else 0 end),0)+1 as next from projects where is_showcased",
     );
     const result = await db.query(
-      "update projects set is_example=$2,metadata=(metadata-'exampleArchived')||jsonb_build_object('exampleOrder',case when $2 and not is_example then $3::text else coalesce(metadata->>'exampleOrder',$3::text) end),updated_at=now() where vm_id=$1 and owner_id is null",
+      "update projects set is_showcased=$2,metadata=(metadata-'exampleArchived')||jsonb_build_object('exampleOrder',case when $2 and not is_showcased then $3::text else coalesce(metadata->>'exampleOrder',$3::text) end),updated_at=now() where vm_id=$1",
       [exampleId, action === "feature", String(position.next)],
     );
     if (!result.rowCount)
-      throw new AdminShowcaseError("The example copy is unavailable.");
+      throw new AdminShowcaseError("The project is unavailable.");
     await db.query(
       "insert into admin_audit_log(actor_id,action,project_id,details) values($1,$2,$3,$4)",
       [
