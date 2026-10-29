@@ -30,8 +30,10 @@ const toProjectItem = async (
   metadata: ProjectMetadata,
   readOnly = false,
   requestUrl?: string,
+  ownedByCurrentUser?: boolean,
 ): Promise<ProjectItem> => ({
   id,
+  ownedByCurrentUser,
   readOnly,
   shellAllowed: !readOnly,
   name: metadata.name,
@@ -75,6 +77,7 @@ export async function GET(req: Request) {
             row.metadata,
             row.is_example || row.owner_id !== user?.id,
             req.url,
+            !!user && row.owner_id === user.id,
           ),
         ),
       ),

@@ -49,3 +49,38 @@ test("confirmed signed-out state can show Sign in after loading finishes", () =>
   assert.match(html, /Sign in/);
   assert.doesNotMatch(html, /Loading profile/);
 });
+
+test("Your projects excludes viewed examples and shared projects while keeping owned projects, including public ones", async () => {
+  const { ownedProjects } = await import("../lib/owned-projects");
+  const projects = [
+    { id: "mine", ownedByCurrentUser: true, readOnly: false },
+    { id: "mine-public", ownedByCurrentUser: true, readOnly: false },
+    { id: "pokemon-viewed", ownedByCurrentUser: false, readOnly: true },
+    { id: "class-shared", ownedByCurrentUser: false, readOnly: true },
+    {
+      id: "editable-but-not-owned",
+      ownedByCurrentUser: false,
+      readOnly: false,
+    },
+  ];
+  assert.deepEqual(
+    ownedProjects(projects).map((x) => x.id),
+    ["mine", "mine-public"],
+  );
+  assert.equal(
+    projects.find((x) => x.id === "pokemon-viewed")?.id,
+    "pokemon-viewed",
+    "The current non-owned project remains available to the workspace.",
+  );
+});
+test("older editable project responses remain compatible; unknown ownership is hidden", async () => {
+  const { ownedProjects } = await import("../lib/owned-projects");
+  assert.deepEqual(
+    ownedProjects([
+      { id: "demo", readOnly: false },
+      { id: "shared", readOnly: true },
+      { id: "unknown" },
+    ]).map((x) => x.id),
+    ["demo"],
+  );
+});

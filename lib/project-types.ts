@@ -44,6 +44,7 @@ export type ProjectMetadata = {
 };
 
 export type ProjectItem = {
+  ownedByCurrentUser?: boolean;
   shellAllowed?: boolean;
   readOnly?: boolean;
   id: string;

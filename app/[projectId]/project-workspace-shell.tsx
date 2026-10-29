@@ -1,4 +1,5 @@
 "use client";
+import { ownedProjects } from "@/lib/owned-projects";
 import { isPreviewReadyMessage } from "@/lib/preview-ready";
 import { InlineSpinner, SimpleLoading } from "@/components/dream-loading";
 
@@ -213,6 +214,8 @@ export function ProjectWorkspaceShell({
     [router],
   );
 
+  const personalProjects = useMemo(() => ownedProjects(projects), [projects]);
+
   const selectedProject = projectId
     ? (projects.find((project) => project.id === projectId) ?? null)
     : null;
@@ -322,11 +325,11 @@ export function ProjectWorkspaceShell({
 
   const projectsContextValue = useMemo(
     () => ({
-      projects,
+      projects: personalProjects,
       isLoading: projectsLoading,
       onSelectProject: handleSelectProject,
     }),
-    [projects, projectsLoading, handleSelectProject],
+    [personalProjects, projectsLoading, handleSelectProject],
   );
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -389,7 +392,7 @@ export function ProjectWorkspaceShell({
           className="df-studio-nav df-recent-projects"
           aria-label="Recent projects"
         >
-          {projects
+          {personalProjects
             .filter((project) =>
               project.name.toLowerCase().includes(projectSearch.toLowerCase()),
             )
@@ -411,7 +414,7 @@ export function ProjectWorkspaceShell({
             <SimpleLoading inline label="Loading projects…" />
           )}
           {!projectsLoading &&
-            !projects.filter((p) =>
+            !personalProjects.filter((p) =>
               p.name.toLowerCase().includes(projectSearch.toLowerCase()),
             ).length && <p className="df-muted">No matching projects.</p>}
         </nav>
