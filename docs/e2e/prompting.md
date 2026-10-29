@@ -29,7 +29,7 @@ Without `E2E_BROWSER_EXECUTABLE`, the live command tests API integration. With a
 
 ## Pull-request checks
 
-`DreamForge CI` runs `Tests and build` for every PR. For a PR branch in this repository, it also runs `Live project journey` after the build passes. The live job waits for the Vercel **Preview deployment of that exact PR head commit**; it never substitutes the production site or an older preview.
+`DreamForge CI` runs `Tests and build` for every PR. For a ready-for-review PR branch in this repository, it also runs `Live project journey` after the build passes. Draft PRs run deterministic checks and the build but skip the paid live journey. The live job waits for the Vercel **Preview deployment of that exact PR head commit**; it never substitutes the production site or an older preview.
 
 The live job uses the repository secrets `E2E_LOGIN` and `E2E_PASSWORD` for the existing dedicated test student. Vercel Preview must have the same account/runtime configuration needed by the app. The workflow does not receive database, Runtime, model-provider or Supabase admin keys; those stay on the app server. Live checks consume the test account's finite allowance and real model/Runtime capacity. They never top up the account automatically.
 
@@ -54,7 +54,7 @@ Alternatively, `npm run test:e2e:setup` provisions a dedicated Supabase auth use
 
 The command exits nonzero on the first failure. `.e2e-results/latest.json` contains each check's status, duration, first feedback, first model text, project link and preview URL. No passwords, auth cookies or raw response streams are included. The report and reusable project state are ignored by Git.
 
-The default first-feedback budget is 15 seconds, measured from submitting the request through HTTP startup to the first progress label, text or tool event. First model text is recorded separately so heartbeats do not disguise a slow model. Override with `E2E_FEEDBACK_BUDGET_MS`; request timeout defaults to 240 seconds (`E2E_REQUEST_TIMEOUT_MS`). `E2E_MODEL` accepts the app's model selector IDs (`glm`, `deepseek`, `free`, `auto`), subject to server policy. This is a smoke test, not a statistical model benchmark.
+The default first-feedback budget is 15 seconds, measured from submitting the request through HTTP startup to the first progress label, text or tool event. First model text is recorded separately so heartbeats do not disguise a slow model. Override with `E2E_FEEDBACK_BUDGET_MS`; request timeout defaults to 240 seconds (`E2E_REQUEST_TIMEOUT_MS`). `E2E_MODEL` accepts the app's current model selector IDs (`haiku`, `sonnet`, `luna`, `sol`, `gemini-lite`, `gemini`, `glm`), subject to server policy. All seven currently route to paid models. The retired `free`, `auto` and `deepseek` selector IDs are rejected; setting `E2E_MODEL=free` does not enable a free OpenRouter route. This is a smoke test, not a statistical model benchmark.
 
 Each run adds three test conversations and may consume real model tokens. Each run creates a fresh project and deletes it, its Runtime snapshots and its Supabase records in a `finally` block, whether tests pass or fail. The temporary `.e2e-results/project.json` is removed after successful cleanup; a separate `E2E_OUTPUT` isolates another deployment's state. The suite does not auto-top-up, publish, or edit other accounts. Cleanup is restricted to owned E2E projects belonging to provisioned test accounts and explicitly marked with an `e2eRunId` UUID at creation. Normal runtime idle pausing remains in effect.
 

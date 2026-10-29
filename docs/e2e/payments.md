@@ -32,7 +32,7 @@ E2E_PAYMENT_STRIPE_SECRET_KEY=sk_test_YOUR_SANDBOX_KEY
 E2E_MODEL=glm
 ```
 
-The deployment must have prepaid billing and sandbox payments enabled, its own Stripe test key, the correct `DREAMFORGE_SITE_URL`, and a sandbox webhook delivering to `/api/platform/stripe`. Database TLS uses this repository's verified Supabase CA. The runner accepts no live Stripe key. Never put these settings in CI logs or source control.
+The deployment must have the credit wallet available and sandbox payments enabled, its own Stripe test key, the correct `DREAMFORGE_SITE_URL`, and a sandbox webhook delivering to `/api/platform/stripe`. Database TLS uses this repository's verified Supabase CA. The runner accepts no live Stripe key. Never put these settings in CI logs or source control.
 
 Run:
 
