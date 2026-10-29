@@ -22,7 +22,7 @@ for (const state of ["paused", "stopped", "running", "starting", "pausing"]) {
   );
   assert.deepEqual(
     calls,
-    ["paused", "stopped"].includes(state) ? ["start", "server"] : [],
+    state === "stopped" ? ["start", "server"] : state === "paused" ? ["start"] : [],
   );
 }
 const quotaError = {
@@ -72,4 +72,21 @@ console.log(
   "PASS: paused and cold-boot server recovery, quota blockers, readiness checks and visible app errors",
 );
 
+});
+
+test("a wake that could not restore memory recovers the server", async () => {
+  const calls: string[] = [];
+  await wakeVm(
+    {
+      data: async () => ({ state: "paused" }),
+      start: async () => {
+        calls.push("wake");
+        return { memoryRestored: false };
+      },
+    },
+    async () => {
+      calls.push("server");
+    },
+  );
+  assert.deepEqual(calls, ["wake", "server"]);
 });

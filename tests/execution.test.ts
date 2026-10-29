@@ -265,6 +265,7 @@ test("real browser evidence: three clicks, reset, another click; failed expectat
   const origin = `http://127.0.0.1:${(server.address() as import("node:net").AddressInfo).port}`;
   const vm = { exec: async () => ({ statusCode: 0 }) } as unknown as Vm;
   process.env.VERIFICATION_BROWSER_WS = "fixture";
+  let browserServer: import("playwright-core").BrowserServer | undefined;
   const services = (path = "/") => ({
     preview: async () => ({
       url: origin + path,
@@ -273,9 +274,18 @@ test("real browser evidence: three clicks, reset, another click; failed expectat
       expiresAt: null,
     }),
     connect: async () =>
-      chromium.launch({ executablePath: executable, headless: true }),
+      chromium.connect(browserServer!.wsEndpoint(), { timeout: 8000 }),
   });
   try {
+    // Browser startup belongs to fixture setup, not the app's bounded browser
+    // connection check. A slow launch otherwise outlives that check and leaks
+    // its eventual browser, keeping the test worker alive after an assertion.
+    // Each connection still creates and closes its own isolated context.
+    browserServer = await chromium.launchServer({
+      executablePath: executable,
+      headless: true,
+      timeout: 30000,
+    });
     const run = await begin("vm-realbrowser");
     const steps = [
       { button: "Add one", expectedText: "1" },
@@ -305,8 +315,12 @@ test("real browser evidence: three clicks, reset, another click; failed expectat
     await finishRun(run, "completed");
   } finally {
     delete process.env.VERIFICATION_BROWSER_WS;
-    server.closeAllConnections();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    try {
+      await browserServer?.close();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   }
 });
 

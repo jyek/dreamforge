@@ -29,6 +29,12 @@ export async function projectCreationResult(
 }
 export function projectCreationFailure(error: unknown) {
   const code = (error as { code?: string })?.code || "";
+  if (code === "hosting_starter_not_configured")
+    return {
+      status: 503,
+      error:
+        "New project workspaces are temporarily unavailable. Please contact DreamForge support.",
+    };
   const limit =
     (error as { details?: { limit?: string } })?.details?.limit || "";
   if (code === "no_credit_kept_limit")
