@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test, after } from "node:test";
 import pg from "pg";
 import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
+import { MODELS } from "../lib/model-catalog";
 import { reserveUsage, settleUsage } from "../lib/platform-usage";
 import {
   redactIdentity,
@@ -28,7 +29,7 @@ test("atomic account reservations prevent overspending; settlement is idempotent
     [project, user],
   );
   await pool.query(
-    "insert into token_accounts(child_id,token_limit) values($1,100)",
+    "insert into token_accounts(child_id,token_limit,credit_limit_micros) values($1,0,100)",
     [user],
   );
   const results = await Promise.allSettled([
@@ -41,8 +42,8 @@ test("atomic account reservations prevent overspending; settlement is idempotent
       (r) => r.status === "fulfilled",
     ) as PromiseFulfilledResult<string>
   ).value;
-  await settleUsage(id, 10, 5, "fixture");
-  await settleUsage(id, 10, 5, "fixture");
+  await settleUsage(id, 10, 5, MODELS.glm.id);
+  await settleUsage(id, 10, 5, MODELS.glm.id);
   let row = (
     await pool.query("select * from token_accounts where child_id=$1", [user])
   ).rows[0];
@@ -54,8 +55,9 @@ test("atomic account reservations prevent overspending; settlement is idempotent
     await pool.query("select * from token_accounts where child_id=$1", [user])
   ).rows[0];
   assert.equal(Number(row.used_tokens), 15);
-  assert.equal(Number(row.reserved_tokens), 80);
-  await assert.rejects(() => reserveUsage(user, project, 6));
+  assert.equal(Number(row.credit_reserved_micros), 81);
+  assert.equal(Number(row.reserved_tokens), 0);
+  await assert.rejects(() => reserveUsage(user, project, 15));
 });
 test("browser roles cannot change account balances or safety decisions", async () => {
   const client = await pool.connect();

@@ -1,4 +1,3 @@
-import { prepaidBillingEnabled } from "@/lib/billing";
 import { modelTier, MODELS, DEFAULT_MODEL_CHOICE } from "@/lib/model-catalog";
 import { moderationConversation } from "@/lib/moderation-decision";
 import { managedChat } from "@/lib/managed-chat";
@@ -117,8 +116,7 @@ async function handleChat(req: Request) {
         );
       if (
         modelTier(modelChoice) === "advanced" &&
-        (!prepaidBillingEnabled() ||
-          !process.env.OPENAI_BASE_URL?.includes("openrouter.ai") ||
+        (!process.env.OPENAI_BASE_URL?.includes("openrouter.ai") ||
           ["anthropic", "claude"].includes(process.env.LLM_PROVIDER || ""))
       )
         return Response.json(

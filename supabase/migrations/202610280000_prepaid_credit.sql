@@ -1,5 +1,4 @@
--- REVIEW ONLY: back up first; deploy compatible code, drain runs, approve the
--- conversion, apply, then enable DREAMFORGE_PREPAID_BILLING_ENABLED.
+-- Back up and drain usage before applying. Required before deploying dollar billing.
 begin;
 set local lock_timeout='5s';
 set local statement_timeout='30s';

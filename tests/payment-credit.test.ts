@@ -69,12 +69,12 @@ test("concurrent webhook and return-page credits are exactly once; unpaid and mi
     Number(
       (
         await pool.query(
-          "select token_limit from token_accounts where child_id=$1",
+          "select credit_limit_micros from token_accounts where child_id=$1",
           [child],
         )
-      ).rows[0].token_limit,
+      ).rows[0].credit_limit_micros,
     ),
-    1001000,
+    15000000,
   );
   for (const invalid of [
     { payment_status: "unpaid" },
@@ -113,7 +113,10 @@ test("return page reconciles a paid Stripe session without a webhook and returns
   assert.deepEqual(await r.json(), {
     credited: true,
     tokens: 1000000,
-    remaining: 2000850,
+    remaining: 850,
+    creditAddedMicros: 5000000,
+    availableCreditMicros: 20000000,
+    prepaid: true,
   });
   assert.match(r.headers.get("cache-control")!, /no-store/);
   await POST(request("cs_test_return"));
@@ -147,19 +150,19 @@ test("return page reconciles a paid Stripe session without a webhook and returns
     Number(
       (
         await pool.query(
-          "select token_limit from token_accounts where child_id=$1",
+          "select credit_limit_micros from token_accounts where child_id=$1",
           [child],
         )
-      ).rows[0].token_limit,
+      ).rows[0].credit_limit_micros,
     ),
-    2001000,
+    20000000,
   );
   const read = await GET(
     new Request(
       `https://fixture.invalid/api/platform/payment-status?token=${token}&session=cs_test_return`,
     ),
   );
-  assert.equal((await read.json()).remaining, 2000850);
+  assert.equal((await read.json()).availableCreditMicros, 20000000);
 });
 test("status denies other accounts, expired links, cross-origin requests and unverified Stripe failures", async () => {
   globalThis.fetch = async () =>
@@ -188,6 +191,9 @@ test("status denies other accounts, expired links, cross-origin requests and unv
     credited: false,
     tokens: 0,
     remaining: null,
+    prepaid: true,
+    creditAddedMicros: null,
+    availableCreditMicros: null,
   });
   assert.equal(
     (

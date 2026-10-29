@@ -16,7 +16,6 @@ const child = "00000000-0000-4000-8000-000000000095",
   project = "vm-creditfixture";
 after(() => pool.end());
 test("a paid cash top-up funds one balance exactly once, without adding old-style tokens", async () => {
-  process.env.DREAMFORGE_PREPAID_BILLING_ENABLED = "true";
   await pool.query("insert into auth.users(id) values($1)", [child]);
   await pool.query(
     "insert into profiles(id,username,display_name,auth_email,role) values($1,'credit_fixture','Credit fixture','credit@tests.invalid','child')",
@@ -292,4 +291,15 @@ test("cached input uses its own cost plus 50 percent and retains auditable usage
   assert.equal(Number(row.credit_cost_micros), 1600);
   assert.equal(Number(row.estimated_cost_usd), 0.00079);
   assert.match(row.billing_version, /cost-plus-50/);
+});
+
+test("tokens never fund a request when the dollar wallet is empty", async () => {
+  await pool.query(
+    "update token_accounts set token_limit=999999999,credit_limit_micros=credit_used_micros+credit_reserved_micros where child_id=$1",
+    [child],
+  );
+  await assert.rejects(
+    () => reserveUsage(child, project, 100, "z-ai/glm-5.3-flash"),
+    /credit/,
+  );
 });

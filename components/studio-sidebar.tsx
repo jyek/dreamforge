@@ -3,10 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DreamForgeBrand } from "./dreamforge-brand";
 import { watchBalanceChanges } from "@/lib/balance-refresh";
-import {
-  formatCreditBalance,
-  legacyCreditEquivalentMicros,
-} from "@/lib/billing";
+import { formatCreditBalance } from "@/lib/billing";
 import { useSidebarState } from "@/lib/use-sidebar-state";
 export async function signOut() {
   await fetch("/api/platform/auth", { method: "DELETE" });
@@ -19,7 +16,6 @@ export function StudioSidebar({
   accountLoading = false,
   accountError = false,
   onRetryAccount,
-  remainingTokens,
   creditBalanceMicros,
   onProfileOpen,
   role,
@@ -35,7 +31,6 @@ export function StudioSidebar({
   accountLoading?: boolean;
   accountError?: boolean;
   onRetryAccount?: () => void;
-  remainingTokens?: number;
   creditBalanceMicros?: number;
   onProfileOpen?: () => void;
   role?: "teacher" | "child";
@@ -48,15 +43,9 @@ export function StudioSidebar({
   hideCollapseControl?: boolean;
 }) {
   const { collapsed, toggle: toggleCollapsed } = useSidebarState();
-  const [fetchedBalance, setFetchedBalance] = useState<number | null>(null);
   const [fetchedCredit, setFetchedCredit] = useState<number | null>(null);
   useEffect(() => {
-    if (
-      role !== "child" ||
-      remainingTokens !== undefined ||
-      creditBalanceMicros !== undefined
-    )
-      return;
+    if (role !== "child" || creditBalanceMicros !== undefined) return;
     const controller = new AbortController();
     const refresh = () =>
       fetch("/api/platform/balance", {
@@ -66,15 +55,8 @@ export function StudioSidebar({
         .then(async (r) => {
           if (r.ok) {
             const data = await r.json();
-            setFetchedBalance(
-              typeof data.remaining === "number" &&
-                Number.isFinite(data.remaining)
-                ? data.remaining
-                : null,
-            );
             setFetchedCredit(
-              data.prepaid &&
-                typeof data.availableCreditMicros === "number" &&
+              typeof data.availableCreditMicros === "number" &&
                 Number.isFinite(data.availableCreditMicros)
                 ? data.availableCreditMicros
                 : null,
@@ -93,12 +75,10 @@ export function StudioSidebar({
       unwatch();
       window.removeEventListener("dreamforge:thread-state", afterRequest);
     };
-  }, [role, remainingTokens, creditBalanceMicros]);
-  const balance = remainingTokens ?? fetchedBalance;
+  }, [role, creditBalanceMicros]);
   const credit = creditBalanceMicros ?? fetchedCredit;
-  const displayedCredit =
-    credit ?? (balance === null ? null : legacyCreditEquivalentMicros(balance));
-  const creditLabel = credit !== null ? "Credit left:" : "Credit equivalent";
+  const displayedCredit = credit;
+  const creditLabel = "Credit left:";
   const account = (
     <>
       <span className="df-studio-avatar" aria-hidden="true">

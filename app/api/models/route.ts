@@ -1,8 +1,6 @@
-import { prepaidBillingEnabled } from "@/lib/billing";
 import { modelOptions, QUOTA_FALLBACK_MODEL } from "@/lib/allowed-models";
 import {
   MODEL_CHOICES,
-  MODELS,
   modelTier,
   DEFAULT_MODEL_CHOICE,
 } from "@/lib/model-catalog";
@@ -11,13 +9,13 @@ export async function GET() {
   return Response.json(
     {
       models,
-      prepaid: prepaidBillingEnabled(),
+      prepaid: true,
 
       choices: MODEL_CHOICES.map((choice) => ({
         id: choice.id,
         name: choice.label,
         tier: modelTier(choice.id),
-        available: modelTier(choice.id) === "basic" || prepaidBillingEnabled(),
+        available: true,
         paid: true,
       })),
       defaultModel: models[0].id,

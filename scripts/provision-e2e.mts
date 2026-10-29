@@ -69,7 +69,7 @@ try {
       [user.id, username, email],
     );
   await db.query(
-    "insert into token_accounts(child_id,token_limit) values($1,1000000) on conflict(child_id) do update set token_limit=1000000",
+    "insert into token_accounts(child_id) values($1) on conflict(child_id) do nothing",
     [user.id],
   );
   await fs.writeFile(

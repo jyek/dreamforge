@@ -62,7 +62,6 @@ export function PlatformDashboardLayout({
   teacher,
   name,
   accountLoading = false,
-  remainingTokens,
   creditBalanceMicros,
   section,
   onSectionChange,
@@ -72,7 +71,6 @@ export function PlatformDashboardLayout({
   teacher: boolean;
   accountLoading?: boolean;
   name?: string;
-  remainingTokens?: number;
   creditBalanceMicros?: number;
   section: string;
   onSectionChange: (section: string) => void;
@@ -96,7 +94,6 @@ export function PlatformDashboardLayout({
         onProfileOpen={() => setNavOpen(false)}
         name={name}
         accountLoading={accountLoading}
-        remainingTokens={remainingTokens}
         creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}
         label={teacher ? "Teacher sidebar" : "Builder sidebar"}

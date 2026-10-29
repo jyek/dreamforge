@@ -36,9 +36,7 @@ export async function POST(req: Request) {
     cancel_url: `${site}/pay/${body.token}`,
     "line_items[0][price_data][currency]": "sgd",
     "line_items[0][price_data][unit_amount]": String(pack.amount),
-    "line_items[0][price_data][product_data][name]": pack.creditPurchase
-      ? `DreamForge ${pack.name}`
-      : `DreamForge ${pack.name} — ${pack.tokens.toLocaleString()} tokens`,
+    "line_items[0][price_data][product_data][name]": `DreamForge ${pack.name}`,
     "line_items[0][quantity]": "1",
     ...(localDevelopmentBilling()
       ? {

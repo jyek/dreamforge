@@ -1,12 +1,6 @@
-import {
-  prepaidBillingEnabled,
-  usageCreditMicros,
-  usageModelCostUSD,
-} from "./billing";
+import { usageCreditMicros, usageModelCostUSD } from "./billing";
 import { reserveCreditUsage } from "./prepaid-usage";
 import { MODELS } from "./model-catalog";
-import { TOKEN_LIMIT_MESSAGE } from "./trusted-errors";
-import { QuotaError } from "./quota-error";
 import { database } from "./database";
 // Price caps sent to OpenRouter, not a promise of exact provider billing.
 export function estimatedCost(model: string, input: number, output: number) {
@@ -28,35 +22,15 @@ export async function reserveUsage(
   billingModel = MODELS.glm.id as string,
   maxOutputTokens?: number,
 ) {
-  if (prepaidBillingEnabled())
-    return reserveCreditUsage(
-      child,
-      project,
-      bound,
-      billingModel,
-      maxOutputTokens,
-    );
-  const db = await database().connect();
-  try {
-    await db.query("begin");
-    const { rowCount } = await db.query(
-      "update token_accounts set reserved_tokens=reserved_tokens+$2 where child_id=$1 and used_tokens+reserved_tokens+$2<=token_limit",
-      [child, bound],
-    );
-    if (!rowCount) throw new QuotaError(TOKEN_LIMIT_MESSAGE);
-    const { rows } = await db.query(
-      "insert into usage_runs(child_id,vm_id,reserved_tokens) values($1,$2,$3) returning id",
-      [child, project, bound],
-    );
-    await db.query("commit");
-    return rows[0].id as string;
-  } catch (e) {
-    await db.query("rollback");
-    throw e;
-  } finally {
-    db.release();
-  }
+  return reserveCreditUsage(
+    child,
+    project,
+    bound,
+    billingModel,
+    maxOutputTokens,
+  );
 }
+
 export async function settleUsage(
   id: string,
   input?: number,
