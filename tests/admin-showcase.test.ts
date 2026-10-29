@@ -164,8 +164,12 @@ test("personal projects are publicly tagged without copying, changing ownership 
   assert.equal(await isPubliclyShowcased(demo), true);
   await changeShowcase(admin, "hide", demo);
   assert.equal(await isPubliclyShowcased(demo), false);
-  const before = (await pool.query("select count(*)::int as n from projects"))
-    .rows[0].n;
+  const before = (
+    await pool.query(
+      "select count(*)::int as n from projects where vm_id=$1 or metadata->>'showcaseSourceId'=$1",
+      [original],
+    )
+  ).rows[0].n;
   await changeShowcase(admin, "feature", original);
   const source = (
     await pool.query(
@@ -177,7 +181,12 @@ test("personal projects are publicly tagged without copying, changing ownership 
   assert.equal(source.is_example, false);
   assert.equal(source.is_showcased, true);
   assert.equal(
-    (await pool.query("select count(*)::int as n from projects")).rows[0].n,
+    (
+      await pool.query(
+        "select count(*)::int as n from projects where vm_id=$1 or metadata->>'showcaseSourceId'=$1",
+        [original],
+      )
+    ).rows[0].n,
     before,
   );
   const row = (await loadAdminProjects(admin)).find((x) => x.id === original)!;
