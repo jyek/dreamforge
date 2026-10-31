@@ -1,4 +1,5 @@
 "use client";
+import { ClassroomSafetyReport } from "./classroom-safety-report";
 import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
 import { StudentReviewTable } from "./student-review-table";
 import { NoClassroomProjects } from "./no-classroom-projects";
@@ -153,6 +154,7 @@ export function TeacherStudentProjects({
         </>
       ) : (
         <>
+          {classId && <ClassroomSafetyReport classId={classId} />}
           {classId && (
             <label className="df-guidance-filters">
               Find a student

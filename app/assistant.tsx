@@ -1,5 +1,6 @@
 "use client";
 
+import { HELD_PROMPT_MESSAGE } from "@/lib/prompt-hold";
 import { AssistantRuntimeProvider, useAuiState } from "@assistant-ui/react";
 import {
   useAISDKRuntime,
@@ -418,6 +419,76 @@ export const Assistant = ({
     messages: seedMessages,
     onFinish: handleChatFinish,
   });
+
+  // A questionable prompt waits for the teacher. While the chat is open, pick up
+  // their decision: approved prompts continue on their own.
+  const lastMessage = chat.messages.at(-1);
+  const waitingForTeacher =
+    lastMessage?.role === "assistant" &&
+    lastMessage.parts.some(
+      (part) => part.type === "text" && part.text === HELD_PROMPT_MESSAGE,
+    );
+  useEffect(() => {
+    if (
+      readOnly ||
+      !selectedConversationId ||
+      !waitingForTeacher ||
+      chat.status === "submitted" ||
+      chat.status === "streaming"
+    )
+      return;
+    let stopped = false;
+    const check = async () => {
+      const r = await fetch(
+        `/api/platform/held-prompts?conversationId=${selectedConversationId}`,
+        { cache: "no-store" },
+      ).catch(() => null);
+      if (!r?.ok || stopped) return;
+      const { holds } = (await r.json()) as {
+        holds: { id: string; status: string; content: string }[];
+      };
+      const approved = holds.find((hold) => hold.status === "approved");
+      const denied = holds.find((hold) => hold.status === "denied");
+      if (approved && !stopped) {
+        stopped = true;
+        void chat.sendMessage({ text: approved.content });
+      } else if (denied && !stopped) {
+        stopped = true;
+        await fetch("/api/platform/held-prompts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: denied.id }),
+        }).catch(() => {});
+        chat.setMessages([
+          ...chat.messages,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                text: "Your teacher didn’t approve that request. Try a different game, app, or coding idea.",
+              },
+            ],
+          },
+        ]);
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 5000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [
+    readOnly,
+    selectedConversationId,
+    waitingForTeacher,
+    chat.status,
+    chat.sendMessage,
+    chat.setMessages,
+    chat.messages,
+  ]);
 
   const startedInitialPrompt = useRef(false);
   useEffect(() => {

@@ -3193,3 +3193,8 @@
 .df-class-teaching-team { margin: 12px 0 20px; }
 .df-class-teaching-team h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
 .df-class-teaching-team > div { display: flex; gap: 24px; flex-wrap: wrap; }
+.df-safety-report { display: grid; gap: 12px; margin: 8px 0 28px; }
+.df-safety-item { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid #e2deeb; border-radius: 14px; background: #fff; }
+.df-safety-pending { border: 2px solid #a77fff; background: #f4edff; }
+.df-safety-item header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.df-safety-prompt { margin: 0; overflow-wrap: anywhere; }
