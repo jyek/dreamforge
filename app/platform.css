@@ -3183,7 +3183,8 @@
 .df-teaching-team-person .df-classroom-avatar { width: 44px; height: 44px; }
 .df-teaching-team-person > div { flex: 1; display: grid; gap: 2px; }
 .df-teaching-team-person small { color: #81758f; }
-.df-class-teachers-dialog .df-notice { margin-top: 18px; }
+.df-class-teachers-dialog .df-notice { display: grid; gap: 18px; margin-top: 18px; padding: 18px; }
+.df-class-teachers-dialog .df-notice p { margin: 0; }
 .df-class-teachers-dialog .df-input { flex: 1; min-width: 0; }
 .df-pending-teacher-invites { display: grid; gap: 12px; margin-top: 20px; font-size: 12px; }
 .df-pending-teacher-invites h3 { font-size: 14px; font-weight: 700; }
