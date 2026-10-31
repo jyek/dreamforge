@@ -6,6 +6,23 @@ type Db = {
     params: unknown[],
   ) => Promise<{ rows: any[]; rowCount: number | null }>;
 };
+/** Holding is an extra layer. If its columns are not available (the migration
+ * has not been applied yet) or the update fails, chat must carry on with the
+ * normal moderation instead of failing. Logs only a fixed error code. */
+async function failSafe<T>(fallback: T, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    const code = (error as { code?: unknown })?.code;
+    console.error("prompt_hold.unavailable", {
+      code:
+        typeof code === "string" && /^[A-Z0-9]{5}$/.test(code)
+          ? code
+          : undefined,
+    });
+    return fallback;
+  }
+}
 export const HELD_PROMPT_MESSAGE =
   "Your teacher needs to check this request first. It will continue on its own once they approve it.";
 /** Records the real moderation outcome on the teacher's record. A "review"
@@ -21,36 +38,40 @@ export async function recordModerationOutcome(
   const outcome = error.outcome;
   if (!outcome || outcome.decision === "allow") return false;
   const hold = outcome.decision === "review";
-  const { rows } = await db.query(
-    `update prompt_reviews r set decision=$3,categories=$4,severity=$5,
+  return failSafe(false, async () => {
+    const { rows } = await db.query(
+      `update prompt_reviews r set decision=$3,categories=$4,severity=$5,
        hold_status=case when $6::boolean and exists(select 1 from teacher_builders t where t.child_id=r.child_id) then 'pending' else r.hold_status end
      where r.id=$1 and r.child_id=$2 and r.reviewed_at is null
      returning (r.hold_status='pending') as held`,
-    [
-      reviewId,
-      childId,
-      outcome.decision,
-      outcome.categories,
-      outcome.severity,
-      hold,
-    ],
-  );
-  return rows[0]?.held === true;
+      [
+        reviewId,
+        childId,
+        outcome.decision,
+        outcome.categories,
+        outcome.severity,
+        hold,
+      ],
+    );
+    return rows[0]?.held === true;
+  });
 }
 /** If the teacher approved exactly this prompt, use that approval once. */
 export async function consumeApprovedHold(
   db: Db,
   input: { childId: string; conversationId: string; content: string },
 ) {
-  const { rowCount } = await db.query(
-    `update prompt_reviews set held_prompt_used_at=now()
+  return failSafe(false, async () => {
+    const { rowCount } = await db.query(
+      `update prompt_reviews set held_prompt_used_at=now()
      where id=(select id from prompt_reviews where child_id=$1 and conversation_id=$2
        and content=$3 and hold_status='approved' and held_prompt_used_at is null
        order by created_at desc limit 1)
      and held_prompt_used_at is null`,
-    [input.childId, input.conversationId, input.content],
-  );
-  return !!rowCount;
+      [input.childId, input.conversationId, input.content],
+    );
+    return !!rowCount;
+  });
 }
 /** A teacher approves or declines a held prompt. Only a prompt held for review
  * can be approved (blocked prompts never are), and only by a teacher of that
