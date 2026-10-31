@@ -47,11 +47,9 @@ export function ClassroomTeachersDialog({
         }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
-      // An emailed invitation is delivered by email only; the link is shown
-      // when the teacher asks for one, or when sending failed.
-      if (d.link && !d.emailedTo) setLink(d.link);
-      else setLink("");
-      setNotice(d.emailedTo ? `Invitation emailed to ${d.emailedTo}.` : "");
+      if (d.link) setLink(d.link);
+      else if (method !== "POST") setLink("");
+      setNotice(d.emailedTo ? `Link emailed to ${d.emailedTo}.` : "");
       if (d.emailedTo) setEmail("");
       if (d.emailError) setError(d.emailError);
       await load();
@@ -111,48 +109,19 @@ export function ClassroomTeachersDialog({
         </div>
         {data?.canManage && (
           <>
-            <form
-              className="df-inline"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void mutate("POST", { email });
-              }}
-            >
-              <input
-                className="df-input"
-                type="email"
-                required
-                placeholder="coteacher@school.edu"
-                aria-label="Co-teacher email address"
-                autoComplete="off"
-                value={email}
-                disabled={busy}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <button className="df-button" disabled={busy || !email.trim()}>
-                {busy ? "Sending…" : "Email invitation"}
-              </button>
-            </form>
-            {!link && (
+            {!link ? (
               <button
-                type="button"
-                className="df-button secondary small"
+                className="df-button"
                 disabled={busy}
                 onClick={() => mutate("POST")}
               >
-                Or get a link to share yourself
+                {busy ? "Working…" : "Add a co-teacher"}
               </button>
-            )}
-            {notice && (
-              <p className="df-notice" role="status">
-                {notice}
-              </p>
-            )}
-            {link && (
+            ) : (
               <div className="df-notice">
                 <p>
-                  Copy this private link and send it to your co-teacher. It
-                  works once and expires in seven days.
+                  Share this private link with your co-teacher. It works once
+                  and expires in seven days.
                 </p>
                 <div className="df-inline">
                   <input
@@ -168,6 +137,36 @@ export function ClassroomTeachersDialog({
                     Copy link
                   </CopyButton>
                 </div>
+                <p>Or email it to them:</p>
+                <form
+                  className="df-inline"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void mutate("POST", {
+                      email,
+                      token: link.split("/").pop(),
+                    });
+                  }}
+                >
+                  <input
+                    className="df-input"
+                    type="email"
+                    required
+                    placeholder="coteacher@school.edu"
+                    aria-label="Co-teacher email address"
+                    autoComplete="off"
+                    value={email}
+                    disabled={busy}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <button
+                    className="df-button secondary small"
+                    disabled={busy || !email.trim()}
+                  >
+                    {busy ? "Sending…" : "Send email"}
+                  </button>
+                </form>
+                {notice && <p role="status">{notice}</p>}
               </div>
             )}
             {!!data.invitations.length && (
