@@ -153,6 +153,40 @@ test("schools keep their people, classes and data separate", async () => {
     classA,
   );
 
+  const expanded = (await schoolOverview(pool, a.school.id))!;
+  assert.equal(expanded.classes[0].teachers.length, 2);
+  assert.deepEqual(
+    expanded.classes[0].roster.map((p: any) => p.id),
+    [person.student1],
+  );
+  assert.equal(
+    expanded.teachers.find((p: any) => p.id === person.admin1).classes,
+    1,
+  );
+  for (const [vm, child] of [
+    ["vm-schoolalerta", person.student1],
+    ["vm-schoolalertb", person.student2],
+  ]) {
+    await pool.query(
+      "insert into projects(vm_id,owner_id,metadata) values($1,$2,'{}')",
+      [vm, child],
+    );
+    await pool.query(
+      "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity,hold_status,reviewed_by,reviewed_at) values($1,$2,'00000000-0000-4000-8000-000000000099','sample request','review','{}','medium','approved',$3,now()),($1,$2,'00000000-0000-4000-8000-000000000099','blocked request','block','{}','high',null,null,null)",
+      [vm, child, vm.endsWith("a") ? person.teacher1 : person.teacher2],
+    );
+  }
+  const safetyA = (await schoolOverview(pool, a.school.id))!.alerts;
+  assert.equal(safetyA.length, 2);
+  assert.ok(safetyA.every((r: any) => r.child_id === person.student1));
+  assert.ok(
+    safetyA.some(
+      (r: any) =>
+        r.hold_status === "approved" && r.reviewer_name === "sch_teacher1",
+    ),
+  );
+  assert.ok(safetyA.some((r: any) => r.decision === "block"));
+
   // A school administrator can create further invitations only for their own school.
   const token = await createSchoolTeacherInvite(pool, {
     schoolId: a.school.id,

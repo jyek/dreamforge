@@ -57,7 +57,7 @@ export async function schoolOverview(db: Db, schoolId: string) {
     await db.query(
       `select p.id,p.display_name,p.username,
          exists(select 1 from school_admins a where a.school_id=p.school_id and a.profile_id=p.id) as is_admin,
-         (select count(*)::int from classes c where c.teacher_id=p.id) as classes
+         (select count(*)::int from classes c join profiles owner on owner.id=c.teacher_id where owner.school_id=$1 and (c.teacher_id=p.id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.id))) as classes
        from profiles p where p.school_id=$1 and p.role='teacher' order by lower(p.display_name)`,
       [schoolId],
     )
@@ -80,5 +80,32 @@ export async function schoolOverview(db: Db, schoolId: string) {
       [schoolId],
     )
   ).rows[0];
-  return { school, teachers, classes, ...counts };
+  for (const classroom of classes) {
+    classroom.teachers = (
+      await db.query(
+        `select p.id,p.display_name,p.username,(p.id=c.teacher_id) as is_owner
+      from classes c join profiles p on (p.id=c.teacher_id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.id))
+      where c.id=$2 and p.school_id=$1 order by (p.id=c.teacher_id) desc,p.display_name`,
+        [schoolId, classroom.id],
+      )
+    ).rows;
+    classroom.roster = (
+      await db.query(
+        `select p.id,p.display_name,p.username from class_members m join profiles p on p.id=m.child_id where m.class_id=$2 and p.school_id=$1 order by p.display_name`,
+        [schoolId, classroom.id],
+      )
+    ).rows;
+  }
+  const alerts = (
+    await db.query(
+      `select r.id,r.child_id,r.content,r.decision,r.categories,r.hold_status,r.created_at,r.reviewed_at,
+    p.display_name as child_name, reviewer.display_name as reviewer_name, projects.metadata->>'name' as project_name,
+    coalesce((select json_agg(json_build_object('id',c.id,'name',c.name)) from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id where m.child_id=r.child_id and owner.school_id=$1),'[]'::json) as classrooms
+    from prompt_reviews r join profiles p on p.id=r.child_id left join profiles reviewer on reviewer.id=r.reviewed_by left join projects on projects.vm_id=r.vm_id
+    where p.school_id=$1 and (r.decision<>'allow' or r.hold_status is not null)
+    order by r.created_at desc,r.id desc`,
+      [schoolId],
+    )
+  ).rows;
+  return { school, teachers, classes, alerts, ...counts };
 }

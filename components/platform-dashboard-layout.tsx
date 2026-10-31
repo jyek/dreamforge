@@ -52,6 +52,39 @@ export const SCHOOL_SECTION = {
   icon: Building2,
   description: "Your school's teachers, classes and safety overview.",
 } as const;
+export const SCHOOL_ADMIN_SECTIONS = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: Home,
+    description: "Your school, classrooms and safety activity.",
+  },
+  {
+    id: "classes",
+    label: "Classes",
+    icon: School,
+    description: "Teaching teams and students in each classroom.",
+  },
+  {
+    id: "teachers",
+    label: "Teachers",
+    icon: UsersRound,
+    description: "Your school’s teachers and their classrooms.",
+  },
+  {
+    id: "alerts",
+    label: "Safety alerts",
+    icon: ShieldCheck,
+    description:
+      "Pending, approved, declined and blocked requests across your school.",
+  },
+  {
+    id: "teaching",
+    label: "My teaching",
+    icon: FolderKanban,
+    description: "Return to your teacher workspace.",
+  },
+] as const;
 export const BUILDER_SECTIONS = [
   {
     id: "home",
@@ -68,6 +101,7 @@ export const BUILDER_SECTIONS = [
 ] as const;
 export function PlatformDashboardLayout({
   teacher,
+  schoolMode = false,
   name,
   accountLoading = false,
   creditBalanceMicros,
@@ -77,6 +111,7 @@ export function PlatformDashboardLayout({
   headerAction,
 }: {
   teacher: boolean;
+  schoolMode?: boolean;
   accountLoading?: boolean;
   name?: string;
   creditBalanceMicros?: number;
@@ -98,11 +133,13 @@ export function PlatformDashboardLayout({
       stopped = true;
     };
   }, [teacher]);
-  const sections = teacher
-    ? schoolAdmin
-      ? [...TEACHER_SECTIONS, SCHOOL_SECTION]
-      : TEACHER_SECTIONS
-    : BUILDER_SECTIONS;
+  const sections = schoolMode
+    ? SCHOOL_ADMIN_SECTIONS
+    : teacher
+      ? schoolAdmin
+        ? [...TEACHER_SECTIONS, SCHOOL_SECTION]
+        : TEACHER_SECTIONS
+      : BUILDER_SECTIONS;
   const current =
     (section === "profile"
       ? {
@@ -115,12 +152,19 @@ export function PlatformDashboardLayout({
   return (
     <div className="df-teacher-dashboard">
       <StudioSidebar
+        caption={schoolMode ? "SCHOOL ADMINISTRATION" : undefined}
         onProfileOpen={() => setNavOpen(false)}
         name={name}
         accountLoading={accountLoading}
         creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}
-        label={teacher ? "Teacher sidebar" : "Builder sidebar"}
+        label={
+          schoolMode
+            ? "School administrator sidebar"
+            : teacher
+              ? "Teacher sidebar"
+              : "Builder sidebar"
+        }
         className={navOpen ? "is-open" : ""}
         toggle={
           <button
@@ -137,7 +181,13 @@ export function PlatformDashboardLayout({
           <nav
             id="studio-sections"
             className="df-studio-nav"
-            aria-label={teacher ? "Teacher sections" : "Builder sections"}
+            aria-label={
+              schoolMode
+                ? "School sections"
+                : teacher
+                  ? "Teacher sections"
+                  : "Builder sections"
+            }
           >
             {sections.map((s) => (
               <button
