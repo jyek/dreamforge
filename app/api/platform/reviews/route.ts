@@ -1,5 +1,9 @@
-import { teacherStudentAccessSQL } from "@/lib/classroom-permissions";
+import {
+  classroomTeacherSQL,
+  teacherStudentAccessSQL,
+} from "@/lib/classroom-permissions";
 import { database } from "@/lib/database";
+import { decideHold } from "@/lib/prompt-hold";
 import { checkOrigin, getProfile, platformEnabled } from "@/lib/platform-auth";
 const scope = `${teacherStudentAccessSQL("r.child_id")}`;
 export async function GET(req: Request) {
@@ -26,6 +30,9 @@ export async function GET(req: Request) {
   const projectId = params.get("projectId");
   if (projectId && !/^vm-[a-z0-9]+$/.test(projectId))
     return Response.json({ error: "Invalid project." }, { status: 400 });
+  const classId = params.get("classId");
+  if (classId && !/^[a-f0-9-]{36}$/i.test(classId))
+    return Response.json({ error: "Invalid classroom." }, { status: 400 });
   let before: { time: string; id: string } | null = null;
   if (params.get("before")) {
     try {
@@ -43,13 +50,14 @@ export async function GET(req: Request) {
     }
   }
   const { rows } = await database().query(
-    `select r.*,p.metadata->>'name' as project_name,pr.display_name as child_name from prompt_reviews r join projects p on p.vm_id=r.vm_id join profiles pr on pr.id=r.child_id where ${scope} and ($2::timestamptz is null or (r.created_at,r.id)<($2::timestamptz,$3::uuid)) and (not $4::boolean or r.decision<>'allow') and ($5::text is null or r.vm_id=$5) order by r.created_at desc,r.id desc limit 500`,
+    `select r.*,p.metadata->>'name' as project_name,pr.display_name as child_name from prompt_reviews r join projects p on p.vm_id=r.vm_id join profiles pr on pr.id=r.child_id where ${scope} and ($2::timestamptz is null or (r.created_at,r.id)<($2::timestamptz,$3::uuid)) and (not $4::boolean or r.decision<>'allow') and ($5::text is null or r.vm_id=$5) and ($6::uuid is null or (${classroomTeacherSQL("$6::uuid", "$1")} and exists(select 1 from class_members m where m.class_id=$6::uuid and m.child_id=r.child_id))) order by r.created_at desc,r.id desc limit 500`,
     [
       user.id,
       before?.time || null,
       before?.id || null,
       params.get("flags") === "1",
       projectId,
+      classId,
     ],
   );
   const last = rows.at(-1);
@@ -73,8 +81,16 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
     return Response.json({ error: "Invalid review." }, { status: 400 });
+  if (body.action === "approve" || body.action === "deny")
+    return Response.json({
+      ok: await decideHold(database(), {
+        id: body.id,
+        teacherId: user.id,
+        action: body.action,
+      }),
+    });
   const { rowCount } = await database().query(
-    `update prompt_reviews r set reviewed_by=$1,reviewed_at=now() where id=$2 and ${scope}`,
+    `update prompt_reviews r set reviewed_by=$1,reviewed_at=now() where id=$2 and r.hold_status is distinct from 'pending' and ${scope}`,
     [user.id, body.id],
   );
   return Response.json({ ok: !!rowCount });
