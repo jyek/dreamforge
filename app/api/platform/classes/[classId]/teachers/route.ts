@@ -6,6 +6,8 @@ import {
 } from "@/lib/platform-auth";
 import { classroomAccess } from "@/lib/classroom-data";
 import { database } from "@/lib/database";
+import { EmailNotConfiguredError, sendEmail } from "@/lib/email";
+import { coTeacherInviteEmail, validEmail } from "@/lib/coteacher-invite-email";
 const valid = (id: string) => /^[a-f0-9-]{36}$/i.test(id);
 export async function GET(
   _req: Request,
@@ -42,6 +44,16 @@ export async function POST(
     { classId } = await params;
   if (user?.role !== "teacher" || !checkOrigin(req) || !valid(classId))
     return Response.json({ error: "Not allowed." }, { status: 403 });
+  const body = await req.json().catch(() => ({}));
+  const email =
+    typeof body.email === "string" && body.email.trim()
+      ? body.email.trim()
+      : null;
+  if (email && !validEmail(email))
+    return Response.json(
+      { error: "Enter a valid email address." },
+      { status: 400 },
+    );
   const token = inviteToken();
   const { rowCount } = await database().query(
     "insert into teacher_invites(token_hash,created_by,classroom_id) select $1,$2,c.id from classes c where c.id=$3 and c.teacher_id=$2",
@@ -52,9 +64,32 @@ export async function POST(
       { error: "Only the classroom owner can invite teachers." },
       { status: 403 },
     );
-  return Response.json({
-    link: `${process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin}/classrooms/invite/${token}`,
-  });
+  const link = `${process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin}/classrooms/invite/${token}`;
+  if (!email) return Response.json({ link });
+  // The invitation stays valid if sending fails, so the owner can still copy the link.
+  try {
+    const classroom = await classroomAccess(classId, user);
+    await sendEmail({
+      to: email,
+      ...coTeacherInviteEmail({
+        inviterName: user.display_name,
+        className: classroom?.name || "a classroom",
+        link,
+      }),
+    });
+    return Response.json({ link, emailedTo: email });
+  } catch (e) {
+    console.error("coteacher.invite_email_failed", {
+      errorType: e instanceof Error ? e.name : "Unknown",
+    });
+    return Response.json({
+      link,
+      emailError:
+        e instanceof EmailNotConfiguredError
+          ? "Email isn't set up yet, so copy the link below and send it yourself."
+          : "We couldn't send the email. Copy the link below and send it yourself.",
+    });
+  }
 }
 export async function DELETE(
   req: Request,
