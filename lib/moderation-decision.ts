@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { maskBlockedPrompts } from "./blocked-prompts";
 export const moderationDecisionSchema = z.object({
   decision: z.enum(["allow", "block", "review"]),
   categories: z.array(
@@ -29,10 +30,11 @@ export function moderationConversation(
   messages: Array<{
     role: string;
     parts?: Array<{ type: string; text?: string }>;
+    metadata?: unknown;
   }>,
 ) {
   return JSON.stringify(
-    messages
+    maskBlockedPrompts(messages)
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({
         role: m.role,

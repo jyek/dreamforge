@@ -516,11 +516,10 @@ try {
       !result.events.some((e) => e.type.startsWith("tool-")),
       "Blocked prompt invoked tools",
     );
+    // The student keeps their own words, flagged as blocked.
     assert(
       result.history.some(
-        (m) =>
-          m.role === "user" &&
-          m.parts.some((p) => p.text === "[Request blocked by safety checks]"),
+        (m) => m.role === "user" && m.metadata?.custom?.blocked === true,
       ),
       "Prompt was not blocked by the safety harness",
     );
