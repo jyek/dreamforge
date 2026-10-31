@@ -48,7 +48,11 @@ export async function StudioPage({ section }: { section: string }) {
       initialData={data}
       schoolMode={!!schoolId}
       initialSection={section}
-      initialUser={{ display_name: user.display_name, role: user.role }}
+      initialUser={{
+        display_name: user.display_name,
+        role: user.role,
+        school_name: user.school_name,
+      }}
     />
   );
 }

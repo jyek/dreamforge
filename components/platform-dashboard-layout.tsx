@@ -61,16 +61,22 @@ export const SCHOOL_ADMIN_SECTIONS = [
     description: "Your school, classrooms and safety activity.",
   },
   {
-    id: "classes",
-    label: "Classes",
-    icon: School,
-    description: "Teaching teams and students in each classroom.",
-  },
-  {
     id: "teachers",
     label: "Teachers",
     icon: UsersRound,
     description: "Your school’s teachers and their classrooms.",
+  },
+  {
+    id: "students",
+    label: "Students",
+    icon: UsersRound,
+    description: "Enroll students and manage classroom membership.",
+  },
+  {
+    id: "classes",
+    label: "Classes",
+    icon: School,
+    description: "Teaching teams and students in each classroom.",
   },
   {
     id: "alerts",
@@ -78,12 +84,6 @@ export const SCHOOL_ADMIN_SECTIONS = [
     icon: ShieldCheck,
     description:
       "Pending, approved, declined and blocked requests across your school.",
-  },
-  {
-    id: "students",
-    label: "Students",
-    icon: UsersRound,
-    description: "Enroll students and manage classroom membership.",
   },
 ] as const;
 export const BUILDER_SECTIONS = [
@@ -104,6 +104,7 @@ export function PlatformDashboardLayout({
   teacher,
   schoolMode = false,
   name,
+  schoolName,
   accountLoading = false,
   creditBalanceMicros,
   section,
@@ -115,6 +116,7 @@ export function PlatformDashboardLayout({
   schoolMode?: boolean;
   accountLoading?: boolean;
   name?: string;
+  schoolName?: string | null;
   creditBalanceMicros?: number;
   section: string;
   onSectionChange: (section: string) => void;
@@ -143,6 +145,7 @@ export function PlatformDashboardLayout({
         caption={schoolMode ? "SCHOOL ADMINISTRATION" : undefined}
         onProfileOpen={() => setNavOpen(false)}
         name={name}
+        schoolName={schoolName}
         accountLoading={accountLoading}
         creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}

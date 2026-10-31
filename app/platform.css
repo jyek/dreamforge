@@ -3236,3 +3236,11 @@
   .df-action-link > svg:last-child { grid-column: 3; grid-row: 1 / 3; }
   .df-action-counts { grid-column: 2; margin-left: 0; }
 }
+
+.df-sidebar-brand .df-brand-school .df-brand-wordmark {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+}

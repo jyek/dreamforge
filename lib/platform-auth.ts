@@ -16,12 +16,13 @@ export type Profile = {
   username: string;
   display_name: string;
   role: "teacher" | "child";
+  school_name?: string | null;
 };
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const session = await getStudentSession();
   if (!session) return null;
   const { rows } = await database().query(
-    "select id,username,display_name,role from profiles where id=$1",
+    "select p.id,p.username,p.display_name,p.role,s.name as school_name from profiles p left join schools s on s.id=p.school_id where p.id=$1",
     [session.id],
   );
   return rows[0] || null;

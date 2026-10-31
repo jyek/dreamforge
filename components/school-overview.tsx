@@ -78,6 +78,7 @@ export function SchoolOverview({
       teacher
       schoolMode
       name={name}
+      schoolName={initial.school.name}
       section={section}
       onSectionChange={navigate}
     >

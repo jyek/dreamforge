@@ -53,7 +53,11 @@ type Wallet = CreditWallet & {
   output_tokens: string;
 };
 type Data = {
-  user: { display_name: string; role: "child" | "teacher" };
+  user: {
+    display_name: string;
+    role: "child" | "teacher";
+    school_name?: string | null;
+  };
   classes: {
     id: string;
     name: string;
@@ -190,6 +194,7 @@ export function PlatformDashboard({
     <PlatformDashboardLayout
       teacher={!!teacher}
       schoolMode={schoolMode}
+      schoolName={data?.user.school_name ?? initialUser?.school_name}
       accountLoading={!data && !initialUser}
       creditBalanceMicros={
         !teacher && data?.wallet

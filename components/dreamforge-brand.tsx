@@ -1,9 +1,16 @@
 import Link from "next/link";
-export function DreamForgeBrand() {
+export function DreamForgeBrand({
+  schoolName,
+}: { schoolName?: string | null } = {}) {
   return (
-    <Link href="/home" className="df-brand" aria-label="DreamForge home">
+    <Link
+      href="/home"
+      className={schoolName ? "df-brand df-brand-school" : "df-brand"}
+      aria-label={`${schoolName || "DreamForge"} home`}
+      title={schoolName || undefined}
+    >
       <img src="/brand/dreamforge-mark.svg" width="48" height="48" alt="" />
-      <span className="df-brand-wordmark">dreamforge</span>
+      <span className="df-brand-wordmark">{schoolName || "dreamforge"}</span>
     </Link>
   );
 }
