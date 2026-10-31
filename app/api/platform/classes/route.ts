@@ -1,5 +1,11 @@
 import { database } from "@/lib/database";
 import {
+  SCHOOL_MISMATCH_MESSAGE,
+  administeredSchool,
+  sameSchool,
+  schoolOf,
+} from "@/lib/schools";
+import {
   checkOrigin,
   getProfile,
   inviteToken,
@@ -13,10 +19,17 @@ export async function POST(req: Request) {
   if (!user) return Response.json({ error: "Sign in first." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   if (body.action === "inviteTeacher" && user.role === "teacher") {
+    // Teachers in a school are added to it by the school administrator only.
+    const school = await schoolOf(database(), user.id);
+    if (school && (await administeredSchool(database(), user.id)) !== school)
+      return Response.json(
+        { error: "Ask your school administrator to add teachers." },
+        { status: 403 },
+      );
     const token = inviteToken();
     await database().query(
-      "insert into teacher_invites(token_hash,created_by) values($1,$2)",
-      [tokenHash(token), user.id],
+      "insert into teacher_invites(token_hash,created_by,school_id) values($1,$2,$3)",
+      [tokenHash(token), user.id, school],
     );
     return Response.json({
       link: `${process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin}/signup?teacherInvite=${token}`,
@@ -37,7 +50,7 @@ export async function POST(req: Request) {
   const code =
     typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
   const { rows } = await database().query(
-    "select id from classes where invite_code=$1",
+    "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1",
     [code],
   );
   if (!rows[0])
@@ -45,6 +58,8 @@ export async function POST(req: Request) {
       { error: "Class Number not found. Check it with your teacher." },
       { status: 400 },
     );
+  if (!sameSchool(rows[0].school_id, await schoolOf(database(), user.id)))
+    return Response.json({ error: SCHOOL_MISMATCH_MESSAGE }, { status: 403 });
   await database().query(
     "insert into class_members(class_id,child_id) values($1,$2) on conflict do nothing",
     [rows[0].id, user.id],

@@ -37,10 +37,10 @@ export async function PATCH(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   if (!name || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name))
     return fail("Use a display name with 1–60 characters.");
-  await database().query(
-    "update profiles set display_name=$2 where id=$1",
-    [user.id, name],
-  );
+  await database().query("update profiles set display_name=$2 where id=$1", [
+    user.id,
+    name,
+  ]);
   return Response.json({ ok: true, name });
 }
 export async function POST(req: Request) {
@@ -92,12 +92,12 @@ export async function POST(req: Request) {
       await db.query("begin");
       const invitation = teacher
         ? await db.query(
-            "select token_hash,classroom_id,created_by from teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
+            "select token_hash,classroom_id,created_by,school_id,make_admin from teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
             [tokenHash(body.teacherInvite)],
           )
         : code
           ? await db.query(
-              "select id from classes where invite_code=$1 for share",
+              "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1 for share of c",
               [code],
             )
           : { rows: [] };
@@ -128,10 +128,24 @@ export async function POST(req: Request) {
         );
       }
       authId = result.id;
+      // New accounts join the school of the invitation or class they came from.
+      const schoolId = invitation.rows[0]?.school_id ?? null;
       await db.query(
-        "insert into profiles(id,username,display_name,auth_email,role) values($1,$2,$3,$4,$5)",
-        [authId, username, name, email, teacher ? "teacher" : "child"],
+        "insert into profiles(id,username,display_name,auth_email,role,school_id) values($1,$2,$3,$4,$5,$6)",
+        [
+          authId,
+          username,
+          name,
+          email,
+          teacher ? "teacher" : "child",
+          schoolId,
+        ],
       );
+      if (teacher && invitation.rows[0].make_admin && schoolId)
+        await db.query(
+          "insert into school_admins(school_id,profile_id) values($1,$2)",
+          [schoolId, authId],
+        );
       if (teacher) {
         if (invitation.rows[0].classroom_id)
           await db.query(
@@ -152,10 +166,9 @@ export async function POST(req: Request) {
             "insert into class_members(class_id,child_id) values($1,$2)",
             [invitation.rows[0].id, authId],
           );
-        await db.query(
-          "insert into token_accounts(child_id) values($1)",
-          [authId],
-        );
+        await db.query("insert into token_accounts(child_id) values($1)", [
+          authId,
+        ]);
       }
       await db.query("commit");
     } catch {

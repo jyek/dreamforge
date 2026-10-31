@@ -3193,3 +3193,5 @@
 .df-class-teaching-team { margin: 12px 0 20px; }
 .df-class-teaching-team h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
 .df-class-teaching-team > div { display: flex; gap: 24px; flex-wrap: wrap; }
+.df-school-list { display: grid; gap: 8px; margin: 10px 0 22px; }
+.df-school-row { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid #e2deeb; border-radius: 12px; background: #fff; }
