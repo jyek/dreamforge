@@ -1,6 +1,7 @@
 import { database } from "./database";
 import { createHash } from "node:crypto";
 import type { Profile } from "./platform-auth";
+import { sameSchool } from "./schools";
 export async function acceptClassroomTeacherInvite(
   token: string,
   user: Profile,
@@ -12,11 +13,16 @@ export async function acceptClassroomTeacherInvite(
     await db.query("begin");
     const hash = createHash("sha256").update(token).digest("hex");
     const { rows } = await db.query(
-      `select i.classroom_id,i.created_by,i.used_by,c.teacher_id from teacher_invites i join classes c on c.id=i.classroom_id where i.token_hash=$1 and i.expires_at>now() for update of i`,
-      [hash],
+      `select i.classroom_id,i.created_by,i.used_by,c.teacher_id,o.school_id as owner_school,(select school_id from profiles where id=$2) as teacher_school from teacher_invites i join classes c on c.id=i.classroom_id join profiles o on o.id=c.teacher_id where i.token_hash=$1 and i.expires_at>now() for update of i`,
+      [hash, user.id],
     );
     const invite = rows[0];
-    if (!invite || invite.created_by !== invite.teacher_id) {
+    // Co-teachers must belong to the classroom owner's school (or both be independent).
+    if (
+      !invite ||
+      invite.created_by !== invite.teacher_id ||
+      !sameSchool(invite.owner_school, invite.teacher_school)
+    ) {
       await db.query("rollback");
       return null;
     }

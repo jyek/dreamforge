@@ -3199,3 +3199,5 @@
 .df-safety-pending { border: 2px solid #a77fff; background: #f4edff; }
 .df-safety-item header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .df-safety-prompt { margin: 0; overflow-wrap: anywhere; }
+.df-school-list { display: grid; gap: 8px; margin: 10px 0 22px; }
+.df-school-row { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid #e2deeb; border-radius: 12px; background: #fff; }
