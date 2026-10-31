@@ -77,10 +77,10 @@ async function canManage(
 /** Students in a class with the owner who could join the group. */
 export async function classmatesFor(db: Db, ownerId: string, vmId: string) {
   const { rows } = await db.query(
-    `select distinct pr.id,pr.display_name,pr.username from class_members mine
-     join class_members other on other.class_id=mine.class_id
-     join profiles pr on pr.id=other.child_id
-     where mine.child_id=$1 and pr.id<>$1 and pr.role='child'
+    `select pr.id,pr.display_name,pr.username from profiles pr
+     where pr.role='child' and pr.id<>$1
+       and exists(select 1 from class_members mine join class_members other on other.class_id=mine.class_id
+                  where mine.child_id=$1 and other.child_id=pr.id)
        and not exists(select 1 from project_members m where m.vm_id=$2 and m.child_id=pr.id)
      order by lower(pr.display_name)`,
     [ownerId, vmId],
