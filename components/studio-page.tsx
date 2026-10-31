@@ -46,6 +46,7 @@ export async function StudioPage({ section }: { section: string }) {
   return (
     <PlatformDashboard
       initialData={data}
+      schoolMode={!!schoolId}
       initialSection={section}
       initialUser={{ display_name: user.display_name, role: user.role }}
     />

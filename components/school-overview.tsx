@@ -2,7 +2,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CopyButton } from "./copy-button";
-import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import {
+  PlatformDashboardLayout,
+  schoolSectionPath,
+} from "./platform-dashboard-layout";
 import { SchoolSetup } from "./school-setup";
 import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomAvatar } from "./classroom-avatar";
@@ -68,15 +71,7 @@ export function SchoolOverview({
   useEffect(() => setSection(initialSection), [initialSection]);
   function navigate(s: string) {
     setSection(s);
-    router.push(
-      s === "overview"
-        ? "/home"
-        : s === "classes"
-          ? "/classrooms"
-          : s === "alerts"
-            ? "/safety"
-            : `/${s}`,
-    );
+    router.push(schoolSectionPath(s));
   }
   return (
     <PlatformDashboardLayout
@@ -322,8 +317,7 @@ export function SchoolOverviewContent({
                 </div>
                 <small>
                   @{t.username}
-                  {t.is_admin ? " · School admin" : ""} · {t.classes}{" "}
-                  classes
+                  {t.is_admin ? " · School admin" : ""} · {t.classes} classes
                 </small>
                 <div className="df-inline">
                   {initial.classes

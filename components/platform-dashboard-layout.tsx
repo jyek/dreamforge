@@ -45,6 +45,14 @@ export const TEACHER_SECTIONS = [
     description: "Review safety concerns and guide your students.",
   },
 ] as const;
+export const schoolSectionPath = (section: string) =>
+  section === "overview"
+    ? "/home"
+    : section === "classes"
+      ? "/classrooms"
+      : section === "alerts"
+        ? "/safety"
+        : `/${section}`;
 export const SCHOOL_ADMIN_SECTIONS = [
   {
     id: "overview",
@@ -123,9 +131,11 @@ export function PlatformDashboardLayout({
     (section === "profile"
       ? {
           label: "Profile",
-          description: teacher
-            ? "Manage your teacher profile and account."
-            : "Your spending, account and parent top-ups.",
+          description: schoolMode
+            ? "Manage your school admin profile and account."
+            : teacher
+              ? "Manage your teacher profile and account."
+              : "Your spending, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];
   return (

@@ -36,7 +36,10 @@ import {
   Clock3,
 } from "lucide-react";
 import { DreamForgeProjectArt } from "./dreamforge-brand";
-import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import {
+  PlatformDashboardLayout,
+  schoolSectionPath,
+} from "./platform-dashboard-layout";
 type Project = {
   vm_id: string;
   metadata: { name: string; conversations: { id: string }[] };
@@ -88,10 +91,12 @@ export function PlatformDashboard({
   initialUser,
   initialData,
   initialSection = "home",
+  schoolMode = false,
 }: {
   initialUser?: Data["user"];
   initialData?: Data;
   initialSection?: string;
+  schoolMode?: boolean;
 }) {
   const router = useRouter();
   const [data, setData] = useState<Data | null>(initialData || null),
@@ -105,7 +110,9 @@ export function PlatformDashboard({
     if (initialData) setData(initialData);
   }, [initialSection, initialData]);
   function selectSection(section: string) {
-    router.push(`/${section}`, { scroll: false });
+    router.push(schoolMode ? schoolSectionPath(section) : `/${section}`, {
+      scroll: false,
+    });
   }
   async function load() {
     try {
@@ -182,6 +189,7 @@ export function PlatformDashboard({
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
+      schoolMode={schoolMode}
       accountLoading={!data && !initialUser}
       creditBalanceMicros={
         !teacher && data?.wallet
