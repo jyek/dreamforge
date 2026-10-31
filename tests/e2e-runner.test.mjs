@@ -87,9 +87,7 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "m
         histories.set(body.conversationId, [
           {
             ...user,
-            parts: blocked
-              ? [{ type: "text", text: "[Request blocked by safety checks]" }]
-              : user.parts,
+            ...(blocked ? { metadata: { custom: { blocked: true } } } : {}),
           },
           { role: "assistant", parts: [{ type: "text", text: answer }] },
         ]);

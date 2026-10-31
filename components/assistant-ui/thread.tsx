@@ -324,6 +324,11 @@ const AssistantActionBar: FC = () => {
 };
 
 const UserMessage: FC = () => {
+  const blocked = useAuiState(
+    ({ message }) =>
+      (message.metadata?.custom as { blocked?: boolean } | undefined)
+        ?.blocked === true,
+  );
   return (
     <MessagePrimitive.Root
       className="aui-user-message-root mx-auto grid w-full max-w-(--thread-max-width) animate-in auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] content-start gap-y-2 px-2 py-3 duration-150 fade-in slide-in-from-bottom-1 [&:where(>*)]:col-start-2"
@@ -332,7 +337,18 @@ const UserMessage: FC = () => {
       <UserMessageAttachments />
 
       <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0">
-        <div className="aui-user-message-content rounded-2xl bg-muted px-4 py-2.5 wrap-break-word text-foreground">
+        <div
+          className={
+            blocked
+              ? "aui-user-message-content rounded-2xl border border-red-300 bg-red-50 px-4 py-2.5 wrap-break-word text-red-950"
+              : "aui-user-message-content rounded-2xl bg-muted px-4 py-2.5 wrap-break-word text-foreground"
+          }
+        >
+          {blocked && (
+            <span className="mb-1 block text-xs font-semibold tracking-wide text-red-700 uppercase">
+              Blocked · not sent to the AI
+            </span>
+          )}
           <MessagePrimitive.Parts />
         </div>
         <div className="aui-user-action-bar-wrapper absolute top-1/2 left-0 -translate-x-full -translate-y-1/2 pr-2">
