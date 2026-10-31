@@ -24,6 +24,7 @@ type Project = {
   conversation_id: string | null;
   prompt_count: number;
   guidance_count: number;
+  group_members?: string[];
 };
 export type StudentProjectsData = {
   classroom?: { name: string; teacher_name?: string };
@@ -185,7 +186,14 @@ export function TeacherStudentProjects({
                     <strong>{project.owner_name || teacherName}</strong>
                     <div className="df-muted">Teacher</div>
                   </td>
-                  <td>{project.name}</td>
+                  <td>
+                    {project.name}
+                    {!!project.group_members?.length && (
+                      <small style={{ display: "block" }}>
+                        Group project with {project.group_members.join(", ")}
+                      </small>
+                    )}
+                  </td>
                   <td>{project.prompt_count}</td>
                   <td>{project.guidance_count}</td>
                   <td>
