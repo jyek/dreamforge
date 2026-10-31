@@ -243,7 +243,16 @@ async function handleChat(req: Request) {
             payload.conversationId,
             [
               ...messages.slice(0, -1),
-              held ? {...messages.at(-1)!, parts:[{type:"text",text:"[Waiting for teacher approval]"}]} : error.preservesPrompt ? messages.at(-1)! : flagBlockedPrompt(messages.at(-1)!),
+              held
+                ? {
+                    ...messages.at(-1)!,
+                    parts: [
+                      { type: "text", text: "[Waiting for teacher approval]" },
+                    ],
+                  }
+                : error.preservesPrompt
+                  ? messages.at(-1)!
+                  : flagBlockedPrompt(messages.at(-1)!),
               {
                 id,
                 role: "assistant",

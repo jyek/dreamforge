@@ -58,7 +58,7 @@ export function ClassroomSafetyReport({ classId }: { classId: string }) {
       const r = await fetch("/api/platform/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, action }),
+        body: JSON.stringify({ id, action, classId }),
       });
       const d = await r.json();
       if (!r.ok || !d.ok) throw Error("That request has already been handled.");
@@ -76,7 +76,7 @@ export function ClassroomSafetyReport({ classId }: { classId: string }) {
   return (
     <section className="df-safety-report" aria-labelledby="safety-report-title">
       <div className="df-section-head">
-        <h3 id="safety-report-title">Safety report</h3>
+        <h3 id="safety-report-title">Safety and action queue</h3>
         {reviews && (
           <span>
             {pending.length} waiting for you · {rest.length} blocked or flagged

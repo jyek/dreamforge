@@ -105,6 +105,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       id: held,
       teacherId: ids.other,
       action: "approve",
+      classId: ids.classId,
     }),
     false,
   );
@@ -113,6 +114,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       id: held,
       teacherId: ids.teacher,
       action: "approve",
+      classId: ids.classId,
     }),
     true,
   );
@@ -121,8 +123,52 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       id: held,
       teacherId: ids.teacher,
       action: "deny",
+      classId: ids.classId,
     }),
     false,
+  );
+
+  // A legacy teacher link alone cannot authorize a classroom approval.
+  await pool.query(
+    "insert into teacher_builders(teacher_id,child_id) values($1,$2) on conflict do nothing",
+    [ids.other, ids.child],
+  );
+  const restricted = await review(
+    ids.child,
+    "vm-holdchild",
+    "classroom approval only",
+  );
+  await recordModerationOutcome(pool, restricted, ids.child, outcome("review"));
+  assert.equal(
+    await decideHold(pool, {
+      id: restricted,
+      teacherId: ids.other,
+      classId: ids.classId,
+      action: "approve",
+    }),
+    false,
+  );
+  assert.equal(
+    await decideHold(pool, {
+      id: restricted,
+      teacherId: ids.teacher,
+      classId: ids.conversation,
+      action: "approve",
+    }),
+    false,
+  );
+  await pool.query(
+    "insert into class_teachers(class_id,teacher_id,added_by) values($1,$2,$3)",
+    [ids.classId, ids.other, ids.teacher],
+  );
+  assert.equal(
+    await decideHold(pool, {
+      id: restricted,
+      teacherId: ids.other,
+      classId: ids.classId,
+      action: "approve",
+    }),
+    true,
   );
 
   // The approval covers exactly this text, in this conversation, once.
@@ -158,6 +204,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       id: blocked,
       teacherId: ids.teacher,
       action: "approve",
+      classId: ids.classId,
     }),
     false,
   );
@@ -192,6 +239,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       id: declined,
       teacherId: ids.teacher,
       action: "deny",
+      classId: ids.classId,
     }),
     true,
   );

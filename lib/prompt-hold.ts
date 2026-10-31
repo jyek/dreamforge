@@ -1,5 +1,5 @@
 import type { SafetyError } from "./kids-safety";
-import { teacherStudentAccessSQL } from "./classroom-permissions";
+import { classroomTeacherSQL } from "./classroom-permissions";
 type Db = {
   query: (
     sql: string,
@@ -41,7 +41,7 @@ export async function recordModerationOutcome(
   return failSafe(false, async () => {
     const { rows } = await db.query(
       `update prompt_reviews r set decision=$3,categories=$4,severity=$5,
-       hold_status=case when $6::boolean and exists(select 1 from teacher_builders t where t.child_id=r.child_id) then 'pending' else r.hold_status end
+       hold_status=case when $6::boolean and exists(select 1 from class_members m join classes c on c.id=m.class_id where m.child_id=r.child_id) then 'pending' else r.hold_status end
      where r.id=$1 and r.child_id=$2 and r.reviewed_at is null
      returning (r.hold_status='pending') as held`,
       [
@@ -78,15 +78,21 @@ export async function consumeApprovedHold(
  * student. Returns false when nothing was changed. */
 export async function decideHold(
   db: Db,
-  input: { id: string; teacherId: string; action: "approve" | "deny" },
+  input: {
+    id: string;
+    teacherId: string;
+    classId: string;
+    action: "approve" | "deny";
+  },
 ) {
   const { rowCount } = await db.query(
     `update prompt_reviews r set hold_status=$3,reviewed_by=$1,reviewed_at=now()
-     where r.id=$2 and r.hold_status='pending' and r.decision='review' and ${teacherStudentAccessSQL("r.child_id")}`,
+     where r.id=$2 and r.hold_status='pending' and r.decision='review' and exists(select 1 from class_members m where m.child_id=r.child_id and m.class_id=$4::uuid and ${classroomTeacherSQL("m.class_id")})`,
     [
       input.teacherId,
       input.id,
       input.action === "approve" ? "approved" : "denied",
+      input.classId,
     ],
   );
   return !!rowCount;

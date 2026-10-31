@@ -81,14 +81,21 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
     return Response.json({ error: "Invalid review." }, { status: 400 });
-  if (body.action === "approve" || body.action === "deny")
+  if (body.action === "approve" || body.action === "deny") {
+    if (
+      typeof body.classId !== "string" ||
+      !/^[a-f0-9-]{36}$/i.test(body.classId)
+    )
+      return Response.json({ error: "Choose a classroom." }, { status: 400 });
     return Response.json({
       ok: await decideHold(database(), {
         id: body.id,
         teacherId: user.id,
+        classId: body.classId,
         action: body.action,
       }),
     });
+  }
   const { rowCount } = await database().query(
     `update prompt_reviews r set reviewed_by=$1,reviewed_at=now() where id=$2 and r.hold_status is distinct from 'pending' and ${scope}`,
     [user.id, body.id],

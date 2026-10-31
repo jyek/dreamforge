@@ -18,6 +18,7 @@ import { CreateClassDialog } from "./create-class-dialog";
 import { JoinClassDialog } from "./join-class-dialog";
 import { BuilderGreeting } from "./builder-greeting";
 import { BuilderIdeaArt } from "./builder-idea-art";
+import { TeacherActionSummary } from "./teacher-action-summary";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { TeacherProfile } from "./teacher-profile";
@@ -336,6 +337,7 @@ export function PlatformDashboard({
           )}
           {teacher && view === "home" && (
             <>
+              <TeacherActionSummary />
               <div className="df-section-head">
                 <h2>Your studio at a glance</h2>
               </div>

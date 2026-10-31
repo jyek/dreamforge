@@ -31,6 +31,7 @@ export async function GET(
     if (!view) return Response.json({ visible: false });
     // Students only get the dialog when they own the project or are in its group.
     const visible = user.role === "teacher" ? view.canManage : view.isMember;
+    if (!visible) return Response.json({ visible: false });
     return Response.json({ visible, ...view, you: user.id });
   } catch (error) {
     if (isMissingGroupSchema(error)) return Response.json({ visible: false });
