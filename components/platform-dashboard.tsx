@@ -272,8 +272,8 @@ export function PlatformDashboard({
                         size={22}
                         aria-hidden="true"
                       />
-                      Ideas in progress<strong>{data.projects.length}</strong>
-                      Projects to explore
+                      Your projects<strong>{data.projects.length}</strong>
+                      Created by you
                     </div>
                     <div className="df-card df-stat">
                       <ShieldCheck

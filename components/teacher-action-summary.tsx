@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowRight,
+  CircleCheck,
+  ShieldCheck,
+  LoaderCircle,
+  CircleAlert,
+} from "lucide-react";
 type Entry = { id: string; name: string; waiting: number; unreviewed: number };
 export function TeacherActionSummary() {
   const [rows, setRows] = useState<Entry[] | null>(null),
@@ -31,33 +38,63 @@ export function TeacherActionSummary() {
       clearInterval(timer);
     };
   }, []);
+  const pending = rows?.filter((c) => c.waiting > 0 || c.unreviewed > 0) || [];
   return (
-    <section className="df-page" aria-labelledby="teacher-actions-title">
-      <h2 id="teacher-actions-title">Safety and actions needed</h2>
-      {error ? (
-        <p role="status">
-          Could not refresh classroom actions. Open a classroom to check its
-          queue.
-        </p>
-      ) : !rows ? (
-        <p>Loading classroom actions…</p>
-      ) : rows.length === 0 ? (
-        <p>Your classroom action summaries will appear here.</p>
-      ) : (
-        rows.map((c) => (
-          <Link
-            key={c.id}
-            href={`/classrooms/${c.id}`}
-            className="df-school-row"
-          >
-            <strong>{c.name}</strong>
+    <section
+      className="df-teacher-actions"
+      aria-labelledby="teacher-actions-title"
+    >
+      <div className="df-section-head">
+        <h2 id="teacher-actions-title">Safety and actions needed</h2>
+      </div>
+      <div className="df-action-list" aria-busy={!rows && !error}>
+        {error ? (
+          <p className="df-action-row df-action-status" role="status">
+            <CircleAlert size={20} aria-hidden="true" />
             <span>
-              {c.waiting} awaiting approval · {c.unreviewed} safety items to
-              review →
+              Could not refresh actions.{" "}
+              <Link href="/classrooms">
+                Open a classroom to check its queue.
+              </Link>
             </span>
-          </Link>
-        ))
-      )}
+          </p>
+        ) : !rows ? (
+          <p className="df-action-row df-action-status" role="status">
+            <LoaderCircle size={20} aria-hidden="true" />
+            <span>Loading classroom actions…</span>
+          </p>
+        ) : pending.length === 0 ? (
+          <p className="df-action-row df-action-status" role="status">
+            <CircleCheck size={20} aria-hidden="true" />
+            <span>
+              <strong>Nothing to review.</strong> No pending approvals or safety
+              items.
+            </span>
+          </p>
+        ) : (
+          pending.map((c) => (
+            <Link
+              key={c.id}
+              href={`/classrooms/${c.id}`}
+              className="df-action-row df-action-link"
+            >
+              <ShieldCheck size={20} aria-hidden="true" />
+              <strong className="df-action-class">{c.name}</strong>
+              <span className="df-action-counts">
+                {[
+                  c.waiting > 0 ? `${c.waiting} awaiting approval` : null,
+                  c.unreviewed > 0
+                    ? `${c.unreviewed} safety ${c.unreviewed === 1 ? "item" : "items"} to review`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+          ))
+        )}
+      </div>
     </section>
   );
 }
