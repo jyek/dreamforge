@@ -19,6 +19,12 @@ export class SafetyError extends Error {
       | "unavailable"
       | "configuration"
       | "quota" = "blocked",
+    /** The moderation outcome, when the content was actually classified. */
+    readonly outcome?: {
+      decision: "allow" | "block" | "review";
+      categories: string[];
+      severity: string;
+    },
   ) {
     super(message);
   }
@@ -140,6 +146,12 @@ export async function screenContent(
         : result.decision === "review"
           ? "I couldn’t confirm this request is safe. Try describing what you want to build more clearly."
           : "I can’t help with that request. Try a different game, app, or coding idea.",
+      "blocked",
+      {
+        decision: result.decision,
+        categories: result.categories,
+        severity: result.severity,
+      },
     );
   return rows[0].id;
 }
