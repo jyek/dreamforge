@@ -322,7 +322,7 @@ export function SchoolOverviewContent({
                 </div>
                 <small>
                   @{t.username}
-                  {t.is_admin ? " · School administrator" : ""} · {t.classes}{" "}
+                  {t.is_admin ? " · School admin" : ""} · {t.classes}{" "}
                   classes
                 </small>
                 <div className="df-inline">

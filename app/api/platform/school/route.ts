@@ -10,7 +10,7 @@ async function schoolAdmin() {
 }
 const denied = () =>
   Response.json(
-    { error: "School administrator access required." },
+    { error: "School admin access required." },
     { status: 403 },
   );
 export async function GET() {
@@ -18,7 +18,7 @@ export async function GET() {
   if (!admin) return denied();
   return Response.json(await schoolOverview(database(), admin.schoolId));
 }
-/** A school administrator invites a teacher (or another administrator) into their school. */
+/** A school admin invites a teacher (or another administrator) into their school. */
 export async function POST(req: Request) {
   const admin = await schoolAdmin();
   if (!admin || !checkOrigin(req)) return denied();

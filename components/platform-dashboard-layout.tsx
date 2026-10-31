@@ -131,7 +131,7 @@ export function PlatformDashboardLayout({
   return (
     <div className="df-teacher-dashboard">
       <StudioSidebar
-        roleLabel={schoolMode ? "School administrator" : undefined}
+        roleLabel={schoolMode ? "School admin" : undefined}
         caption={schoolMode ? "SCHOOL ADMINISTRATION" : undefined}
         onProfileOpen={() => setNavOpen(false)}
         name={name}
@@ -140,7 +140,7 @@ export function PlatformDashboardLayout({
         role={teacher ? "teacher" : "child"}
         label={
           schoolMode
-            ? "School administrator sidebar"
+            ? "School admin sidebar"
             : teacher
               ? "Teacher sidebar"
               : "Builder sidebar"

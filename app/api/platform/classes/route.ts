@@ -19,11 +19,11 @@ export async function POST(req: Request) {
   if (!user) return Response.json({ error: "Sign in first." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   if (body.action === "inviteTeacher" && user.role === "teacher") {
-    // Teachers in a school are added to it by the school administrator only.
+    // Teachers in a school are added to it by the school admin only.
     const school = await schoolOf(database(), user.id);
     if (school && (await administeredSchool(database(), user.id)) !== school)
       return Response.json(
-        { error: "Ask your school administrator to add teachers." },
+        { error: "Ask your school admin to add teachers." },
         { status: 403 },
       );
     const token = inviteToken();

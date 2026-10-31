@@ -25,4 +25,4 @@ export async function administeredSchool(db: Db, profileId: string) {
 export const sameSchool = (a: string | null, b: string | null) =>
   (a ?? null) === (b ?? null);
 export const SCHOOL_MISMATCH_MESSAGE =
-  "This class belongs to a different school. Ask your school administrator for help.";
+  "This class belongs to a different school. Ask your school admin for help.";

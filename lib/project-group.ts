@@ -164,7 +164,7 @@ export async function addMember(
     if (!(await canManage(db, input.vmId, input.actorId, group.ownerId)))
       return fail(
         403,
-        "Only a classroom teacher or school administrator can change the group.",
+        "Only a classroom teacher or school admin can change the group.",
       );
     if (input.childId === group.ownerId)
       return fail(400, "The owner is already in the group.");
@@ -228,7 +228,7 @@ export async function removeMember(
     )
       return fail(
         403,
-        "Only a classroom teacher or school administrator can change the group.",
+        "Only a classroom teacher or school admin can change the group.",
       );
     if (await busy(db, input.vmId))
       return fail(409, "Wait for the current request to finish first.");
@@ -263,7 +263,7 @@ export async function setEditor(
     if (!allowed)
       return fail(
         403,
-        "Only the current editor, a classroom teacher or a school administrator can do this.",
+        "Only the current editor, a classroom teacher or a school admin can do this.",
       );
     const inGroup =
       input.editorId === group.ownerId ||
