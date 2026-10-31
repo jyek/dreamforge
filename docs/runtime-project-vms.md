@@ -14,17 +14,9 @@ DreamForge's Next.js application and API stay on Vercel. Runtime runs project de
 - Trial accounts use private bearer preview URLs valid for seven days. Copying the link grants preview access to its recipient. DreamForge refreshes expiring links; old copied links eventually expire. No public proxy is added.
 - Runtime's free-account retention applies. The provider currently keeps paused trial sandboxes for seven days. Maintain source backups when keeping projects longer, or add credit for longer provider retention.
 
-## Migration
+## Starter and configuration
 
-Apply `supabase/migrations/202610130001_runtime_bindings.sql`, then run:
-
-```bash
-npm run runtime:migrate -- /absolute/path/to/private.env /absolute/path/to/backup-directory
-```
-
-The private environment file supplies `DATABASE_URL`, `FREESTYLE_API_KEY`, `FREESTYLE_BASE_URL` and `RUNTIME_API_KEY`. The script backs up metadata, conversations and project source with SHA-256 manifests, copies source to Runtime, reinstalls dependencies, verifies preview readiness and key source checksums, then pauses the destination. It retains the original Freestyle VMs. Re-running skips projects already bound to Runtime.
-
-Never commit the private environment file, backups or bearer URLs. The production deployment only needs `RUNTIME_API_KEY` plus its existing Supabase/model configuration; Freestyle credentials are needed only for legacy migration tooling.
+Project starters are bundled in `config/project-starter.tar.gz`; bootstrap and cold creation use the same pinned archive. Production needs `RUNTIME_API_KEY`, `RUNTIME_BASE_SNAPSHOT` and the Supabase/model configuration. Retired provider migration scripts have been removed. Existing Runtime bindings and project IDs remain unchanged.
 
 ## Validation
 

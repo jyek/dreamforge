@@ -1,3 +1,4 @@
+import { starterInstallCommand } from "./project-starter.mjs";
 import { requestSandboxCreation } from "./runtime-provisioning";
 import { database } from "./database";
 import { prepareProjectRuntime } from "./prepare-project-runtime";
@@ -26,7 +27,6 @@ import {
   VM_PORT,
   WORKDIR,
   PROJECT_IDLE_SECONDS,
-  TEMPLATE_REPO,
 } from "./vars";
 
 export const devVm = projectVm;
@@ -141,9 +141,11 @@ export async function createProjectVms(
       });
       if (setup.statusCode !== 0)
         throw Error("Could not prepare workspace storage");
-      const repo = sourceRepoUrl || TEMPLATE_REPO;
       const install = await vm.exec({
-        command: `git clone --depth 1 ${quote(repo)} /tmp/dreamforge-source && cp -a /tmp/dreamforge-source/. ${WORKDIR}/ && rm -rf /tmp/dreamforge-source && cd ${WORKDIR} && npm install --no-audit --no-fund`,
+        command: sourceRepoUrl
+          ? `git clone --depth 1 ${quote(sourceRepoUrl)} /tmp/dreamforge-source && cp -a /tmp/dreamforge-source/. ${WORKDIR}/ && rm -rf /tmp/dreamforge-source && cd ${WORKDIR} && npm install --no-audit --no-fund`
+          : starterInstallCommand() +
+            ` && cd ${WORKDIR} && npm ci --no-audit --no-fund && npm install --save-exact next@15.5.28 react@19.1.10 react-dom@19.1.10 --no-audit --no-fund`,
         timeoutMs: 240000,
       });
       if (install.statusCode !== 0)

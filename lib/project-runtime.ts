@@ -27,7 +27,7 @@ export async function runtimeSandbox(
   if (!rows[0]) {
     throw Object.assign(
       new Error(
-        "This project's files still need to be moved from Freestyle. Its saved conversations are preserved.",
+        "This project's files still need to be restored to Runtime. Its saved conversations are preserved.",
       ),
       { code: "PROJECT_MIGRATION_REQUIRED" },
     );

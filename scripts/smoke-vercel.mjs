@@ -50,7 +50,7 @@ for(let index=0;index<30;index++){
 await reader.cancel();assert(terminalOutput.includes('TERMINAL_VERCEL_OK'),terminalOutput);
 console.log('PASS project files, private-file exclusion and terminal stream');
 const preview=await fetch(created.project.previewUrl,{signal:AbortSignal.timeout(20000)});assert.equal(preview.status,200);
-console.log('PASS live Freestyle preview from the Vercel app');
+console.log('PASS live Runtime preview from the Vercel app');
 const publish=await (await check(`/api/projects/${created.id}/publish`,mutation({message:'Vercel smoke verification'}))).json();
 for(let attempt=0;attempt<60;attempt++){
  const list=await (await check('/api/projects')).json();const project=list.projects.find(p=>p.id===created.id);const release=project.releases.find(r=>r.id===publish.releaseId);
