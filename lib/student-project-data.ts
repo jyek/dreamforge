@@ -2,6 +2,7 @@ import {
   classroomTeacherSQL,
   teacherStudentAccessSQL,
 } from "./classroom-permissions";
+import { groupNames } from "./project-group";
 import { database } from "./database";
 import { guidanceSQL } from "./prompt-guidance";
 export async function studentProjectData(
@@ -33,10 +34,16 @@ export async function studentProjectData(
   );
   const { rows: projects } = await db.query(
     `select p.vm_id,p.owner_id,p.metadata->>'name' as name,p.metadata->'conversations'->0->>'id' as conversation_id,
- (select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and r.child_id=p.owner_id) as prompt_count,
- (select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and r.child_id=p.owner_id and cardinality(${guidanceSQL})>0) as guidance_count
+ (select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id) as prompt_count,
+ (select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and cardinality(${guidanceSQL})>0) as guidance_count
  from projects p where not p.is_example and p.owner_id=any($1::uuid[]) order by p.updated_at desc`,
     [students.map((s) => s.id)],
   );
+  const groups = await groupNames(
+    db,
+    projects.map((project) => project.vm_id),
+  );
+  for (const project of projects)
+    project.group_members = groups.get(project.vm_id) || [];
   return { students, projects };
 }

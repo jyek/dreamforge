@@ -1,4 +1,5 @@
 import { safetyEnabled } from "./safety-mode";
+import { isMissingGroupSchema, projectAccessLevel } from "./project-group";
 import {
   classroomTeacherSQL,
   sharedTeachingProjectSQL,
@@ -40,16 +41,46 @@ export async function platformProjectAccess(
   readOnly = false,
 ) {
   const profile = await getProfile();
-  const { rows } = await database().query(
-    `select metadata,owner_id,is_example from projects where vm_id=$1`,
-    [projectId],
-  );
+  // Until the group-projects migration is applied, projects have no editor.
+  const { rows } = await database()
+    .query(
+      `select metadata,owner_id,editor_id,is_example from projects where vm_id=$1`,
+      [projectId],
+    )
+    .catch(async (error) => {
+      if (!isMissingGroupSchema(error)) throw error;
+      return database().query(
+        `select metadata,owner_id,null::uuid as editor_id,is_example from projects where vm_id=$1`,
+        [projectId],
+      );
+    });
   const row = rows[0];
   if (!row) return null;
   if (readOnly && row.is_example)
     return !safetyEnabled() || profile ? row.metadata : null;
   if (!profile || row.is_example) return null;
-  if (row.owner_id === profile.id) return row.metadata;
+  // One student edits at a time; the owner and every group member can view.
+  const isMember =
+    profile.role === "child" && row.owner_id !== profile.id
+      ? !!(
+          await database()
+            .query(
+              "select 1 from project_members where vm_id=$1 and child_id=$2",
+              [projectId, profile.id],
+            )
+            .catch((error) => {
+              if (!isMissingGroupSchema(error)) throw error;
+              return { rowCount: 0 };
+            })
+        ).rowCount
+      : false;
+  const level = projectAccessLevel({
+    ownerId: row.owner_id,
+    editorId: row.editor_id,
+    isMember,
+    userId: profile.id,
+  });
+  if (level === "edit" || (readOnly && level === "view")) return row.metadata;
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
       `select 1 from class_projects pc join classes c on c.id=pc.class_id join class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,

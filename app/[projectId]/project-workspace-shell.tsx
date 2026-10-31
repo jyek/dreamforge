@@ -19,6 +19,7 @@ import { ProjectRename } from "@/components/assistant-ui/project-rename";
 import { ProjectConversationsProvider } from "@/lib/project-conversations-context";
 import { ProjectsProvider } from "@/lib/projects-context";
 import { ShareDialog } from "@/components/assistant-ui/share-dialog";
+import { GroupDialog } from "@/components/assistant-ui/group-dialog";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -785,6 +786,7 @@ function AppPreview({
             ) : (
               <>
                 <span className="flex-1" />
+                <GroupDialog project={project} />
                 {!project.readOnly && <ShareDialog project={project} />}
               </>
             )}
@@ -1013,7 +1015,8 @@ function BrowserControls({
       >
         <ExternalLinkIcon className="size-4" />
       </a>
-      <div className="ml-1.5 shrink-0">
+      <div className="ml-1.5 flex shrink-0 gap-1.5">
+        <GroupDialog project={project} />
         {!project.readOnly && <ShareDialog project={project} />}
       </div>
     </>
