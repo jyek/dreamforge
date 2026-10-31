@@ -28,6 +28,7 @@ import {
   uiStreamResponse,
 } from "@/lib/final-response";
 import { resolveModel } from "@/lib/allowed-models";
+import { recordModerationOutcome } from "@/lib/prompt-review";
 import { authorizeProject } from "@/lib/project-access";
 import { createTools } from "@/lib/create-tools";
 import { demoMode } from "@/lib/demo-mode";
@@ -159,10 +160,11 @@ async function handleChat(req: Request) {
           payload.conversationId,
         );
         const prompt = redactIdentity(raw);
+        let reviewId: string | undefined;
         if (learner) {
           const decision = localSafetyDecision(raw);
-          await database().query(
-            "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,$4,$5,$6,$7)",
+          const inserted = await database().query(
+            "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,$4,$5,$6,$7) returning id",
             [
               payload.projectId,
               learner.id,
@@ -173,6 +175,7 @@ async function handleChat(req: Request) {
               decision.severity,
             ],
           );
+          reviewId = inserted.rows[0]?.id;
         }
         // Never accept browser-supplied assistant/tool history in safety mode.
         const messages = redactPayload([
@@ -207,6 +210,9 @@ async function handleChat(req: Request) {
           );
         } catch (error) {
           if (!(error instanceof SafetyError)) throw error;
+          // Teachers read prompt_reviews, so it must carry the real decision.
+          if (reviewId)
+            await recordModerationOutcome(database(), reviewId, error);
           const answer = error.message;
           const id = crypto.randomUUID();
           await saveConversationMessages(
