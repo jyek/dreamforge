@@ -131,11 +131,9 @@ export function PlatformDashboardLayout({
     (section === "profile"
       ? {
           label: "Profile",
-          description: schoolMode
-            ? "Manage your school admin profile and account."
-            : teacher
-              ? "Manage your teacher profile and account."
-              : "Your spending, account and parent top-ups.",
+          description: teacher
+            ? "Manage your profile and account."
+            : "Your spending, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];
   return (
