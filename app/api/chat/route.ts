@@ -29,6 +29,12 @@ import {
 } from "@/lib/final-response";
 import { resolveModel } from "@/lib/allowed-models";
 import { flagBlockedPrompt, maskBlockedPrompts } from "@/lib/blocked-prompts";
+import {
+  HELD_PROMPT_MESSAGE,
+  consumeApprovedHold,
+  recordModerationOutcome,
+} from "@/lib/prompt-hold";
+
 import { authorizeProject } from "@/lib/project-access";
 import { createTools } from "@/lib/create-tools";
 import { demoMode } from "@/lib/demo-mode";
@@ -160,10 +166,11 @@ async function handleChat(req: Request) {
           payload.conversationId,
         );
         const prompt = redactIdentity(raw);
+        let reviewId: string | undefined;
         if (learner) {
           const decision = localSafetyDecision(raw);
-          await database().query(
-            "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,$4,$5,$6,$7)",
+          const inserted = await database().query(
+            "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,$4,$5,$6,$7) returning id",
             [
               payload.projectId,
               learner.id,
@@ -174,6 +181,7 @@ async function handleChat(req: Request) {
               decision.severity,
             ],
           );
+          reviewId = inserted.rows[0]?.id;
         }
         // Never accept browser-supplied assistant/tool history in safety mode.
         const messages = redactPayload([
@@ -200,24 +208,42 @@ async function handleChat(req: Request) {
             throw new SafetyError(
               "Please remove private personal details from your prompt and try again.",
             );
-          await screenContent(
-            payload.projectId,
-            null,
-            "input",
-            moderationConversation(messages),
-          );
+          // A teacher can approve a held (questionable) prompt. That approval
+          // covers exactly this text, once, and never overrides the local rules.
+          const approved =
+            learner &&
+            localSafetyDecision(raw).decision === "allow" &&
+            (await consumeApprovedHold(database(), {
+              childId: learner.id,
+              conversationId: payload.conversationId,
+              content: prompt,
+            }));
+          if (!approved)
+            await screenContent(
+              payload.projectId,
+              null,
+              "input",
+              moderationConversation(messages),
+            );
         } catch (error) {
           if (!(error instanceof SafetyError)) throw error;
-          const answer = error.message;
+          const held =
+            !!learner &&
+            !!reviewId &&
+            (await recordModerationOutcome(
+              database(),
+              reviewId,
+              learner.id,
+              error,
+            ));
+          const answer = held ? HELD_PROMPT_MESSAGE : error.message;
           const id = crypto.randomUUID();
           await saveConversationMessages(
             payload.projectId,
             payload.conversationId,
             [
               ...messages.slice(0, -1),
-              error.preservesPrompt
-                ? messages.at(-1)!
-                : flagBlockedPrompt(messages.at(-1)!),
+              held ? {...messages.at(-1)!, parts:[{type:"text",text:"[Waiting for teacher approval]"}]} : error.preservesPrompt ? messages.at(-1)! : flagBlockedPrompt(messages.at(-1)!),
               {
                 id,
                 role: "assistant",
