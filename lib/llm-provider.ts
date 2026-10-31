@@ -1,4 +1,5 @@
 import { privateProviderFetch } from "./provider-privacy";
+import { describeStreamFailure } from "./stream-diagnostics";
 import { withEmptyResponseRetry } from "./empty-response-retry";
 import { withQuotaFallback } from "./quota-fallback";
 import { DEFAULT_CODING_MODEL, QUOTA_FALLBACK_MODEL } from "./allowed-models";
@@ -177,10 +178,28 @@ export const streamLlmResponse = async ({
       prepareStep,
       maxRetries: routing ? 0 : 2,
       timeout: { stepMs: 90000, totalMs: 240000 },
-      onAbort: async () => {
+      onAbort: async ({ steps }) => {
+        if (!abortSignal?.aborted)
+          console.error(
+            "chat.stream_failed",
+            describeStreamFailure(
+              "abort",
+              undefined,
+              routing?.state.usedModel || modelName,
+              steps?.length,
+            ),
+          );
         await onStreamError?.();
       },
-      onError: async () => {
+      onError: async ({ error }) => {
+        console.error(
+          "chat.stream_failed",
+          describeStreamFailure(
+            "error",
+            error,
+            routing?.state.usedModel || modelName,
+          ),
+        );
         await onStreamError?.();
       },
       onStepFinish: async ({ usage, response, toolResults }) => {
@@ -215,14 +234,28 @@ export const streamLlmResponse = async ({
     abortSignal,
     system,
     model: anthropicProvider("claude-sonnet-4-20250514"),
-    onError: async () => {
+    onError: async ({ error }) => {
+      console.error(
+        "chat.stream_failed",
+        describeStreamFailure("error", error, "claude-sonnet-4-20250514"),
+      );
       await onStreamError?.();
     },
     messages: modelMessages,
     tools,
     prepareStep,
     timeout: { stepMs: 90000, totalMs: 240000 },
-    onAbort: async () => {
+    onAbort: async ({ steps }) => {
+      if (!abortSignal?.aborted)
+        console.error(
+          "chat.stream_failed",
+          describeStreamFailure(
+            "abort",
+            undefined,
+            "claude-sonnet-4-20250514",
+            steps?.length,
+          ),
+        );
       await onStreamError?.();
     },
     onStepFinish: async ({ usage, response, toolResults }) => {
