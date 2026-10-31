@@ -1,11 +1,12 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Home,
   School,
   UsersRound,
   FolderKanban,
   ShieldCheck,
+  Building2,
   Menu,
   X,
 } from "lucide-react";
@@ -44,6 +45,13 @@ export const TEACHER_SECTIONS = [
     description: "Review safety concerns and guide your students.",
   },
 ] as const;
+/** Shown to teachers who also administer a school. */
+export const SCHOOL_SECTION = {
+  id: "school",
+  label: "School",
+  icon: Building2,
+  description: "Your school's teachers, classes and safety overview.",
+} as const;
 export const BUILDER_SECTIONS = [
   {
     id: "home",
@@ -78,7 +86,23 @@ export function PlatformDashboardLayout({
   headerAction?: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
-  const sections = teacher ? TEACHER_SECTIONS : BUILDER_SECTIONS;
+  const [schoolAdmin, setSchoolAdmin] = useState(false);
+  useEffect(() => {
+    if (!teacher) return;
+    let stopped = false;
+    void fetch("/api/platform/school/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => !stopped && setSchoolAdmin(d?.schoolAdmin === true))
+      .catch(() => {});
+    return () => {
+      stopped = true;
+    };
+  }, [teacher]);
+  const sections = teacher
+    ? schoolAdmin
+      ? [...TEACHER_SECTIONS, SCHOOL_SECTION]
+      : TEACHER_SECTIONS
+    : BUILDER_SECTIONS;
   const current =
     (section === "profile"
       ? {
