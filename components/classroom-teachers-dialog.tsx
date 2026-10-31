@@ -47,7 +47,9 @@ export function ClassroomTeachersDialog({
         }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
-      if (d.link) setLink(d.link);
+      // An emailed invitation is delivered by email only; the link is shown
+      // when the teacher asks for one, or when sending failed.
+      if (d.link && !d.emailedTo) setLink(d.link);
       else setLink("");
       setNotice(d.emailedTo ? `Invitation emailed to ${d.emailedTo}.` : "");
       if (d.emailedTo) setEmail("");
@@ -131,13 +133,16 @@ export function ClassroomTeachersDialog({
                 {busy ? "Sending…" : "Email invitation"}
               </button>
             </form>
-            <button
-              className="df-button secondary"
-              disabled={busy}
-              onClick={() => mutate("POST")}
-            >
-              Or create a link to copy
-            </button>
+            {!link && (
+              <button
+                type="button"
+                className="df-button secondary small"
+                disabled={busy}
+                onClick={() => mutate("POST")}
+              >
+                Or get a link to share yourself
+              </button>
+            )}
             {notice && (
               <p className="df-notice" role="status">
                 {notice}
@@ -146,9 +151,8 @@ export function ClassroomTeachersDialog({
             {link && (
               <div className="df-notice">
                 <p>
-                  {notice ? "You can also share" : "Copy"} this private link
-                  {notice ? "" : " and send it to your co-teacher"}. It works
-                  once and expires in seven days.
+                  Copy this private link and send it to your co-teacher. It
+                  works once and expires in seven days.
                 </p>
                 <div className="df-inline">
                   <input
