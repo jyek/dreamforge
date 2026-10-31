@@ -20,6 +20,7 @@ export function StudioSidebar({
   onProfileOpen,
   role,
   caption,
+  roleLabel,
   navigation,
   children,
   toggle,
@@ -35,6 +36,7 @@ export function StudioSidebar({
   onProfileOpen?: () => void;
   role?: "teacher" | "child";
   caption?: string;
+  roleLabel?: string;
   navigation: ReactNode;
   children?: ReactNode;
   toggle?: ReactNode;
@@ -94,7 +96,9 @@ export function StudioSidebar({
             </small>
           )
         ) : (
-          <small>{role === "teacher" ? "Teacher" : "Project explorer"}</small>
+          <small>
+            {roleLabel || (role === "teacher" ? "Teacher" : "Project explorer")}
+          </small>
         )}
       </div>
     </>

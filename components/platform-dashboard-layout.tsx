@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Home,
   School,
@@ -45,13 +45,6 @@ export const TEACHER_SECTIONS = [
     description: "Review safety concerns and guide your students.",
   },
 ] as const;
-/** Shown to teachers who also administer a school. */
-export const SCHOOL_SECTION = {
-  id: "school",
-  label: "School",
-  icon: Building2,
-  description: "Your school's teachers, classes and safety overview.",
-} as const;
 export const SCHOOL_ADMIN_SECTIONS = [
   {
     id: "overview",
@@ -79,10 +72,10 @@ export const SCHOOL_ADMIN_SECTIONS = [
       "Pending, approved, declined and blocked requests across your school.",
   },
   {
-    id: "teaching",
-    label: "My teaching",
-    icon: FolderKanban,
-    description: "Return to your teacher workspace.",
+    id: "students",
+    label: "Students",
+    icon: UsersRound,
+    description: "Enroll students and manage classroom membership.",
   },
 ] as const;
 export const BUILDER_SECTIONS = [
@@ -121,24 +114,10 @@ export function PlatformDashboardLayout({
   headerAction?: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
-  const [schoolAdmin, setSchoolAdmin] = useState(false);
-  useEffect(() => {
-    if (!teacher) return;
-    let stopped = false;
-    void fetch("/api/platform/school/status")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => !stopped && setSchoolAdmin(d?.schoolAdmin === true))
-      .catch(() => {});
-    return () => {
-      stopped = true;
-    };
-  }, [teacher]);
   const sections = schoolMode
     ? SCHOOL_ADMIN_SECTIONS
     : teacher
-      ? schoolAdmin
-        ? [...TEACHER_SECTIONS, SCHOOL_SECTION]
-        : TEACHER_SECTIONS
+      ? TEACHER_SECTIONS
       : BUILDER_SECTIONS;
   const current =
     (section === "profile"
@@ -152,6 +131,7 @@ export function PlatformDashboardLayout({
   return (
     <div className="df-teacher-dashboard">
       <StudioSidebar
+        roleLabel={schoolMode ? "School administrator" : undefined}
         caption={schoolMode ? "SCHOOL ADMINISTRATION" : undefined}
         onProfileOpen={() => setNavOpen(false)}
         name={name}

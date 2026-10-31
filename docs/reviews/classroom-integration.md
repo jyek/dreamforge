@@ -19,3 +19,11 @@ Outstanding before rollout:
 - Provision a dedicated school-administrator review account. The locally configured Supabase administrator credential returned HTTP 401 on 1 November 2026. No account or production migration was created.
 
 This is an integration draft, not a production rollout approval.
+
+## School workspace and platform monitoring (2026-11-01)
+
+School-admin membership now selects the school workspace at `/home`, with shared studio routes for teachers, classrooms, students and safety. The legacy `/school` URL redirects home. School admins can invite teachers, create classrooms with a chosen lead teacher, add co-teachers and enroll existing school students. New students use the classroom signup code. Setup writes validate administrator membership and the school of every participant. Admins are not automatically assigned to teaching teams; prompt approval authority is unchanged.
+
+The platform `/admin` backend now includes schools, teachers, students, classrooms, groups and the existing project showcase tools. Directories include independent accounts and support search and school filtering. Groups represent shared projects, with members and the current editor. Access remains restricted to the existing `platform_admins` table. A read-only database check confirmed `justinyek@gmail.com` / `jyek` is already a platform administrator.
+
+Validation: 56 database tests, 152 unit tests and SDK simulations passed; production build passed. Standalone `tsc --noEmit` also includes test sources and reports existing errors in final-response, local-safety, schema-migration and terminal-input tests. No production data was changed, and this update has not been deployed or browser-tested against live accounts. Directories currently load all records server-side and show 50 at a time; server pagination should precede large-scale rollout.

@@ -1,8 +1,12 @@
-# Admin showcase
+# Platform administration
 
 Visit `/admin` and sign in with an existing DreamForge account. A separate, server-owned `dreamforge.platform_admins` membership is required; being a teacher is not sufficient. Signup and profile APIs cannot grant membership. Admin writes require a same-origin JSON request, and responses disable caching.
 
-The panel lists projects and owners, previews app pages without opening private conversations, and supports showing, hiding and ordering examples. Changes are recorded in `dreamforge.admin_audit_log`.
+The `/admin` backend provides school management and monitoring directories for all teachers, students, classrooms and project groups, including independent accounts. People and classrooms can be searched and filtered by school. Groups are shared projects; the directory includes members and the current editor. Directory access is checked on the server using platform-admin membership before loading any records. The account `justinyek@gmail.com` (`jyek`) was verified as an existing platform administrator on 2026-11-01. No email-based authorization bypass is used.
+
+School administrators are a separate school-scoped capability, stored in `school_admins`. Their normal workspace starts at `/home`, with `/teachers`, `/classrooms`, `/students`, and `/safety`. The old `/school` bookmark redirects to `/home`; there is no school-directory route for school administrators. They invite teachers, create classrooms with a lead teacher, assign co-teachers, enroll existing school students, and distribute classroom signup codes for new students. Setup operations verify both school membership and administrator membership. Creating a classroom does not add the administrator to its teaching team. Prompt approvals still require explicit classroom teaching membership.
+
+The Projects tab lists projects and owners, previews app pages without opening private conversations, and supports showing, hiding and ordering examples. Changes are recorded in `dreamforge.admin_audit_log`.
 
 Gallery visibility is a separate `projects.is_showcased` tag. Personal projects keep their owner, editing access and private conversations. Selecting one does not create a copy or turn it into an `is_example` project. Gallery links open `/showcase/<projectId>`, which serves only the live app preview anonymously. Conversations, source-file APIs, runtime control and the original editor still require their existing permissions. Edits to a showcased project update its public preview.
 

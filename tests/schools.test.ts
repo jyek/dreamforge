@@ -1,3 +1,5 @@
+import { setupSchool } from "../lib/school-setup";
+import { platformDirectory } from "../lib/platform-directory";
 // @suite database
 import assert from "node:assert/strict";
 import { test, after } from "node:test";
@@ -200,6 +202,107 @@ test("schools keep their people, classes and data separate", async () => {
     )
   ).rows[0];
   assert.deepEqual(row, { school_id: a.school.id, make_admin: false });
+  const setup = (actor: string, input: Record<string, unknown>) =>
+    setupSchool(pool, actor, a.school.id, input);
+  assert.equal(
+    await setup(person.teacher1, {
+      action: "createClass",
+      teacherId: person.teacher1,
+      name: "Forbidden",
+    }),
+    false,
+  );
+  assert.equal(
+    await setup(person.admin2, {
+      action: "createClass",
+      teacherId: person.teacher1,
+      name: "Forbidden",
+    }),
+    false,
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "createClass",
+      teacherId: person.teacher2,
+      name: "Forbidden",
+    }),
+    false,
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "createClass",
+      teacherId: person.teacher1,
+      name: "New classroom",
+    }),
+    true,
+  );
+  const newClass = (
+    await pool.query("select id from classes where name='New classroom'")
+  ).rows[0].id;
+  assert.equal(
+    await setup(person.admin1, {
+      action: "enrollStudent",
+      classId: newClass,
+      personId: person.student2,
+    }),
+    false,
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "enrollStudent",
+      classId: newClass,
+      personId: person.student1,
+    }),
+    true,
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "addTeacher",
+      classId: newClass,
+      personId: person.teacher2,
+    }),
+    false,
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "addTeacher",
+      classId: newClass,
+      personId: person.admin1,
+    }),
+    true,
+  );
+  // The school admin is not automatically made a classroom teacher when setting it up.
+  assert.equal(
+    (await pool.query("select teacher_id from classes where id=$1", [newClass]))
+      .rows[0].teacher_id,
+    person.teacher1,
+  );
+  await pool.query(
+    "insert into project_members(vm_id,child_id) values('vm-schoolalerta',$1)",
+    [person.student1],
+  );
+  const directory = await platformDirectory(pool);
+  assert.ok(directory.students.some((p) => p.id === person.student1));
+  assert.ok(directory.students.some((p) => p.id === person.student2));
+  assert.ok(
+    directory.teachers.some(
+      (p) => p.id === person.independent && p.school_id === null,
+    ),
+  );
+  assert.ok(
+    directory.classrooms.some(
+      (c) => c.id === newClass && c.students === "sch_student1",
+    ),
+  );
+  assert.ok(
+    directory.groups.some(
+      (g) =>
+        g.id === "vm-schoolalerta" &&
+        g.members === "sch_student1" &&
+        g.editor === "sch_student1",
+    ),
+  );
+  assert.ok(!("auth_email" in directory.teachers[0]));
   // The database refuses an admin invitation that has no school.
   await assert.rejects(
     pool.query(

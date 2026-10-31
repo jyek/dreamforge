@@ -64,7 +64,7 @@ export async function schoolOverview(db: Db, schoolId: string) {
   ).rows;
   const classes = (
     await db.query(
-      `select c.id,c.name,t.display_name as teacher_name,
+      `select c.id,c.name,c.invite_code,t.display_name as teacher_name,
          (select count(*)::int from class_members m where m.class_id=c.id) as students
        from classes c join profiles t on t.id=c.teacher_id
        where t.school_id=$1 order by lower(c.name)`,
@@ -107,5 +107,11 @@ export async function schoolOverview(db: Db, schoolId: string) {
       [schoolId],
     )
   ).rows;
-  return { school, teachers, classes, alerts, ...counts };
+  const studentList = (
+    await db.query(
+      "select id,display_name,username from profiles where school_id=$1 and role='child' order by display_name",
+      [schoolId],
+    )
+  ).rows;
+  return { school, teachers, classes, alerts, studentList, ...counts };
 }

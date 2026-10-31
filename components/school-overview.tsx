@@ -1,8 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CopyButton } from "./copy-button";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import { SchoolSetup } from "./school-setup";
 import { ClassroomAvatar } from "./classroom-avatar";
 type Person = {
   id: string;
@@ -17,6 +18,7 @@ type Classroom = {
   students: number;
   teachers?: Person[];
   roster?: Person[];
+  invite_code?: string;
 };
 type Alert = {
   id: string;
@@ -37,6 +39,7 @@ type Overview = {
   teachers: (Person & { is_admin: boolean; classes: number })[];
   classes: Classroom[];
   students: number;
+  studentList?: Person[];
   flagged_30d: number;
   alerts?: Alert[];
 };
@@ -53,26 +56,39 @@ const status = (a: Alert) =>
 export function SchoolOverview({
   initial,
   name,
+  initialSection = "overview",
 }: {
   initial: Overview;
   name: string;
+  initialSection?: string;
 }) {
   const router = useRouter(),
-    [section, setSection] = useState("overview");
+    [section, setSection] = useState(initialSection);
+  useEffect(() => setSection(initialSection), [initialSection]);
+  function navigate(s: string) {
+    setSection(s);
+    router.push(
+      s === "overview"
+        ? "/home"
+        : s === "classes"
+          ? "/classrooms"
+          : s === "alerts"
+            ? "/safety"
+            : `/${s}`,
+    );
+  }
   return (
     <PlatformDashboardLayout
       teacher
       schoolMode
       name={name}
       section={section}
-      onSectionChange={(s) =>
-        s === "teaching" ? router.push("/home") : setSection(s)
-      }
+      onSectionChange={navigate}
     >
       <SchoolOverviewContent
         initial={initial}
         section={section}
-        onNavigate={setSection}
+        onNavigate={navigate}
       />
     </PlatformDashboardLayout>
   );
@@ -200,6 +216,10 @@ export function SchoolOverviewContent({
           {!alerts.length && <p>No safety alerts recorded.</p>}
         </>
       )}
+      {(section === "classes" || section === "students") && (
+        <SchoolSetup initial={initial} section={section} />
+      )}
+      {section === "students" && people(initial.studentList || [], false)}
       {section === "classes" && (
         <>
           {current ? (
@@ -211,6 +231,10 @@ export function SchoolOverviewContent({
                 ← All classes
               </button>
               <h3>{current.name}</h3>
+              <p>
+                Student signup class code:{" "}
+                <strong>{current.invite_code}</strong>
+              </p>
               <h3>Teaching team</h3>
               {people(current.teachers || [], true)}
               <h3>Students · {current.roster?.length || 0}</h3>
