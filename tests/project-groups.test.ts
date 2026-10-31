@@ -71,7 +71,7 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
   // Only classmates of the owner can be added; students outside the class cannot.
   const add = (childId: string, actorId: string) =>
     addMember(pool, { vmId: vm, childId, actorId });
-  assert.deepEqual(await add(p.outsider, p.owner), {
+  assert.deepEqual(await add(p.outsider, p.teacher), {
     ok: false,
     status: 400,
     error: "Only classmates can join this group.",
@@ -81,13 +81,11 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
   // A group member cannot add people; another class's teacher cannot either.
   assert.equal((await add(p.bea, p.cal)).ok, false);
   assert.equal((await add(p.bea, p.otherTeacher)).ok, false);
-  assert.equal((await add(p.bea, p.owner)).ok, true);
-  // The owner's teacher can.
+  assert.equal((await add(p.bea, p.teacher)).ok, true);
+  assert.equal((await add(p.cal, p.owner)).ok, false);
+  // The owner's current classroom teacher can.
   assert.equal((await add(p.cal, p.teacher)).ok, true);
-  assert.deepEqual(
-    (await groupNames(pool, [vm])).get(vm),
-    ["bea", "cal"],
-  );
+  assert.deepEqual((await groupNames(pool, [vm])).get(vm), ["bea", "cal"]);
 
   // The owner edits first. Pass the pen to Bea; now only Bea may pass it on.
   let view = (await groupView(pool, vm, p.owner))!;
@@ -108,7 +106,7 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
 
   // The pen cannot move while a request is running.
   await pool.query(
-    "insert into project_execution(project_id,active_run) values($1,gen_random_uuid())",
+    "insert into project_execution(project_id,active_run) values($1,gen_random_uuid()) on conflict(project_id) do update set active_run=excluded.active_run",
     [vm],
   );
   const busy = await pass(p.bea, p.owner);
@@ -122,7 +120,7 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
   // Removing the person who is editing hands the project back to the owner.
   assert.equal((await pass(p.bea, p.owner)).ok, true);
   assert.equal(
-    (await removeMember(pool, { vmId: vm, childId: p.bea, actorId: p.owner }))
+    (await removeMember(pool, { vmId: vm, childId: p.bea, actorId: p.teacher }))
       .ok,
     true,
   );

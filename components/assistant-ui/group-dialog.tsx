@@ -24,7 +24,13 @@ type Group = {
 };
 /** Who is in a project's group and who holds the pen. Everyone in the group can
  * view the project; only the student holding the pen can edit it. */
-export function GroupDialog({ project }: { project: ProjectItem }) {
+export function GroupDialog({
+  project,
+  classId,
+}: {
+  project: Pick<ProjectItem, "id">;
+  classId?: string;
+}) {
   const endpoint = `/api/projects/${project.id}/group`;
   const [group, setGroup] = useState<Group | null>(null),
     [error, setError] = useState(""),
@@ -47,7 +53,7 @@ export function GroupDialog({ project }: { project: ProjectItem }) {
       const r = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, ...(classId ? { classId } : {}) }),
       });
       const d = await r.json();
       if (!r.ok) throw Error(d.error);

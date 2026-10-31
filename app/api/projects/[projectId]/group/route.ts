@@ -1,4 +1,3 @@
-import { authorizeProject } from "@/lib/project-access";
 import { database } from "@/lib/database";
 import { checkOrigin, getProfile, platformEnabled } from "@/lib/platform-auth";
 import {
@@ -13,7 +12,8 @@ const valid = (id: unknown): id is string =>
 async function actor(projectId: string, mutate: boolean, req?: Request) {
   const user = platformEnabled() ? await getProfile() : null;
   if (!user || (mutate && !checkOrigin(req!))) return null;
-  if (!(await authorizeProject(projectId, true))) return null;
+  const group = await groupView(database(), projectId, user.id);
+  if (!group || (!group.canManage && !group.isMember)) return null;
   return user;
 }
 /** Who is in this project's group and who is editing. Anyone who can see the
@@ -54,6 +54,7 @@ export async function POST(
       vmId: projectId,
       childId: body.childId,
       actorId: user.id,
+      ...(valid(body.classId) ? { classId: body.classId } : {}),
     });
   else if (body.action === "remove" && valid(body.childId))
     result = await removeMember(db, {

@@ -1,4 +1,5 @@
 "use client";
+import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomSafetyReport } from "./classroom-safety-report";
 import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
 import { StudentReviewTable } from "./student-review-table";
@@ -155,6 +156,7 @@ export function TeacherStudentProjects({
         </>
       ) : (
         <>
+          {classId && <ClassroomGroups classId={classId} />}
           {classId && <ClassroomSafetyReport classId={classId} />}
           {classId && (
             <label className="df-guidance-filters">

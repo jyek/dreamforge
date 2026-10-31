@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CopyButton } from "./copy-button";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import { SchoolSetup } from "./school-setup";
+import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomAvatar } from "./classroom-avatar";
 type Person = {
   id: string;
@@ -235,6 +236,7 @@ export function SchoolOverviewContent({
                 Student signup class code:{" "}
                 <strong>{current.invite_code}</strong>
               </p>
+              <ClassroomGroups classId={current.id} />
               <h3>Teaching team</h3>
               {people(current.teachers || [], true)}
               <h3>Students · {current.roster?.length || 0}</h3>

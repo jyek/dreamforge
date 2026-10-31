@@ -65,7 +65,7 @@ export async function platformProjectAccess(
       ? !!(
           await database()
             .query(
-              "select 1 from project_members where vm_id=$1 and child_id=$2",
+              "select 1 from project_members m join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id join profiles member on member.id=m.child_id where m.vm_id=$1 and m.child_id=$2 and member.school_id is not distinct from owner.school_id and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=m.child_id)",
               [projectId, profile.id],
             )
             .catch((error) => {
@@ -76,7 +76,10 @@ export async function platformProjectAccess(
       : false;
   const level = projectAccessLevel({
     ownerId: row.owner_id,
-    editorId: row.editor_id,
+    editorId:
+      row.editor_id === profile.id && row.owner_id !== profile.id && !isMember
+        ? row.owner_id
+        : row.editor_id,
     isMember,
     userId: profile.id,
   });
