@@ -184,7 +184,10 @@ export function SchoolOverviewContent({
       {section === "classes" && (
         <>
           {!current && (
-            <div className="df-inline" style={{ marginTop: 24 }}>
+            <div
+              className="df-inline"
+              style={{ marginTop: 24, justifyContent: "flex-end" }}
+            >
               <SchoolSetup teachers={initial.teachers} />
             </div>
           )}
