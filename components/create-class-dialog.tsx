@@ -57,7 +57,7 @@ export function CreateClassDialog({
       <DialogTrigger asChild>
         <button className="df-button">
           <Plus size={17} aria-hidden="true" />
-          Create class
+          New classroom
         </button>
       </DialogTrigger>
       <DialogContent

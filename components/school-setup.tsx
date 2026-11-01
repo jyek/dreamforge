@@ -71,7 +71,7 @@ export function SchoolSetup({
           }
           disabled={!available.length}
         >
-          {classroom ? "Add teacher" : "Create classroom"}
+          {classroom ? "Add teacher" : "New classroom"}
         </button>
       </DialogTrigger>
       <DialogContent
