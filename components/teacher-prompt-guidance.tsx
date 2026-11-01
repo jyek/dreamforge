@@ -244,7 +244,7 @@ export function TeacherPromptGuidance({
           compact={!selected}
           busy={loading}
           columns={selected ? 6 : 7}
-          loadingLabel={`Loading ${selected ? "prompts" : "students"}…`}
+          loadingLabel="Loading…"
           empty={!loading && !(selected ? prompts.length : shown.length)}
         >
           <thead>
