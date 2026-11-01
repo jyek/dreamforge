@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { MoreVertical, GripVertical } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { ClassroomAvatar } from "./classroom-avatar";
 import { MAX_CLASSROOM_GROUPS } from "@/lib/classroom-group-names";
 type Student = {
@@ -124,57 +125,62 @@ export function ClassroomGroups({ classId }: { classId: string }) {
     : projectsFor(activeStudent ? [activeStudent.id] : []);
   function studentCard(student: Student) {
     return (
-      <li
-        key={student.id}
-        draggable={!busy}
-        onDragStart={(e) => {
-          e.dataTransfer.setData("text/plain", student.id);
-          e.dataTransfer.effectAllowed = "move";
-          setDragging(student.id);
-        }}
-        onDragEnd={() => setDragging("")}
-        className="df-group-student"
-      >
-        <div className="df-inline">
-          <GripVertical size={16} aria-hidden="true" />
+      <li key={student.id} className="df-group-avatar-student">
+        <button
+          type="button"
+          className="df-group-avatar-button"
+          draggable={!busy}
+          onDragStart={(e) => {
+            e.dataTransfer.setData("text/plain", student.id);
+            e.dataTransfer.effectAllowed = "move";
+            setDragging(student.id);
+          }}
+          onDragEnd={() => setDragging("")}
+          onClick={() => setView({ kind: "student", id: student.id })}
+        >
           <ClassroomAvatar identity={student.id} role="student" />
-          <button
-            className="df-purple"
-            onClick={() => setView({ kind: "student", id: student.id })}
-          >
-            {student.display_name}
-          </button>
-        </div>
-        <small className="df-muted">@{student.username}</small>
-        <div className="df-group-indicators">
-          {student.alert_count > 0 && (
-            <Link href={`/students/${student.id}/projects`} className="df-pill">
-              {student.alert_count} safety{" "}
-              {student.alert_count === 1 ? "alert" : "alerts"}
-            </Link>
-          )}
-          {student.pending_count > 0 && (
-            <a className="df-pill df-group-pending" href="#safety-report-title">
-              {student.pending_count} awaiting approval
-            </a>
-          )}
-        </div>
-        <label className="df-group-assign">
-          Assign group
-          <select
-            className="df-input"
-            value={student.group_id || ""}
-            disabled={busy}
-            onChange={(e) => void assign(student.id, e.target.value || null)}
-          >
-            <option value="">Unassigned</option>
-            {data?.groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <strong>{student.display_name}</strong>
+        </button>
+        {(student.alert_count > 0 || student.pending_count > 0) && (
+          <div className="df-group-indicators">
+            {student.alert_count > 0 && (
+              <Link href={`/students/${student.id}/projects`}>
+                {student.alert_count} safety{" "}
+                {student.alert_count === 1 ? "alert" : "alerts"}
+              </Link>
+            )}
+            {student.pending_count > 0 && (
+              <a className="df-group-pending" href="#safety-report-title">
+                {student.pending_count} awaiting approval
+              </a>
+            )}
+          </div>
+        )}
+        {!!data?.groups.length && (
+          <details className="df-group-move-menu">
+            <summary>Move to group</summary>
+            <label>
+              <span className="sr-only">
+                Assign {student.display_name} to group
+              </span>
+              <select
+                className="df-input"
+                value={student.group_id || ""}
+                disabled={busy}
+                onChange={(e) =>
+                  void assign(student.id, e.target.value || null)
+                }
+              >
+                <option value="">Unassigned</option>
+                {data.groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </details>
+        )}
       </li>
     );
   }
@@ -203,12 +209,14 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       aria-busy={busy}
     >
       <div className="df-section-head">
-        <h3 id="classroom-groups-title">Classroom groups</h3>
+        <h3 id="classroom-groups-title">
+          Students{data ? ` · ${data.students.length}` : ""}
+        </h3>
         <button
           className="df-button small"
-          disabled={!data || busy || remaining === 0}
+          disabled={!data || busy}
           onClick={() => {
-            setCount(String(Math.min(4, remaining)));
+            setCount(String(Math.min(4, Math.max(1, remaining))));
             setError("");
             setCreateOpen(true);
           }}
@@ -216,10 +224,6 @@ export function ClassroomGroups({ classId }: { classId: string }) {
           Create groups
         </button>
       </div>
-      <p className="df-muted">
-        Drag students into groups, or use their group selector. Click a group or
-        student to explore projects.
-      </p>
       {notice && <p role="status">{notice}</p>}
       {error && !createOpen && !manage && (
         <p role="alert" className="df-error">
@@ -240,13 +244,17 @@ export function ClassroomGroups({ classId }: { classId: string }) {
         !error && <p role="status">Loading classroom groups…</p>
       ) : view && (activeGroup || activeStudent) ? (
         <div>
-          <button
-            className="df-button secondary small"
-            onClick={() => setView(null)}
-          >
-            ← All groups
-          </button>
-          <h4>{activeGroup?.name || activeStudent?.display_name} · Projects</h4>
+          <DashboardDetailHeader
+            title={`${activeGroup?.name || activeStudent?.display_name} · Projects`}
+            back={
+              <button
+                className="df-button secondary small"
+                onClick={() => setView(null)}
+              >
+                ← Classroom
+              </button>
+            }
+          />
           {activeGroup && (
             <p className="df-muted">
               {members.length} students · {activeGroup.category}
@@ -303,10 +311,10 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       ) : (
         <div className="df-group-grid">
           <article
-            className={`df-group-card ${dragging ? "df-group-drop-ready" : ""}`}
+            className={`df-group-card ${!data.groups.length ? "df-ungrouped-roster" : ""} ${dragging ? "df-group-drop-ready" : ""}`}
             {...dropArea(null)}
           >
-            <h4>Unassigned</h4>
+            <h4>{data.groups.length ? "Unassigned" : "Students"}</h4>
             <ul>{data.students.filter((s) => !s.group_id).map(studentCard)}</ul>
             {!data.students.some((s) => !s.group_id) && (
               <p className="df-muted">All students assigned.</p>
@@ -365,16 +373,24 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create classroom groups</DialogTitle>
+            <DialogTitle>Create groups</DialogTitle>
             <DialogDescription>
-              How many groups? Each batch gets unique names from a surprise
-              theme, such as elements, gemstones or constellations. Students
-              stay in their current groups.
+              How many groups would you like to break into?
             </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (
+                !Number.isInteger(Number(count)) ||
+                Number(count) < 1 ||
+                Number(count) > remaining
+              ) {
+                setError(
+                  `You can create up to ${Math.max(0, remaining)} more groups (20 per classroom).`,
+                );
+                return;
+              }
               void act(
                 { action: "create", count: Number(count) },
                 "Groups created. Assign students to get started.",
@@ -388,17 +404,12 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               className="df-input"
               type="number"
               min={1}
-              max={remaining}
               step={1}
               required
               value={count}
               onChange={(e) => setCount(e.target.value)}
               disabled={busy}
             />
-            <p className="df-muted">
-              Up to {remaining} more groups ({MAX_CLASSROOM_GROUPS} per
-              classroom).
-            </p>
             {error && (
               <p role="alert" className="df-error">
                 {error}
@@ -413,15 +424,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               >
                 Cancel
               </button>
-              <button
-                className="df-button"
-                disabled={
-                  busy ||
-                  !Number.isInteger(Number(count)) ||
-                  Number(count) < 1 ||
-                  Number(count) > remaining
-                }
-              >
+              <button className="df-button" disabled={busy}>
                 {busy ? "Creating…" : "Create groups"}
               </button>
             </div>

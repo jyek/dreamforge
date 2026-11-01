@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import { ClassroomSafetyReport } from "./classroom-safety-report";
 import { ClassProjectAssignments } from "./class-project-assignments";
@@ -36,16 +37,25 @@ export function TeacherClassroomDetail({
       section="classrooms"
       onSectionChange={(s) => router.push(`/${s}`)}
     >
-      <a className="df-purple" href="/classrooms">
-        ← Classrooms
-      </a>
-      <div className="df-section-head">
-        <h2>{data?.classroom?.name || "Classroom"}</h2>
-        <ClassroomTeachersDialog classId={classId} onChanged={refresh} />
-      </div>
+      <DashboardDetailHeader
+        title={data?.classroom?.name || "Classroom"}
+        subtitle={
+          <>
+            Class code: <strong>{data?.classroom?.invite_code}</strong>
+          </>
+        }
+        back={
+          <a className="df-button secondary small" href="/classrooms">
+            ← Classrooms
+          </a>
+        }
+      />
       {error && <p role="alert">{error}</p>}
       <section className="df-class-teaching-team">
-        <h3>Teaching team</h3>
+        <div className="df-section-head">
+          <h3>Teachers</h3>
+          <ClassroomTeachersDialog classId={classId} onChanged={refresh} />
+        </div>
         <div>
           {data?.teachers?.map((t) => (
             <div className="df-class-teacher-person" key={t.id}>

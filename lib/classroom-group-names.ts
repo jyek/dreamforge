@@ -1,4 +1,4 @@
-export const MAX_CLASSROOM_GROUPS = 24;
+export const MAX_CLASSROOM_GROUPS = 20;
 const themes = {
   Elements: [
     "Neon",

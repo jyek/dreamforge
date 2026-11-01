@@ -216,10 +216,11 @@ export function PlatformDashboardLayout({
       >
         {(teacher || section !== "home") && (
           <header className="df-teacher-header">
-            <div>
+            <div className="df-header-default">
               <h1>{current.label}</h1>
               <p className="df-muted">{current.description}</p>
             </div>
+            <div id="dashboard-detail-header" />
             {headerAction}
           </header>
         )}

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import {
   ClassProjectAssignments,
@@ -21,7 +22,12 @@ type Project = {
 };
 type Data = {
   myGroups?: { id: string; name: string }[];
-  classroom: { name: string; teacher_name: string; teacher_id?: string };
+  classroom: {
+    name: string;
+    teacher_name: string;
+    invite_code?: string;
+    teacher_id?: string;
+  };
   teachers?: { id: string; display_name: string; is_owner: boolean }[];
   students: { id: string; display_name: string }[];
   projects: Project[];
@@ -92,20 +98,30 @@ export function StudentClassroomDetail({
         />
       }
     >
-      <Link href="/classrooms" className="df-purple">
-        ← Classrooms
-      </Link>
-      <div className="df-section-head">
-        <h2>{data.classroom.name}</h2>
-        <span className="df-muted">
-          {data.students.length}{" "}
-          {data.students.length === 1 ? "student" : "students"} ·{" "}
-          {data.projects.length}{" "}
-          {data.projects.length === 1 ? "project" : "projects"}
-        </span>
-      </div>
+      <DashboardDetailHeader
+        title={preview ? preview.name : data.classroom.name}
+        subtitle={
+          <>
+            Class code: <strong>{data.classroom.invite_code}</strong>
+          </>
+        }
+        back={
+          preview ? (
+            <button
+              className="df-button secondary small"
+              onClick={() => setPreview(null)}
+            >
+              ← Classroom
+            </button>
+          ) : (
+            <Link className="df-button secondary small" href="/classrooms">
+              ← Classrooms
+            </Link>
+          )
+        }
+      />
       <section className="df-class-teaching-team" aria-label="Class teachers">
-        <h3>{teachers.length === 1 ? "Your teacher" : "Your teachers"}</h3>
+        <h3>Teachers</h3>
         <div>
           {teachers.map((teacher) => (
             <div className="df-class-teacher-person" key={teacher.id}>
@@ -159,12 +175,6 @@ export function StudentClassroomDetail({
       )}
       {preview ? (
         <>
-          <button
-            className="df-button secondary small"
-            onClick={() => setPreview(null)}
-          >
-            ← Classroom projects
-          </button>
           <ClassroomProjectPreview classId={classId} project={preview} />
         </>
       ) : (

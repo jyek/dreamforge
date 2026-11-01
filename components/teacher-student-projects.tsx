@@ -12,6 +12,7 @@ import {
   type AssignableProject,
 } from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import {
   TeacherPromptGuidance,
@@ -29,7 +30,7 @@ type Project = {
 };
 export type StudentProjectsData = {
   teachers?: { id: string; display_name: string; is_owner: boolean }[];
-  classroom?: { name: string; teacher_name?: string };
+  classroom?: { name: string; teacher_name?: string; invite_code?: string };
   availableProjects?: AssignableProject[];
   students: GuidanceStudent[];
   projects: Project[];
@@ -116,20 +117,22 @@ export function TeacherStudentProjects({
       }
       onSectionChange={(s) => router.push(`/${s}`)}
     >
-      <Link className="df-purple" href={classId ? "/classrooms" : "/students"}>
-        ← {classId ? "Classrooms" : "Students"}
-      </Link>
-      <div className="df-section-head">
-        <h2>
-          {data?.classroom?.name ||
-            (data?.students[0]
-              ? `${data.students[0].display_name} · Projects`
-              : "Student projects")}
-        </h2>
-        {classId && data && (
-          <span className="df-muted">{data.students.length} students</span>
-        )}
-      </div>
+      <DashboardDetailHeader
+        title={
+          data?.classroom?.name ||
+          (data?.students[0]
+            ? `${data.students[0].display_name} · Projects`
+            : "Student projects")
+        }
+        back={
+          <Link
+            className="df-button secondary small"
+            href={classId ? "/classrooms" : "/students"}
+          >
+            ← {classId ? "Classrooms" : "Students"}
+          </Link>
+        }
+      />
       <p className="df-muted">
         Explore student projects, prompts and safety alerts. Student workspaces
         are read-only for teachers.
@@ -161,12 +164,17 @@ export function TeacherStudentProjects({
         </StudentReviewTable>
       ) : selection ? (
         <>
-          <button
-            className="df-button secondary small"
-            onClick={() => setSelection(null)}
-          >
-            ← Student projects
-          </button>
+          <DashboardDetailHeader
+            title={selection.project.name}
+            back={
+              <button
+                className="df-button secondary small"
+                onClick={() => setSelection(null)}
+              >
+                ← Student projects
+              </button>
+            }
+          />
           <TeacherPromptGuidance
             key={selection.project.vm_id}
             initialStudent={selection.student}

@@ -252,20 +252,3 @@
     display: none;
   }
 }
-
-/* Classroom organization board */
-.df-classroom-groups { margin: 24px 0; }
-.df-group-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(245px,1fr)); gap: 16px; align-items: start; }
-.df-group-card { border: 1px solid #ded9e8; border-radius: 14px; padding: 16px; background: var(--df-panel, #fff); min-height: 160px; }
-.df-group-card h4 { margin: 0 0 16px; }
-.df-group-title { font-size: 1.05rem; font-weight: 650; text-align: left; color: var(--df-purple, #7253ad); overflow-wrap: anywhere; }
-.df-group-card ul { list-style: none; padding: 0; margin: 12px 0 0; }
-.df-group-student { border: 1px solid #e7e2ee; border-radius: 10px; padding: 12px; margin-top: 10px; background: #faf9fc; }
-.df-group-student[draggable="true"] { cursor: grab; }
-.df-group-student button { text-align: left; overflow-wrap: anywhere; }
-.df-group-indicators { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; font-size: .75rem; }
-.df-group-pending { background: #fff1cc; color: #744b00; }
-.df-group-assign { display: grid; gap: 4px; font-size: .75rem; margin-top: 8px; }
-.df-group-assign select { width: 100%; }
-.df-group-drop-ready { border: 2px dashed #9b7cc7; }
-.df-group-member-links { display: flex; flex-wrap: wrap; gap: 16px; list-style: none; padding: 0; }

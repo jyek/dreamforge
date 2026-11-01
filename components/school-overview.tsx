@@ -5,6 +5,7 @@ import {
   PlatformDashboardLayout,
   schoolSectionPath,
 } from "./platform-dashboard-layout";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { SchoolTeachers } from "./school-teachers";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
 import { TeacherActionSummary } from "./teacher-action-summary";
@@ -172,25 +173,28 @@ export function SchoolOverviewContent({
           )}
           {current ? (
             <>
-              <button
-                className="df-button secondary small"
-                onClick={() => setSelected(null)}
-              >
-                ← All classrooms
-              </button>
-              <h3>{current.name}</h3>
-              <p>
-                Student signup class code:{" "}
-                <strong>{current.invite_code}</strong>
-              </p>
-              <ClassroomGroups classId={current.id} />
+              <DashboardDetailHeader
+                title={current.name}
+                subtitle={
+                  <>
+                    Class code: <strong>{current.invite_code}</strong>
+                  </>
+                }
+                back={
+                  <button
+                    className="df-button secondary small"
+                    onClick={() => setSelected(null)}
+                  >
+                    ← All classrooms
+                  </button>
+                }
+              />
               <div className="df-section-head">
-                <h3>Teaching team</h3>
+                <h3>Teachers</h3>
                 <SchoolSetup teachers={initial.teachers} classroom={current} />
               </div>
               {people(current.teachers || [], true)}
-              <h3>Students · {current.roster?.length || 0}</h3>
-              {people(current.roster || [], false)}
+              <ClassroomGroups classId={current.id} />
               <button
                 className="df-button secondary"
                 onClick={() => {

@@ -50,7 +50,7 @@ export async function changeClassroomGroups(
       )
         throw new ClassroomGroupError(
           400,
-          `Choose a whole number from 1 to ${MAX_CLASSROOM_GROUPS - (existing.rowCount || 0)}. A classroom can have up to ${MAX_CLASSROOM_GROUPS} groups.`,
+          `A classroom can have up to ${MAX_CLASSROOM_GROUPS} groups. You can create up to ${Math.max(0, MAX_CLASSROOM_GROUPS - (existing.rowCount || 0))} more groups.`,
         );
       const batch = classroomGroupNames(
         body.count,

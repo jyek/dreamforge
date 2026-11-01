@@ -403,6 +403,13 @@ test("schools keep their people, classes and data separate", async () => {
     action: "create",
     count: 3,
   });
+  await assert.rejects(
+    changeClassroomGroups(pool, classA, person.teacher1, {
+      action: "create",
+      count: 18,
+    }),
+    /20 groups/,
+  );
   const groups = (
     await pool.query("select id,name from classroom_groups where class_id=$1", [
       classA,

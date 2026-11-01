@@ -1,4 +1,5 @@
 "use client";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { StudentReviewTable } from "./student-review-table";
 import { TableEmptyState } from "./table-empty-state";
 import { useEffect, useState } from "react";
@@ -131,12 +132,10 @@ export function TeacherPromptGuidance({
     : Boolean(studentSearch || category);
   return (
     <section className="df-guidance">
-      {(selected || overviewTitle !== "Safety overview") && (
-        <div className="df-section-head">
-          <h2>
-            {selected ? `${selected.display_name} · Safety` : overviewTitle}
-          </h2>
-          {selected && !initialStudent && (
+      {selected && !initialStudent ? (
+        <DashboardDetailHeader
+          title={`${selected.display_name} · Safety`}
+          back={
             <button
               className="df-button secondary small"
               onClick={() => {
@@ -149,8 +148,16 @@ export function TeacherPromptGuidance({
             >
               ← All students
             </button>
-          )}
-        </div>
+          }
+        />
+      ) : (
+        overviewTitle !== "Safety overview" && (
+          <div className="df-section-head">
+            <h2>
+              {selected ? `${selected.display_name} · Safety` : overviewTitle}
+            </h2>
+          </div>
+        )
       )}
       {alertCount > 0 && (
         <div className="df-school-safety-summary" role="status">
