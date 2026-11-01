@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
+import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassroomProjectFilter } from "./classroom-project-filter";
 import { StudentReviewTable } from "./student-review-table";
 import { ClassroomAvatar } from "./classroom-avatar";
@@ -213,22 +214,24 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       aria-labelledby="classroom-groups-title"
       aria-busy={busy}
     >
-      <div className="df-section-head">
-        <h3 id="classroom-groups-title">
-          Students{data ? ` · ${data.students.length}` : ""}
-        </h3>
-        <button
-          className="df-button small"
-          disabled={!data || busy}
-          onClick={() => {
-            setCount(String(Math.min(4, Math.max(1, remaining))));
-            setError("");
-            setCreateOpen(true);
-          }}
-        >
-          Create groups
-        </button>
-      </div>
+      <ClassroomSectionHeader
+        id="classroom-groups-title"
+        title={<>Students{data ? ` · ${data.students.length}` : ""}</>}
+        action={
+          <button
+            className="df-button small"
+            disabled={!data || busy}
+            onClick={() => {
+              setCount(String(Math.min(4, Math.max(1, remaining))));
+              setError("");
+              setCreateOpen(true);
+            }}
+          >
+            Create groups
+          </button>
+        }
+      />
+
       {notice && <p role="status">{notice}</p>}
       {error && !createOpen && !manage && (
         <p role="alert" className="df-error">
@@ -372,9 +375,10 @@ export function ClassroomGroups({ classId }: { classId: string }) {
           className="df-classroom-project-list"
           aria-labelledby="classroom-projects-title"
         >
-          <div className="df-section-head">
-            <h3 id="classroom-projects-title">Projects</h3>
-          </div>
+          <ClassroomSectionHeader
+            id="classroom-projects-title"
+            title="Projects"
+          />
           <ClassroomProjectFilter
             people={Array.from(
               new Map(

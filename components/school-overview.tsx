@@ -7,6 +7,7 @@ import {
   PlatformDashboardLayout,
   schoolSectionPath,
 } from "./platform-dashboard-layout";
+import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { SchoolTeachers } from "./school-teachers";
@@ -162,10 +163,15 @@ export function SchoolOverviewContent({
                   </button>
                 }
               />
-              <div className="df-section-head">
-                <h3>Teachers</h3>
-                <SchoolSetup teachers={initial.teachers} classroom={current} />
-              </div>
+              <ClassroomSectionHeader
+                title="Teachers"
+                action={
+                  <SchoolSetup
+                    teachers={initial.teachers}
+                    classroom={current}
+                  />
+                }
+              />
               <ClassroomPeople people={current.teachers || []} role="teacher" />
               <ClassroomGroups classId={current.id} />
             </>

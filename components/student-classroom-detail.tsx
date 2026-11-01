@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
@@ -115,9 +116,7 @@ export function StudentClassroomDetail({
         }
       />
       <section className="df-classroom-section">
-        <div className="df-section-head">
-          <h3>Teachers</h3>
-        </div>
+        <ClassroomSectionHeader title="Teachers" />
         <ClassroomPeople people={teachers} role="teacher" />
       </section>
       {groupError && <p role="alert">{groupError}</p>}
@@ -160,9 +159,7 @@ export function StudentClassroomDetail({
       ) : (
         <>
           <section className="df-classroom-section">
-            <div className="df-section-head">
-              <h3>Students</h3>
-            </div>
+            <ClassroomSectionHeader title="Students" />
             <ClassroomPeople
               people={data.students}
               role="student"
@@ -170,9 +167,7 @@ export function StudentClassroomDetail({
             />
           </section>
           <section className="df-classroom-section">
-            <div className="df-section-head">
-              <h3>Projects</h3>
-            </div>
+            <ClassroomSectionHeader title="Projects" />
             <ClassroomProjectFilter
               people={[
                 ...teachers.map((t) => ({

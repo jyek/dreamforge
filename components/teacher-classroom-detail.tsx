@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
@@ -49,10 +50,12 @@ export function TeacherClassroomDetail({
       />
       {error && <p role="alert">{error}</p>}
       <section className="df-class-teaching-team">
-        <div className="df-section-head">
-          <h3>Teachers</h3>
-          <ClassroomTeachersDialog classId={classId} onChanged={refresh} />
-        </div>
+        <ClassroomSectionHeader
+          title="Teachers"
+          action={
+            <ClassroomTeachersDialog classId={classId} onChanged={refresh} />
+          }
+        />
         <ClassroomPeople people={data?.teachers || []} role="teacher" />
       </section>
       <ClassProjectAssignments
