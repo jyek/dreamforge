@@ -118,7 +118,7 @@ export const BUILDER_SECTIONS = [
     id: "projects",
     label: "Projects",
     icon: FolderKanban,
-    description: "Find and open your projects.",
+    description: "View and edit your creations.",
   },
 ] as const;
 export function PlatformDashboardLayout({
