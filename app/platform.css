@@ -3427,7 +3427,7 @@
 .df-student-project-actions > summary { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; cursor: pointer; border-radius: 10px; background: white; list-style: none; }
 .df-student-project-actions > summary::-webkit-details-marker { display: none; }
 .df-student-project-actions > summary:focus-visible { outline: 2px solid #7040ff; outline-offset: 2px; }
-.df-student-project-menu { position: absolute; right: 0; top: 42px; display: grid; gap: 8px; padding: 12px; min-width: 220px; background: white; border: 1px solid #e0dfea; border-radius: 12px; box-shadow: 0 8px 24px #21163d22; }
+.df-student-project-menu { position: absolute; right: 0; top: 42px; display: grid; gap: 4px; padding: 6px; min-width: 220px; background: white; border: 1px solid #e0dfea; border-radius: 12px; box-shadow: 0 8px 24px #21163d14; }
 
 .df-group-menu-button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #81758f; box-shadow: none; cursor: pointer; }
 .df-group-menu-button:hover { background: #f3effb; color: #6b3ff7; }
@@ -3481,3 +3481,7 @@
 .df-project-assignment-status { display: grid; justify-items: start; gap: 8px; margin-top: 12px; font-size: 12px; }
 .df-project-classroom-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .df-project-classroom-tag { display: inline-block; border: 1px solid #e0dfea; padding: 3px 8px; border-radius: 6px; color: #71677f; }
+
+.df-student-project-menu .df-button { width: 100%; justify-content: flex-start; min-height: 40px; padding: 10px 12px; border: 0; border-radius: 7px; background: transparent; color: #35264a; box-shadow: none; font-size: 13px; font-weight: 500; text-align: left; transform: none; }
+.df-student-project-menu .df-button:hover, .df-student-project-menu .df-button:focus-visible { background: #f3effb; color: #6b3ff7; box-shadow: none; transform: none; }
+.df-student-project-menu .df-button:focus-visible { outline: 2px solid #9a80e8; outline-offset: -2px; }
