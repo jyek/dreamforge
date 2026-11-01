@@ -93,3 +93,9 @@ Browser checks run before cleanup; afterward the report's project URL is histori
 ## Hardening verification on 29 October 2026
 
 The full browser journey passed against `https://dreamforge2.vercel.app` after correcting the stale local target. Project creation took 7.630s. The read-only reply delivered first feedback in 665ms and first model text in 2.608s; completion took 2.922s. The code edit delivered first feedback in 548ms, first model text in 100.307s and completion in 101.248s. The long gap between feedback and text remains a latency concern despite functional success. Browser counter interactions, refresh feedback, a typed follow-up and saved history all passed. The disposable project and one snapshot were removed. This verifies the deployed prompting journey, not the new local checkout changes or a real Stripe sandbox payment.
+
+## Moderation availability diagnostics
+
+A failed live run records `moderationDiagnostics` before deleting its disposable project. These contain only fixed event/phase/reason codes, HTTP status and classification decision; prompts, provider response bodies and cookies are excluded. `diagnosticsUnavailable` indicates collection failed; cleanup and the original failure still apply. An input `http_error` with status 429 identifies an upstream moderation rate limit rather than a safety classification or classroom approval failure.
+
+The app retries only rejected moderation HTTP 429 responses, at most three times using 1/2/4-second backoff when no Retry-After is supplied. All attempts share the same 15-second deadline. Long provider cooldowns, accepted malformed generations, transport failures and other HTTP statuses fail closed without generation replay. CI must remain failed if the real safety service is still unavailable; do not bypass moderation or replace the live assertion with a fixture.

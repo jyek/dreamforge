@@ -50,12 +50,12 @@ test("semantic moderation uses retention filters, parses decisions and refuses u
   }
 });
 
-test("a rejected rate limit retries once with identical policy, content and deadline", async () => {
+test("a rejected rate limit retries within the bounded budget with identical policy, content and deadline", async () => {
   const original = globalThis.fetch;
   const requests: RequestInit[] = [];
   globalThis.fetch = async (_url, init) => {
     requests.push(init!);
-    if (requests.length === 1)
+    if (requests.length <= 3)
       return Response.json(
         { error: "rate limited" },
         { status: 429, headers: { "Retry-After": "0" } },
@@ -80,20 +80,22 @@ test("a rejected rate limit retries once with identical policy, content and dead
       (await builtinModeration("Create a counter", "input")).decision,
       "block",
     );
-    assert.equal(requests.length, 2);
-    assert.equal(requests[0].body, requests[1].body);
-    assert.equal(requests[0].signal, requests[1].signal);
-    assert.equal(JSON.parse(String(requests[1].body)).provider.zdr, true);
+    assert.equal(requests.length, 4);
+    for (const request of requests) {
+      assert.equal(requests[0].body, request.body);
+      assert.equal(requests[0].signal, request.signal);
+      assert.equal(JSON.parse(String(request.body)).provider.zdr, true);
+    }
   } finally {
     globalThis.fetch = original;
   }
 });
 
-test("persistent rate limits stop after one retry; long cooldowns and other errors are not replayed", async () => {
+test("persistent rate limits stop after three retries; long cooldowns and other errors are not replayed", async () => {
   const original = globalThis.fetch;
   try {
     for (const [status, cooldown, expectedCalls] of [
-      [429, "0", 2],
+      [429, "0", 4],
       [429, "60", 1],
       [401, "0", 1],
       [402, "0", 1],
@@ -176,6 +178,9 @@ test("retry cooldown parsing honors seconds and dates without exceeding the inte
   const { moderationRetryDelay } = await import("../lib/moderation-request");
   const now = Date.parse("2026-10-26T12:00:00Z");
   assert.equal(moderationRetryDelay(null, now), 1000);
+  assert.equal(moderationRetryDelay(null, now, 1), 2000);
+  assert.equal(moderationRetryDelay(null, now, 2), 4000);
+  assert.equal(moderationRetryDelay(null, now, 3), null);
   assert.equal(moderationRetryDelay("0.5", now), 500);
   assert.equal(
     moderationRetryDelay("Mon, 26 Oct 2026 12:00:01 GMT", now),
@@ -189,4 +194,27 @@ test("retry cooldown parsing honors seconds and dates without exceeding the inte
     "Mon, 26 Oct 2026 12:01:00 GMT",
   ])
     assert.equal(moderationRetryDelay(value, now), null);
+});
+
+test("an expired shared deadline stops rate-limit backoff without another request", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalTimeout = AbortSignal.timeout;
+  const controller = new AbortController();
+  let calls = 0;
+  AbortSignal.timeout = () => controller.signal;
+  globalThis.fetch = async () => {
+    calls++;
+    controller.abort();
+    return Response.json({}, { status: 429, headers: { "Retry-After": "0" } });
+  };
+  try {
+    await assert.rejects(
+      () => builtinModeration("Create a counter", "input"),
+      (error: any) => error.reason === "timeout",
+    );
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    AbortSignal.timeout = originalTimeout;
+  }
 });

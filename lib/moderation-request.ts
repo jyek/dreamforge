@@ -18,8 +18,12 @@ export class ModerationServiceError extends Error {
   }
 }
 
-export function moderationRetryDelay(value: string | null, now = Date.now()) {
-  if (value === null) return 1000;
+export function moderationRetryDelay(
+  value: string | null,
+  now = Date.now(),
+  attempt = 0,
+) {
+  if (value === null) return [1000, 2000, 4000][attempt] ?? null;
   const seconds = Number(value);
   const ms =
     value.trim() !== "" && Number.isFinite(seconds)
@@ -29,7 +33,7 @@ export function moderationRetryDelay(value: string | null, now = Date.now()) {
   return Number.isFinite(ms) && ms >= 0 && ms <= 2000 ? ms : null;
 }
 
-/** Retry only a rejected, rate-limited request, once, within one shared deadline.
+/** Retry only rejected rate limits, at most three times within one 15s deadline.
  * Never replay an accepted generation, malformed decision or unknown network failure.
  */
 export async function moderationRequest(body: string) {
@@ -48,8 +52,12 @@ export async function moderationRequest(body: string) {
           signal,
         },
       );
-      const wait = moderationRetryDelay(response.headers.get("retry-after"));
-      if (response.status === 429 && attempt === 0 && wait !== null) {
+      const wait = moderationRetryDelay(
+        response.headers.get("retry-after"),
+        Date.now(),
+        attempt,
+      );
+      if (response.status === 429 && attempt < 3 && wait !== null) {
         await response.body?.cancel();
         await delay(wait, undefined, { signal });
         continue;

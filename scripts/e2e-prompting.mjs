@@ -359,7 +359,10 @@ try {
     if (page) {
       await page.goto(origin + "/projects");
       await page
-        .getByRole("link", { name: "Open E2E Prompting Playground", exact: true })
+        .getByRole("link", {
+          name: "Open E2E Prompting Playground",
+          exact: true,
+        })
         .first()
         .click();
       await page.waitForURL(`**/${project.id}/**`);
@@ -747,6 +750,56 @@ try {
 } catch (error) {
   report.status = "failed";
   console.error(`FAIL ${safeError(error)}`);
+  // Capture fixed safety codes before finally removes the disposable project.
+  // Never copy prompts, tool data, provider bodies or cookies into the report.
+  if (project?.id) {
+    try {
+      const response = await fetch(
+        `${origin}/api/projects/${project.id}/execution`,
+        {
+          headers: { Origin: origin, Cookie: cookie },
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+      if (!response.ok) throw Error("Diagnostics unavailable");
+      const state = await response.json();
+      report.moderationDiagnostics = (state.events || [])
+        .filter((e) =>
+          ["moderation.failed", "moderation.rejected"].includes(e.kind),
+        )
+        .map(({ kind, data = {} }) => ({
+          kind,
+          phase: ["input", "output", "tool"].includes(data.phase)
+            ? data.phase
+            : undefined,
+          reason: [
+            "http_error",
+            "response_error",
+            "invalid_response",
+            "invalid_decision",
+            "decision_truncated",
+            "timeout",
+            "network_error",
+          ].includes(data.reason)
+            ? data.reason
+            : undefined,
+          status:
+            Number.isInteger(data.status) &&
+            data.status >= 100 &&
+            data.status <= 599
+              ? data.status
+              : undefined,
+          decision: ["allow", "review", "block"].includes(data.decision)
+            ? data.decision
+            : undefined,
+        }));
+      console.error(
+        `Moderation diagnostics: ${JSON.stringify(report.moderationDiagnostics)}`,
+      );
+    } catch {
+      report.diagnosticsUnavailable = true;
+    }
+  }
   process.exitCode = 1;
 } finally {
   if (page && report.status === "failed")
