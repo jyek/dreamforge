@@ -3455,3 +3455,14 @@
 .df-status-toast > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #81758f; box-shadow: none; cursor: pointer; }
 .df-status-toast > button:hover { background: #f3effb; }
 .df-status-toast > button:focus-visible { outline: 2px solid #6b3ff7; outline-offset: 2px; }
+
+.df-group-action-menu { position: relative; }
+.df-group-action-menu > summary { list-style: none; }
+.df-group-action-menu > summary::-webkit-details-marker { display: none; }
+.df-group-action-options { position: absolute; right: 0; top: 40px; z-index: 5; display: grid; min-width: 160px; padding: 6px; border: 1px solid #e0dfea; border-radius: 10px; background: white; box-shadow: 0 6px 20px #21163d18; }
+.df-group-action-options > button { padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; color: #24183b; box-shadow: none; text-align: left; cursor: pointer; }
+.df-group-action-options > button:hover, .df-group-action-options > button:focus-visible { background: #f3effb; }
+.df-group-manage-dialog { padding: 32px; gap: 28px; }
+.df-group-manage-dialog form { display: grid; gap: 28px; }
+.df-group-name-field { display: grid; gap: 12px; }
+.df-group-manage-dialog form > .df-inline { justify-content: flex-end; gap: 16px; }

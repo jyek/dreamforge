@@ -51,6 +51,9 @@ export function ClassroomGroups({ classId }: { classId: string }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [count, setCount] = useState("4");
   const [manage, setManage] = useState<Group | null>(null);
+  const [manageAction, setManageAction] = useState<"rename" | "delete">(
+    "rename",
+  );
   const [name, setName] = useState("");
   const [view, setView] = useState<{
     kind: "group" | "student";
@@ -346,17 +349,35 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                   >
                     {g.name}
                   </button>
-                  <button
-                    className="df-group-menu-button"
-                    aria-label={`Manage ${g.name}`}
-                    onClick={() => {
-                      setManage(g);
-                      setName(g.name);
-                      setError("");
-                    }}
-                  >
-                    <MoreVertical size={18} />
-                  </button>
+                  <details className="df-group-action-menu">
+                    <summary
+                      className="df-group-menu-button"
+                      aria-label={`Actions for ${g.name}`}
+                    >
+                      <MoreVertical size={18} />
+                    </summary>
+                    <div className="df-group-action-options">
+                      {(["rename", "delete"] as const).map((action) => (
+                        <button
+                          type="button"
+                          key={action}
+                          disabled={busy}
+                          onClick={(e) => {
+                            const menu = e.currentTarget.closest("details");
+                            if (menu) menu.open = false;
+                            setManage(g);
+                            setManageAction(action);
+                            setName(g.name);
+                            setError("");
+                          }}
+                        >
+                          {action === "rename"
+                            ? "Rename Group"
+                            : "Delete Group"}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
                 </div>
                 <small className="df-muted">
                   {students.length}{" "}
@@ -527,34 +548,47 @@ export function ClassroomGroups({ classId }: { classId: string }) {
           if (!open && !busy) setManage(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="df-group-manage-dialog">
           <DialogHeader>
-            <DialogTitle>Manage {manage?.name}</DialogTitle>
+            <DialogTitle>
+              {manageAction === "rename" ? "Rename Group" : "Delete Group"}
+            </DialogTitle>
             <DialogDescription>
-              Rename this group or delete it to return its students to
-              Unassigned. Student projects are preserved.
+              {manageAction === "rename"
+                ? "Choose a new name for this group."
+                : `Delete ${manage?.name}? Students will return to Unassigned. Student projects are preserved.`}
             </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               void act(
-                { action: "rename", groupId: manage?.id, name },
-                "Group renamed.",
+                {
+                  action: manageAction,
+                  groupId: manage?.id,
+                  ...(manageAction === "rename" ? { name } : {}),
+                },
+                manageAction === "rename"
+                  ? "Group renamed."
+                  : "Group deleted. Students are now unassigned.",
               );
             }}
           >
-            <label htmlFor="classroom-group-name">Group name</label>
-            <input
-              autoFocus
-              id="classroom-group-name"
-              className="df-input"
-              value={name}
-              maxLength={60}
-              required
-              disabled={busy}
-              onChange={(e) => setName(e.target.value)}
-            />
+            {manageAction === "rename" && (
+              <div className="df-group-name-field">
+                <label htmlFor="classroom-group-name">Group name</label>
+                <input
+                  autoFocus
+                  id="classroom-group-name"
+                  className="df-input"
+                  value={name}
+                  maxLength={60}
+                  required
+                  disabled={busy}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            )}
             {error && (
               <p role="alert" className="df-error">
                 {error}
@@ -569,21 +603,15 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               >
                 Cancel
               </button>
-              <button className="df-button" disabled={busy || !name.trim()}>
-                Save name
-              </button>
               <button
-                type="button"
-                className="df-button secondary"
-                disabled={busy}
-                onClick={() =>
-                  void act(
-                    { action: "delete", groupId: manage?.id },
-                    "Group deleted. Students are now unassigned.",
-                  )
-                }
+                className="df-button"
+                disabled={busy || (manageAction === "rename" && !name.trim())}
               >
-                Delete group
+                {busy
+                  ? "Saving…"
+                  : manageAction === "rename"
+                    ? "Rename"
+                    : "Delete Group"}
               </button>
             </div>
           </form>
