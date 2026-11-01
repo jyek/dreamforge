@@ -3275,8 +3275,6 @@
 
 .df-school-safety-summary { margin: 24px 0; padding: 16px 20px; border: 1px solid #e4dfed; border-radius: 12px; color: #71677f; }
 
-.df-table td.df-table-loading { padding: 32px 24px; text-align: center; }
-.df-table-loading [role="status"] { justify-content: center; }
 
 .df-people-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin:24px 0 16px; }
 .df-people-toolbar label { display:grid; gap:8px; min-width:220px; font-size:14px; }
@@ -3287,3 +3285,12 @@
 .df-person-username, .df-people-directory .df-directory-person small { display:block; color:#71677f; font-size:12px; }
 .df-add-person-dialog [aria-pressed="true"] { background:#eee7ff; }
 @media(max-width:600px) { .df-people-toolbar { flex-wrap:wrap; } }
+
+.df-table-skeleton { width:100%; overflow:hidden; }
+.df-table-skeleton-row { display:grid; gap:24px; padding:22px 24px; border-bottom:1px solid #eeeaf3; }
+.df-table-skeleton-row:first-child { background:#faf9fc; padding-top:18px; padding-bottom:18px; }
+.df-table-skeleton-row:last-child { border-bottom:0; }
+.df-table-skeleton-bar { display:block; height:12px; max-width:140px; border-radius:5px; background:linear-gradient(90deg,#eeeaf3 25%,#f8f6fb 50%,#eeeaf3 75%); background-size:200% 100%; animation:df-table-shimmer 1.5s ease-in-out infinite; }
+.df-table-skeleton-row:nth-child(even) .df-table-skeleton-bar { width:75%; }
+@keyframes df-table-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+@media(prefers-reduced-motion:reduce) { .df-table-skeleton-bar { animation:none; } }

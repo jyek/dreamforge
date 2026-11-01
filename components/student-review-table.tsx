@@ -1,5 +1,4 @@
-import { Children, isValidElement, type ReactNode } from "react";
-import { SimpleLoading } from "./dream-loading";
+import type { ReactNode } from "react";
 /** Shared table shell for student rosters, projects and prompt reviews. */
 export function StudentReviewTable({
   children,
@@ -24,26 +23,34 @@ export function StudentReviewTable({
       aria-busy={busy}
       data-empty={empty}
     >
-      <div className="df-table-scroll">
-        <table className="df-table">
-          {busy ? (
-            <>
-              {Children.toArray(children).filter(
-                (child) => isValidElement(child) && child.type === "thead",
-              )}
-              <tbody>
-                <tr>
-                  <td colSpan={columns} className="df-table-loading">
-                    <SimpleLoading inline label={loadingLabel} />
-                  </td>
-                </tr>
-              </tbody>
-            </>
-          ) : (
-            children
-          )}
-        </table>
-      </div>
+      {busy ? (
+        <div
+          className="df-table-skeleton"
+          role="status"
+          aria-label={loadingLabel}
+        >
+          <span className="sr-only">{loadingLabel}</span>
+          <div aria-hidden="true">
+            {Array.from({ length: 5 }, (_, row) => (
+              <div
+                className="df-table-skeleton-row"
+                key={row}
+                style={{
+                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                }}
+              >
+                {Array.from({ length: columns }, (_, col) => (
+                  <span className="df-table-skeleton-bar" key={col} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="df-table-scroll">
+          <table className="df-table">{children}</table>
+        </div>
+      )}
     </div>
   );
 }
