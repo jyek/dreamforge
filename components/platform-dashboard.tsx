@@ -410,19 +410,14 @@ export function PlatformDashboard({
                   {data.projects.map((p, index) => (
                     <article key={p.vm_id} className="df-card df-project">
                       <Link
-                        className="df-project-main"
+                        className="df-project-main df-project-open-link"
                         aria-label={`Open ${p.metadata.name}`}
                         href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
                       >
                         <DreamForgeProjectArt variant={index} />
                       </Link>
                       <div className="df-project-card-heading">
-                        <Link
-                          className="df-project-main"
-                          href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
-                        >
-                          <h3>{p.metadata.name}</h3>
-                        </Link>
+                        <h3>{p.metadata.name}</h3>
                         {!teacher && (
                           <StudentProjectActions
                             projectId={p.vm_id}
@@ -452,26 +447,20 @@ export function PlatformDashboard({
                             : null}
                         </div>
                       </div>
-                      <Link
-                        className="df-project-main"
-                        href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
-                      >
-                        <p className="df-muted">
-                          {p.metadata.description ||
-                            (teacher
-                              ? "Your teaching project"
-                              : "Built with your imagination")}
-                        </p>
-                        <footer>
-                          {teacher ? "Open project" : "Keep building ↗"}
-                        </footer>
-                      </Link>
+                      <p className="df-muted">
+                        {p.metadata.description ||
+                          (teacher
+                            ? "Your teaching project"
+                            : "Built with your imagination")}
+                      </p>
                       {teacher && (
-                        <ProjectClassroomSharing
-                          projectId={p.vm_id}
-                          name={p.metadata.name}
-                          onChanged={load}
-                        />
+                        <div className="df-project-card-controls">
+                          <ProjectClassroomSharing
+                            projectId={p.vm_id}
+                            name={p.metadata.name}
+                            onChanged={load}
+                          />
+                        </div>
                       )}
                     </article>
                   ))}

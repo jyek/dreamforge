@@ -3491,3 +3491,11 @@
 .df-project-assignment-status .df-project-classroom-tag { border-color: #e0dfea; }
 
 .df-input { font-weight: 400; }
+
+/* One native link covers the project card; controls remain above it. */
+.df-project { cursor: pointer; }
+.df-project-open-link::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.df-project-open-link:focus-visible::after { outline: 2px solid #7040ff; outline-offset: 4px; }
+.df-project-card-controls { position: relative; z-index: 2; }
+.df-project-card-heading > h3 { min-width: 0; }
+.df-project > p.df-muted { margin-bottom: 0; }
