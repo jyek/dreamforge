@@ -65,7 +65,8 @@ export async function schoolOverview(db: Db, schoolId: string) {
   const classes = (
     await db.query(
       `select c.id,c.name,c.invite_code,t.display_name as teacher_name,
-         (select count(*)::int from class_members m where m.class_id=c.id) as students
+         (select count(*)::int from class_members m where m.class_id=c.id) as students,
+         (select count(*)::int from class_projects cp join projects p on p.vm_id=cp.vm_id where cp.class_id=c.id and not p.is_example) as projects
        from classes c join profiles t on t.id=c.teacher_id
        where t.school_id=$1 order by lower(c.name)`,
       [schoolId],

@@ -29,6 +29,7 @@ type Classroom = {
   name: string;
   teacher_name: string;
   students: number;
+  projects: number;
   teachers?: Person[];
   roster?: Person[];
   invite_code?: string;
@@ -173,15 +174,17 @@ export function SchoolOverviewContent({
             </>
           ) : (
             <StudentReviewTable
-              columns={3}
+              columns={5}
               compact={false}
               className="df-school-classroom-directory"
             >
               <thead>
                 <tr>
                   <th scope="col">Classroom</th>
-                  <th scope="col">Teaching team</th>
+                  <th scope="col">Lead Teacher</th>
+                  <th scope="col">Co-Teachers</th>
                   <th scope="col">Students</th>
+                  <th scope="col">Projects</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,34 +209,27 @@ export function SchoolOverviewContent({
                       <strong>{c.name}</strong>
                     </td>
                     <td>
+                      {c.teachers?.find((t) => t.is_owner)?.display_name ||
+                        c.teacher_name}
+                    </td>
+                    <td>
                       <div className="df-directory-classes">
-                        {c.teachers?.length
-                          ? c.teachers.map((t) => (
-                              <span key={t.id}>
-                                {t.display_name}
-                                {t.is_owner && (
-                                  <small className="df-muted">
-                                    {" "}
-                                    · Lead teacher
-                                  </small>
-                                )}
-                              </span>
-                            ))
-                          : c.teacher_name}
+                        {c.teachers?.some((t) => !t.is_owner)
+                          ? c.teachers
+                              .filter((t) => !t.is_owner)
+                              .map((t) => (
+                                <span key={t.id}>{t.display_name}</span>
+                              ))
+                          : "—"}
                       </div>
-                      <small className="df-muted">
-                        {c.teachers?.length || 1}{" "}
-                        {(c.teachers?.length || 1) === 1
-                          ? "teacher"
-                          : "teachers"}
-                      </small>
                     </td>
                     <td>{c.students}</td>
+                    <td>{c.projects ?? 0}</td>
                   </tr>
                 ))}
                 {!initial.classes.length && (
                   <tr>
-                    <td colSpan={3} className="df-directory-empty">
+                    <td colSpan={5} className="df-directory-empty">
                       No classrooms yet. Create a classroom to get started.
                     </td>
                   </tr>
