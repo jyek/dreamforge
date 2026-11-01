@@ -279,10 +279,6 @@ export function SchoolOverviewContent({
                           >
                             Enter classroom
                           </button>
-                          <SchoolSetup
-                            teachers={initial.teachers}
-                            classroom={c}
-                          />
                         </div>
                       </td>
                     </tr>
