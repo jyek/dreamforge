@@ -14,6 +14,20 @@ export const isHeldPrompt = (message: Message) =>
   message.role === "user" &&
   (message.metadata as { custom?: { held?: boolean } } | undefined)?.custom
     ?.held === true;
+export const isTeacherApprovedPrompt = (message: Message) =>
+  message.role === "user" &&
+  (message.metadata as { custom?: { teacherApproved?: boolean } } | undefined)
+    ?.custom?.teacherApproved === true;
+/** Server only: call after consuming an exact, current classroom approval. */
+export function flagTeacherApprovedPrompt(message: UIMessage): UIMessage {
+  return {
+    ...message,
+    metadata: {
+      ...(message.metadata as object | undefined),
+      custom: { teacherApproved: true },
+    },
+  };
+}
 export function flagHeldPrompt(message: UIMessage): UIMessage {
   return {
     ...message,

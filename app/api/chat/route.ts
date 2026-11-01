@@ -31,6 +31,7 @@ import { resolveModel } from "@/lib/allowed-models";
 import {
   flagBlockedPrompt,
   flagHeldPrompt,
+  flagTeacherApprovedPrompt,
   maskBlockedPrompts,
 } from "@/lib/blocked-prompts";
 import {
@@ -237,6 +238,10 @@ async function handleChat(req: Request) {
               "input",
               moderationConversation(messages),
             );
+          else
+            messages[messages.length - 1] = flagTeacherApprovedPrompt(
+              messages.at(-1)!,
+            );
         } catch (error) {
           if (!(error instanceof SafetyError)) throw error;
           const held =
@@ -377,7 +382,7 @@ async function handleChat(req: Request) {
                 payload.projectId,
                 null,
                 "output",
-                moderationConversation(safe),
+                moderationConversation(safe, "output"),
               );
               await saveConversationMessages(
                 payload.projectId,

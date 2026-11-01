@@ -139,7 +139,15 @@ export async function screenContent(
     ],
   );
   const rows = event.rows;
-  if (result.decision !== "allow")
+  if (result.decision !== "allow") {
+    const run = currentRun();
+    if (run)
+      await executionEvent(run, "moderation.rejected", {
+        phase,
+        decision: result.decision,
+        categories: result.categories,
+        severity: result.severity,
+      }).catch(() => {});
     throw new SafetyError(
       result.categories.includes("self_harm")
         ? "You deserve support. Please talk to someone you trust about how you are feeling."
@@ -153,5 +161,6 @@ export async function screenContent(
         severity: result.severity,
       },
     );
+  }
   return rows[0].id;
 }

@@ -6,6 +6,10 @@ import {
   moderationConversation,
 } from "../lib/moderation-decision";
 import { SafetyError, screenContent } from "../lib/kids-safety";
+import {
+  flagTeacherApprovedPrompt,
+  maskBlockedPrompts,
+} from "../lib/blocked-prompts";
 const allow = { decision: "allow", categories: [], severity: "low", score: 0 };
 test("valid JSON and fenced JSON are accepted; malformed or incomplete decisions fail closed", () => {
   assert.deepEqual(parseModerationDecision(JSON.stringify(allow)), allow);
@@ -41,6 +45,45 @@ test("input screening keeps all conversation text and intent without old tool pa
     { role: "user", content: "earlier intent" },
     { role: "assistant", content: "previous answer" },
     { role: "user", content: "latest request" },
+  ]);
+});
+test("final output screening does not reclassify an approved request but still sees every assistant answer and new request", () => {
+  const approved = flagTeacherApprovedPrompt({
+    id: "approved-request",
+    role: "user",
+    parts: [{ type: "text", text: "teacher-reviewed classroom activity" }],
+  });
+  const messages = [
+    approved,
+    {
+      role: "assistant",
+      parts: [{ type: "text", text: "actual generated answer" }],
+    },
+    { role: "user", parts: [{ type: "text", text: "new unreviewed request" }] },
+    {
+      role: "assistant",
+      metadata: { custom: { teacherApproved: true } },
+      parts: [
+        { type: "text", text: "assistant content cannot inherit approval" },
+      ],
+    },
+  ];
+  const output = JSON.parse(moderationConversation(messages, "output"));
+  assert.equal(
+    output[0].content,
+    "[Student request reviewed and approved by a classroom teacher]",
+  );
+  assert.equal(output[1].content, "actual generated answer");
+  assert.equal(output[2].content, "new unreviewed request");
+  assert.equal(output[3].content, "assistant content cannot inherit approval");
+  // Future student requests retain earlier intent during input checks. Approval
+  // never hides the actual request from the coding model either.
+  assert.match(
+    moderationConversation(messages),
+    /teacher-reviewed classroom activity/,
+  );
+  assert.deepEqual(maskBlockedPrompts([approved])[0].parts, [
+    { type: "text", text: "teacher-reviewed classroom activity" },
   ]);
 });
 test("temporary checker failures preserve the request and do not blame or refer users to a teacher", async () => {
