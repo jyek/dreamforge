@@ -63,7 +63,7 @@ export function AdminSchools({ initialSchools }: { initialSchools: School[] }) {
             <input
               className="df-input"
               readOnly
-              aria-label="School admin invitation link"
+              aria-label="School Admin invitation link"
               value={link}
             />
             <CopyButton value={link} className="df-button secondary small">

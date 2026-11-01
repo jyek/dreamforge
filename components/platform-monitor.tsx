@@ -168,7 +168,7 @@ export function PlatformMonitor({
                       {columns[section].map((c) => (
                         <th key={c} scope="col">
                           {c === "school_admin"
-                            ? "School admin"
+                            ? "School Admin"
                             : c.charAt(0).toUpperCase() + c.slice(1)}
                         </th>
                       ))}

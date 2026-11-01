@@ -75,7 +75,7 @@ export function StaffInvitation({
             >
               <option value="teacher">Teacher</option>
               {schoolAdmin && (
-                <option value="school_admin">School admin</option>
+                <option value="school_admin">School Admin</option>
               )}
             </select>
           </label>
@@ -98,7 +98,7 @@ export function StaffInvitation({
       {link && (
         <div className="df-notice" role="status">
           <p>
-            {role === "school_admin" ? "School admin" : "Teacher"} invitation
+            {role === "school_admin" ? "School Admin" : "Teacher"} invitation
             ready. Share this link privately:
           </p>
           <div className="df-inline">

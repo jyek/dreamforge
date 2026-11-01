@@ -123,7 +123,7 @@ export function StudioSidebar({
     </>
   );
   const sidebarCaption =
-    caption || (role === "teacher" ? "TEACHER STUDIO" : "");
+    caption ?? (role === "teacher" ? "TEACHER STUDIO" : "");
   return (
     <aside
       className={`df-studio-sidebar ${sidebarCaption ? "" : "without-caption"} ${className}`}

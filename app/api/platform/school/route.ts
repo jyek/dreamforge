@@ -10,7 +10,7 @@ async function schoolAdmin() {
 }
 const denied = () =>
   Response.json(
-    { error: "School admin access required." },
+    { error: "School Admin access required." },
     { status: 403 },
   );
 export async function GET() {

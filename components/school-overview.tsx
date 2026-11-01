@@ -279,7 +279,7 @@ export function SchoolOverviewContent({
                   </td>
                   <td>
                     <span className="df-guidance-tag">
-                      {t.is_admin ? "School admin" : "Teacher"}
+                      {t.is_admin ? "School Admin" : "Teacher"}
                     </span>
                   </td>
                   <td>
