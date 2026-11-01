@@ -106,6 +106,12 @@ export const BUILDER_SECTIONS = [
     icon: School,
     description: "A place to learn, create, and build together.",
   },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    description: "Find and open your projects.",
+  },
 ] as const;
 export function PlatformDashboardLayout({
   teacher,

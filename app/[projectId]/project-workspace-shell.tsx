@@ -356,12 +356,7 @@ export function ProjectWorkspaceShell({
               href={`/${section.id}`}
               aria-label={section.label}
               title={section.label}
-              aria-current={
-                section.id ===
-                (profile?.role === "teacher" ? "projects" : "home")
-                  ? "page"
-                  : undefined
-              }
+              aria-current={section.id === "projects" ? "page" : undefined}
               onClick={() => {
                 if (isMobile) setMobileSidebarOpen(false);
               }}
