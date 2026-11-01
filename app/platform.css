@@ -992,12 +992,6 @@
   background: #f0e9ff;
   box-shadow: 3px 3px 0 #1a0f2e;
 }
-.df-project-dialog .df-form {
-  gap: 12px;
-}
-.df-project-dialog .df-inline {
-  margin-top: 8px;
-}
 
 .df-studio-nav a {
   text-decoration: none;
@@ -2382,12 +2376,6 @@
   font-size: 25px;
   font-weight: 750;
 }
-.df-join-class-dialog .df-form {
-  margin-top: 8px;
-}
-.df-join-class-dialog .df-inline {
-  margin-top: 8px;
-}
 
 /* One brand size and baseline for entry pages, dashboards and workspaces. */
 .df-brand,
@@ -3361,10 +3349,6 @@
 .df-class-code-copy { display:inline-flex; align-items:center; justify-content:center; border:0; background:transparent; color:#71677f; cursor:pointer; padding:6px; border-radius:6px; }
 .df-class-code-copy:hover { color:#6b3ff7; background:#f2ecff; }
 .df-class-code-copy:focus-visible { outline:2px solid #6b3ff7; }
-.df-group-create-dialog { padding:28px; gap:24px; }
-.df-group-create-dialog form { display:grid; gap:16px; }
-.df-group-create-dialog form > label { margin-bottom:-6px; }
-.df-group-create-dialog form > .df-inline { justify-content:flex-end; margin-top:8px; gap:16px; }
 @media(max-width:600px) { .df-detail-header { align-items:flex-start; gap:12px; flex-wrap:wrap; } .df-teacher-header .df-detail-heading h1 {font-size:24px;} }
 
 /* Keep typography identical for every dashboard table, including empty tables. */
@@ -3462,9 +3446,6 @@
 .df-group-action-options { position: absolute; right: 0; top: 40px; z-index: 5; display: grid; min-width: 160px; padding: 6px; border: 1px solid #e0dfea; border-radius: 10px; background: white; box-shadow: 0 6px 20px #21163d18; }
 .df-group-action-options > button { padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; color: #24183b; box-shadow: none; text-align: left; cursor: pointer; }
 .df-group-action-options > button:hover, .df-group-action-options > button:focus-visible { background: #f3effb; }
-.df-group-manage-dialog { padding: 32px; gap: 28px; }
-.df-group-manage-dialog form { display: grid; gap: 28px; }
-.df-group-name-field { display: grid; gap: 12px; }
-.df-group-manage-dialog form > .df-inline { justify-content: flex-end; gap: 16px; }
+
 
 .df-group-card > .df-section-head { margin: 0 0 8px; gap: 12px; }
