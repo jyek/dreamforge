@@ -3244,3 +3244,20 @@
   line-height: 1.25;
   letter-spacing: -0.3px;
 }
+
+.df-school-teacher-directory { overflow-x: auto; border: 1px solid #e2deeb; border-radius: 14px; background: #fff; }
+.df-school-teacher-directory .df-table { margin: 0; min-width: 540px; }
+.df-school-teacher-directory .df-table td { padding: 18px 20px; vertical-align: middle; }
+.df-directory-person { display: flex; align-items: center; gap: 12px; }
+.df-directory-person strong { display: block; font-size: 14px; font-weight: 600; }
+.df-directory-person small { display: block; margin-top: 3px; color: #71677f; font-size: 12px; }
+.df-directory-classes { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.df-class-text-link { padding: 4px 0; border: 0; background: none; color: #6b3ff7; font-size: 14px; font-weight: 500; cursor: pointer; text-align: left; }
+.df-class-text-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.df-class-text-link:focus-visible { outline: 2px solid #6b3ff7; outline-offset: 3px; border-radius: 3px; }
+.df-directory-empty { color: #71677f; }
+.df-staff-invite-form { display: grid; gap: 12px; margin-top: 20px; }
+.df-staff-invite-form label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
+.df-staff-invite-form select { width: min(100%, 320px); }
+.df-staff-invite-form p { margin: 0; font-size: 14px; }
+.df-staff-invite-form button { justify-self: start; margin-top: 4px; }

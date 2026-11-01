@@ -1,7 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CopyButton } from "./copy-button";
 import {
   PlatformDashboardLayout,
   schoolSectionPath,
@@ -102,10 +101,7 @@ export function SchoolOverviewContent({
   const [selected, setSelected] = useState<string | null>(null),
     [filter, setFilter] = useState("all"),
     [classFilter, setClassFilter] = useState("all"),
-    [limit, setLimit] = useState(50),
-    [link, setLink] = useState(""),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [limit, setLimit] = useState(50);
   const alerts = initial.alerts || [],
     current = initial.classes.find((c) => c.id === selected);
   const visible = alerts.filter(
@@ -116,24 +112,6 @@ export function SchoolOverviewContent({
           : a.hold_status === filter)) &&
       (classFilter === "all" || a.classrooms.some((c) => c.id === classFilter)),
   );
-  async function invite(admin: boolean) {
-    setBusy(true);
-    setError("");
-    try {
-      const r = await fetch("/api/platform/school", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ admin }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw Error(d.error);
-      setLink(d.link);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   const people = (rows: Person[], teacher: boolean) => (
     <div className="df-school-list">
       {rows.length ? (
@@ -166,8 +144,17 @@ export function SchoolOverviewContent({
       <div className="df-section-head">
         <h2>{initial.school.name}</h2>
         <span>
-          {initial.teachers.length} teachers · {initial.classes.length} classes
-          · {initial.students} students
+          {initial.teachers.length}{" "}
+          {initial.teachers.length === 1 ? "teacher" : "teachers"}
+          {section !== "teachers" && (
+            <>
+              {" "}
+              · {initial.classes.length}{" "}
+              {initial.classes.length === 1 ? "class" : "classes"} ·{" "}
+              {initial.students}{" "}
+              {initial.students === 1 ? "student" : "students"}
+            </>
+          )}
         </span>
       </div>
       {section === "overview" && (
@@ -269,77 +256,67 @@ export function SchoolOverviewContent({
         </>
       )}
       {section === "teachers" && (
-        <>
-          <div className="df-inline">
-            <button
-              className="df-button"
-              disabled={busy}
-              onClick={() => invite(false)}
-            >
-              Invite a teacher
-            </button>
-            <button
-              className="df-button secondary"
-              disabled={busy}
-              onClick={() => invite(true)}
-            >
-              Invite another administrator
-            </button>
-          </div>
-          {link && (
-            <div className="df-notice">
-              <p>
-                This private invitation works once and expires in seven days.
-              </p>
-              <div className="df-inline">
-                <input
-                  className="df-input"
-                  aria-label="Invitation link"
-                  readOnly
-                  value={link}
-                />
-                <CopyButton value={link} className="df-button secondary small">
-                  Copy link
-                </CopyButton>
-              </div>
-            </div>
-          )}
-          {error && (
-            <p role="alert" className="df-error">
-              {error}
-            </p>
-          )}
-          <div className="df-school-list">
-            {initial.teachers.map((t) => (
-              <div className="df-school-row" key={t.id}>
-                <div className="df-inline">
-                  <ClassroomAvatar identity={t.id} role="teacher" />
-                  <strong>{t.display_name}</strong>
-                </div>
-                <small>
-                  @{t.username}
-                  {t.is_admin ? " · School admin" : ""} · {t.classes} classes
-                </small>
-                <div className="df-inline">
-                  {initial.classes
-                    .filter((c) => c.teachers?.some((p) => p.id === t.id))
-                    .map((c) => (
-                      <button
-                        className="df-button secondary small"
-                        key={c.id}
-                        onClick={() => {
-                          setSelected(c.id);
-                          onNavigate?.("classes");
-                        }}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+        <div className="df-guidance-table df-school-teacher-directory">
+          <table className="df-table">
+            <thead>
+              <tr>
+                <th scope="col">Teacher</th>
+                <th scope="col">Role</th>
+                <th scope="col">Classes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {initial.teachers.map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    <div className="df-directory-person">
+                      <ClassroomAvatar identity={t.id} role="teacher" />
+                      <div>
+                        <strong>{t.display_name}</strong>
+                        <small>@{t.username}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="df-guidance-tag">
+                      {t.is_admin ? "School admin" : "Teacher"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="df-directory-classes">
+                      {initial.classes
+                        .filter((c) => c.teachers?.some((p) => p.id === t.id))
+                        .map((c) => (
+                          <button
+                            type="button"
+                            className="df-class-text-link"
+                            key={c.id}
+                            onClick={() => {
+                              setSelected(c.id);
+                              onNavigate?.("classes");
+                            }}
+                          >
+                            {c.name} <span aria-hidden="true">→</span>
+                          </button>
+                        ))}
+                      {t.classes === 0 && (
+                        <span className="df-muted">No classes assigned</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {initial.teachers.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="df-directory-empty">
+                    No teachers yet. Create an invitation from your profile to
+                    add someone.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
       {section === "alerts" && (
         <>

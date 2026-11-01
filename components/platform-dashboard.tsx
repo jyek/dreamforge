@@ -21,6 +21,7 @@ import { BuilderIdeaArt } from "./builder-idea-art";
 import { TeacherActionSummary } from "./teacher-action-summary";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
+import { StaffInvitation } from "./staff-invitation";
 import { TeacherProfile } from "./teacher-profile";
 import { ProfileModuleHeader } from "./profile-module-header";
 import { CopyButton } from "./copy-button";
@@ -636,23 +637,10 @@ export function PlatformDashboard({
             </section>
           )}
           {teacher && view === "profile" && (
-            <section className="df-card df-settings-card df-profile-module">
-              <ProfileModuleHeader
-                eyebrow="TEACHER INVITATIONS"
-                title="Invite a teacher"
-                description="Create a private invitation link for another teacher. Each link can be used once and expires after seven days."
-              />
-              <button
-                style={{ marginTop: 16 }}
-                className="df-button secondary"
-                disabled={busy}
-                onClick={() =>
-                  action("/api/platform/classes", { action: "inviteTeacher" })
-                }
-              >
-                Invite a teacher
-              </button>
-            </section>
+            <StaffInvitation
+              schoolAdmin={schoolMode}
+              schoolName={data.user.school_name ?? initialUser?.school_name}
+            />
           )}
           {link && view === "profile" && (
             <div className="df-notice" style={{ marginTop: 20 }}>
