@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
+import { StudentReviewTable } from "./student-review-table";
 import { ClassroomAvatar } from "./classroom-avatar";
 import { MAX_CLASSROOM_GROUPS } from "@/lib/classroom-group-names";
 type Student = {
@@ -34,6 +35,7 @@ export type ClassroomGroupsData = {
   groups: Group[];
   students: Student[];
   projects: Project[];
+  classroomProjects?: (Project & { group_name?: string | null })[];
 };
 export function ClassroomGroups({ classId }: { classId: string }) {
   const endpoint = `/api/platform/classes/${classId}/groups`;
@@ -364,6 +366,64 @@ export function ClassroomGroups({ classId }: { classId: string }) {
             <p>Create your first groups to start assigning students.</p>
           )}
         </div>
+      )}
+      {!view && (
+        <section
+          className="df-classroom-project-list"
+          aria-labelledby="classroom-projects-title"
+        >
+          <div className="df-section-head">
+            <h3 id="classroom-projects-title">Classroom projects</h3>
+          </div>
+          <StudentReviewTable
+            busy={!data && !error}
+            columns={4}
+            loadingLabel="Loading…"
+            compact={false}
+            empty={!!data && !data.classroomProjects?.length}
+          >
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Created by</th>
+                <th>Group</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.classroomProjects || []).map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <strong>{p.name || "Untitled project"}</strong>
+                  </td>
+                  <td>{p.owner}</td>
+                  <td>
+                    {p.group_name ? (
+                      <span className="df-guidance-tag">{p.group_name}</span>
+                    ) : (
+                      <span className="df-muted">Individual project</span>
+                    )}
+                  </td>
+                  <td>
+                    <Link
+                      className="df-button secondary small"
+                      href={`/${p.id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
+                    >
+                      View project
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {data && !data.classroomProjects?.length && (
+                <tr>
+                  <td colSpan={4}>
+                    No projects assigned to this classroom yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </StudentReviewTable>
+        </section>
       )}
       <Dialog
         open={createOpen}

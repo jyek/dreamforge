@@ -40,8 +40,16 @@ async function readGroups(
     where m.class_id=$1 and pr.role='child' order by lower(pr.display_name),pr.id`,
     [classId],
   );
+  const { rows: classroomProjects } = await db.query(
+    `select p.vm_id as id,p.metadata->>'name' as name,pr.display_name as owner,p.owner_id,p.classroom_group_id as group_id,g.name as group_name,p.metadata->'conversations'->0->>'id' as conversation_id
+    from class_projects cp join projects p on p.vm_id=cp.vm_id join profiles pr on pr.id=p.owner_id
+    left join classroom_groups g on g.id=p.classroom_group_id and g.class_id=cp.class_id
+    where cp.class_id=$1 and not p.is_example and (exists(select 1 from class_members cm where cm.class_id=$1 and cm.child_id=p.owner_id) or exists(select 1 from classes c where c.id=$1 and (c.teacher_id=p.owner_id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.owner_id))))
+    order by cp.created_at desc,p.vm_id`,
+    [classId],
+  );
   return Response.json(
-    { projects: rows, groups, students },
+    { projects: rows, classroomProjects, groups, students },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

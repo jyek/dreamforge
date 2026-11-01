@@ -3333,3 +3333,5 @@
 .df-ungrouped-roster > ul { margin:0; }
 
 #dashboard-detail-header > .df-detail-header:not(:last-child) { display:none; }
+
+.df-classroom-project-list { margin-top:28px; }
