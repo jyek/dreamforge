@@ -3,7 +3,7 @@ import { isMissingGroupSchema, projectAccessLevel } from "./project-group";
 import {
   classroomTeacherSQL,
   sharedTeachingProjectSQL,
-  teacherStudentAccessSQL,
+  studentReadAccessSQL,
 } from "./classroom-permissions";
 import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
@@ -32,7 +32,7 @@ export const tokenHash = (token: string) =>
 export const inviteToken = () => randomBytes(24).toString("base64url");
 export async function canReadChild(teacherId: string, childId: string) {
   const { rowCount } = await database().query(
-    `select 1 where ${teacherStudentAccessSQL("$2")}`,
+    `select 1 where ${studentReadAccessSQL("$2")}`,
     [teacherId, childId],
   );
   return !!rowCount;

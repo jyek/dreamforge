@@ -1,6 +1,6 @@
 import {
   classroomTeacherSQL,
-  teacherStudentAccessSQL,
+  studentReadAccessSQL,
 } from "./classroom-permissions";
 import { groupNames } from "./project-group";
 import { database } from "./database";
@@ -19,7 +19,7 @@ export async function studentProjectData(
   }
   if (filter.studentId) {
     const { rowCount } = await db.query(
-      `select 1 where ${teacherStudentAccessSQL("$2")}`,
+      `select 1 where ${studentReadAccessSQL("$2")}`,
       [teacherId, filter.studentId],
     );
     if (!rowCount) return null;
@@ -29,7 +29,7 @@ export async function studentProjectData(
  (select count(*)::int from projects p where p.owner_id=pr.id and not p.is_example) as project_count,
  (select count(*)::int from prompt_reviews r where r.child_id=pr.id) as prompt_count,
  (select count(*)::int from prompt_reviews r where r.child_id=pr.id and cardinality(${guidanceSQL})>0) as guidance_count,'{}'::jsonb as categories
- from profiles pr where ${teacherStudentAccessSQL("pr.id")} and ($2::uuid is null or exists(select 1 from class_members m where m.class_id=$2 and m.child_id=pr.id)) and ($3::uuid is null or pr.id=$3) order by lower(pr.display_name),pr.id`,
+ from profiles pr where ${studentReadAccessSQL("pr.id")} and ($2::uuid is null or exists(select 1 from class_members m where m.class_id=$2 and m.child_id=pr.id)) and ($3::uuid is null or pr.id=$3) order by lower(pr.display_name),pr.id`,
     [teacherId, filter.classId || null, filter.studentId || null],
   );
   const { rows: projects } = await db.query(

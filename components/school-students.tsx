@@ -1,4 +1,5 @@
 "use client";
+import { StudentActionsMenu } from "./student-actions-menu";
 import { StudentReviewTable } from "./student-review-table";
 
 import { useEffect, useState } from "react";
@@ -125,7 +126,24 @@ export function SchoolStudents({
                   ? student.classrooms
                   : available;
               return (
-                <tr key={student.id}>
+                <tr
+                  key={student.id}
+                  className="df-clickable-row"
+                  tabIndex={0}
+                  aria-label={`View projects for ${student.display_name}`}
+                  onClick={() =>
+                    router.push(`/students/${student.id}/projects`)
+                  }
+                  onKeyDown={(e) => {
+                    if (
+                      e.currentTarget === e.target &&
+                      (e.key === "Enter" || e.key === " ")
+                    ) {
+                      e.preventDefault();
+                      router.push(`/students/${student.id}/projects`);
+                    }
+                  }}
+                >
                   <td>
                     <div className="df-directory-person">
                       <div>
@@ -148,7 +166,10 @@ export function SchoolStudents({
                       )}
                     </div>
                   </td>
-                  <td>
+                  <td
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     {active ? (
                       <form
                         className="df-student-membership-form"
@@ -200,26 +221,14 @@ export function SchoolStudents({
                         {error && <p role="alert">{error}</p>}
                       </form>
                     ) : (
-                      <div className="df-inline">
-                        <button
-                          type="button"
-                          className="df-button secondary small"
-                          disabled={busy || !available.length}
-                          onClick={() => open(student.id, "enrollStudent")}
-                          aria-label={`Assign ${student.display_name} to a classroom`}
-                        >
-                          Add to classroom
-                        </button>
-                        <button
-                          type="button"
-                          className="df-button secondary small"
-                          disabled={busy || !student.classrooms.length}
-                          onClick={() => open(student.id, "removeStudent")}
-                          aria-label={`Remove ${student.display_name} from a classroom`}
-                        >
-                          Remove
-                        </button>
-                      </div>
+                      <StudentActionsMenu
+                        name={student.display_name}
+                        canAssign={!!available.length}
+                        canRemove={!!student.classrooms.length}
+                        disabled={busy}
+                        onAssign={() => open(student.id, "enrollStudent")}
+                        onRemove={() => open(student.id, "removeStudent")}
+                      />
                     )}
                   </td>
                 </tr>

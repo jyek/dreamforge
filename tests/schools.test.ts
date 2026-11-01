@@ -1,3 +1,4 @@
+import { studentProjectData } from "../lib/student-project-data";
 import {
   createStudentSchoolInvite,
   lockStudentSchoolInvite,
@@ -667,6 +668,13 @@ test("schools keep their people, classes and data separate", async () => {
       )
     ).rowCount,
     1,
+  );
+  assert.ok(
+    await studentProjectData(person.admin1, { studentId: person.student1 }),
+  );
+  assert.equal(
+    await studentProjectData(person.admin2, { studentId: person.student1 }),
+    null,
   );
   // The database refuses an admin invitation that has no school.
   await assert.rejects(

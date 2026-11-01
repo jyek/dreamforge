@@ -13,3 +13,7 @@ export const sharedTeachingProjectSQL = (
 /** Read-only safety visibility for administrators of the student's school. */
 export const schoolStudentSafetyAccessSQL = (childId: string, actorId = "$1") =>
   `exists(select 1 from profiles _student join school_admins _admin on _admin.school_id=_student.school_id where _student.id=${childId} and _student.role='child' and _admin.profile_id=${actorId})`;
+
+/** Read-only visibility into a student's work for classroom teachers and their school admins. */
+export const studentReadAccessSQL = (childId: string, actorId = "$1") =>
+  `(${teacherStudentAccessSQL(childId, actorId)} or ${schoolStudentSafetyAccessSQL(childId, actorId)})`;

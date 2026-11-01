@@ -3385,3 +3385,36 @@
 @media(max-width:500px) { .df-invite-link-row {grid-template-columns:minmax(0,1fr);} .df-invite-link-row .df-copy-wrap {justify-self:end;} }
 
 .df-invite-link-row .df-copy-wrap { justify-self:end; }
+
+/* Prompt history previews stay inside their columns; full text opens on demand. */
+.df-guidance-table .df-prompt-history { table-layout: fixed; min-width: 960px; }
+.df-prompt-history th:nth-child(1) { width: 145px; }
+.df-prompt-history th:nth-child(2) { width: 150px; }
+.df-prompt-history th:nth-child(3) { width: 30%; }
+.df-prompt-history th:nth-child(4) { width: 155px; }
+.df-prompt-history th:nth-child(5) { width: 22%; }
+.df-prompt-history th:nth-child(6) { width: 180px; }
+.df-prompt-history td { overflow: hidden; overflow-wrap: anywhere; }
+.df-prompt-history .df-guidance-content,
+.df-prompt-history .df-guidance-tip { min-width: 0; max-width: none; white-space: normal; }
+.df-prompt-history .df-guidance-tip { overflow: hidden; }
+.df-prompt-history .df-guidance-tip p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.df-prompt-preview { display: block; width: 100%; min-width: 0; text-align: left; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+.df-prompt-preview > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap; }
+.df-prompt-preview small { display: block; margin-top: 4px; color: #6043a5; font-size: 12px; }
+.df-prompt-preview:focus-visible { outline: 2px solid #8060c4; outline-offset: 3px; border-radius: 3px; }
+.df-prompt-history .df-clickable-row { cursor: pointer; }
+.df-prompt-detail { max-height: 85dvh; overflow-y: auto; width: min(720px, calc(100vw - 2rem)); max-width: 720px; color: #251d35; background: #fff; }
+.df-prompt-detail section { min-width: 0; }
+.df-prompt-detail h3 { font-weight: 600; margin-bottom: 6px; }
+.df-prompt-detail p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.df-prompt-history td { white-space: normal; }
+.df-prompt-tip-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: normal; }
+
+.df-student-menu-trigger { display:inline-flex; align-items:center; justify-content:center; padding:6px; border:0; border-radius:6px; background:transparent; color:#71677f; cursor:pointer; }
+.df-student-menu-trigger:hover {background:#f2ecff; color:#6b3ff7;}
+.df-student-menu-trigger:focus-visible {outline:2px solid #6b3ff7;}
+.df-student-actions-menu { position:fixed; margin:0; width:210px; padding:6px; border:1px solid var(--df-divider); border-radius:12px; background:#fff; color:#251d35; box-shadow:0 6px 24px #251d3520; }
+.df-student-actions-menu button { display:block; width:100%; padding:10px 12px; border:0; border-radius:6px; background:transparent; text-align:left; font-size:13px; cursor:pointer; }
+.df-student-actions-menu button:hover, .df-student-actions-menu button:focus-visible {background:#f6f1ff; outline:none;}
+.df-student-actions-menu button:disabled {opacity:.45; cursor:default;}

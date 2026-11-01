@@ -13,7 +13,10 @@ import {
 } from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
-import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import {
+  schoolSectionPath,
+  PlatformDashboardLayout,
+} from "./platform-dashboard-layout";
 import {
   TeacherPromptGuidance,
   type GuidanceStudent,
@@ -40,11 +43,15 @@ export function TeacherStudentProjects({
   classId,
   studentId,
   initialData,
+  schoolMode = false,
+  schoolName,
 }: {
   teacherName: string;
   classId?: string;
   studentId?: string;
   initialData?: StudentProjectsData;
+  schoolMode?: boolean;
+  schoolName?: string | null;
 }) {
   const router = useRouter();
   const [data, setData] = useState<StudentProjectsData | null>(
@@ -88,6 +95,8 @@ export function TeacherStudentProjects({
   return (
     <PlatformDashboardLayout
       teacher
+      schoolMode={schoolMode}
+      schoolName={schoolName}
       name={teacherName}
       section={classId ? "classrooms" : "students"}
       headerAction={
@@ -119,7 +128,9 @@ export function TeacherStudentProjects({
           </div>
         ) : undefined
       }
-      onSectionChange={(s) => router.push(`/${s}`)}
+      onSectionChange={(s) =>
+        router.push(schoolMode ? schoolSectionPath(s) : `/${s}`)
+      }
     >
       <DashboardDetailHeader
         title={
@@ -180,6 +191,7 @@ export function TeacherStudentProjects({
             }
           />
           <TeacherPromptGuidance
+            scope={schoolMode ? "school" : "teacher"}
             key={selection.project.vm_id}
             initialStudent={selection.student}
             initialProjectId={selection.project.vm_id}
