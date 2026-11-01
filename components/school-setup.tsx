@@ -1,95 +1,147 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "./ui/dialog";
 type Person = { id: string; display_name: string };
 export function SchoolSetup({
-  initial,
-  section,
+  teachers,
+  classroom,
 }: {
-  initial: {
-    teachers: Person[];
-    classes: { id: string; name: string }[];
-  };
-  section: string;
+  teachers: Person[];
+  classroom?: { id: string; name: string; teachers?: Person[] };
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const submitting = useRef(false);
+  const available = teachers.filter(
+    (p) => !classroom?.teachers?.some((t) => t.id === p.id),
+  );
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
+    if (submitting.current) return;
+    const body = Object.fromEntries(new FormData(event.currentTarget));
+    submitting.current = true;
     setBusy(true);
-    setMessage("");
+    setError("");
     try {
       const response = await fetch("/api/platform/school", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(new FormData(form))),
+        body: JSON.stringify({
+          ...body,
+          action: classroom ? "addTeacher" : "createClass",
+          ...(classroom ? { classId: classroom.id } : {}),
+        }),
       });
       const data = await response.json();
-      if (!response.ok) throw Error(data.error);
-      form.reset();
-      setMessage("Saved.");
+      if (!response.ok) throw Error(data.error || "Could not save classroom.");
+      setOpen(false);
       router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save classroom.");
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
-  const choices = (people: Person[]) =>
-    people.map((p) => (
-      <option key={p.id} value={p.id}>
-        {p.display_name}
-      </option>
-    ));
   return (
-    <div className="df-card">
-      {section === "classes" && (
-        <form onSubmit={submit} className="df-inline">
-          <input type="hidden" name="action" value="createClass" />
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!busy) {
+          setOpen(next);
+          setError("");
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className={classroom ? "df-button secondary small" : "df-button"}
+          aria-label={
+            classroom ? `Add teacher to ${classroom.name}` : undefined
+          }
+          disabled={!available.length}
+        >
+          {classroom ? "Add teacher" : "Create classroom"}
+        </button>
+      </DialogTrigger>
+      <DialogContent
+        className="df-card"
+        style={{ background: "#fff", color: "#1a0f2e" }}
+      >
+        <DialogTitle>
+          {classroom ? "Add a co-teacher" : "Create a classroom"}
+        </DialogTitle>
+        <DialogDescription>
+          {classroom
+            ? `Choose a teacher to join ${classroom.name}.`
+            : "Give your classroom a name and choose its lead teacher."}
+        </DialogDescription>
+        <form onSubmit={submit} className="df-form df-school-classroom-form">
+          {!classroom && (
+            <label>
+              Classroom name
+              <input
+                className="df-input"
+                name="name"
+                required
+                maxLength={80}
+                pattern=".*\S.*"
+                placeholder="e.g. Creative coding"
+                disabled={busy}
+              />
+            </label>
+          )}
           <label>
-            Classroom name
-            <input className="df-input" name="name" required maxLength={80} />
-          </label>
-          <label>
-            Lead teacher
-            <select className="df-input" name="teacherId" required>
+            {classroom ? "Co-teacher" : "Lead teacher"}
+            <select
+              className="df-input"
+              name={classroom ? "personId" : "teacherId"}
+              required
+              defaultValue=""
+              disabled={busy}
+            >
               <option value="">Choose a teacher</option>
-              {choices(initial.teachers)}
+              {available.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.display_name}
+                </option>
+              ))}
             </select>
           </label>
-          <button className="df-button" disabled={busy}>
-            Create classroom
-          </button>
+          {error && (
+            <p role="alert" className="df-error">
+              {error}
+            </p>
+          )}
+          <div className="df-inline" style={{ justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              className="df-button secondary"
+              disabled={busy}
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </button>
+            <button className="df-button" disabled={busy}>
+              {busy
+                ? "Saving…"
+                : classroom
+                  ? "Add teacher"
+                  : "Create classroom"}
+            </button>
+          </div>
         </form>
-      )}
-      <h3>Assign a co-teacher</h3>
-      <form onSubmit={submit} className="df-inline">
-        <input type="hidden" name="action" value="addTeacher" />
-        <label>
-          Classroom
-          <select className="df-input" name="classId" required>
-            <option value="">Choose a classroom</option>
-            {initial.classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Teacher
-          <select className="df-input" name="personId" required>
-            <option value="">Choose a person</option>
-            {choices(initial.teachers)}
-          </select>
-        </label>
-        <button className="df-button" disabled={busy}>
-          Assign
-        </button>
-      </form>
-      {message && <p role="status">{message}</p>}
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

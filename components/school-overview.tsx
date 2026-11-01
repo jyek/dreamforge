@@ -91,7 +91,12 @@ export function SchoolOverview({
       onSectionChange={navigate}
       headerAction={
         sectionCount ? (
-          <span className="df-pill">{sectionCount}</span>
+          <div className="df-inline">
+            <span className="df-pill">{sectionCount}</span>
+            {section === "classes" && (
+              <SchoolSetup teachers={initial.teachers} />
+            )}
+          </div>
         ) : undefined
       }
     >
@@ -198,9 +203,6 @@ export function SchoolOverviewContent({
           {!alerts.length && <p>No safety alerts recorded.</p>}
         </>
       )}
-      {section === "classes" && (
-        <SchoolSetup initial={initial} section={section} />
-      )}
       {section === "students" && (
         <SchoolStudents
           students={initial.studentList || []}
@@ -223,7 +225,10 @@ export function SchoolOverviewContent({
                 <strong>{current.invite_code}</strong>
               </p>
               <ClassroomGroups classId={current.id} />
-              <h3>Teaching team</h3>
+              <div className="df-section-head">
+                <h3>Teaching team</h3>
+                <SchoolSetup teachers={initial.teachers} classroom={current} />
+              </div>
               {people(current.teachers || [], true)}
               <h3>Students · {current.roster?.length || 0}</h3>
               {people(current.roster || [], false)}
@@ -238,22 +243,79 @@ export function SchoolOverviewContent({
               </button>
             </>
           ) : (
-            <div className="df-projects">
-              {initial.classes.map((c) => (
-                <button
-                  className="df-card df-project"
-                  key={c.id}
-                  onClick={() => setSelected(c.id)}
-                >
-                  <h3>{c.name}</h3>
-                  <p>
-                    {(c.teachers || []).map((t) => t.display_name).join(", ") ||
-                      c.teacher_name}
-                  </p>
-                  <footer>{c.students} students · View classroom →</footer>
-                </button>
-              ))}
-              {!initial.classes.length && <p>No classrooms yet.</p>}
+            <div className="df-guidance-table df-school-classroom-directory">
+              <table className="df-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Classroom</th>
+                    <th scope="col">Teaching team</th>
+                    <th scope="col">Students</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {initial.classes.map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <button
+                          className="df-class-text-link"
+                          type="button"
+                          onClick={() => setSelected(c.id)}
+                        >
+                          {c.name}
+                        </button>
+                      </td>
+                      <td>
+                        <div className="df-directory-classes">
+                          {c.teachers?.length
+                            ? c.teachers.map((t) => (
+                                <span key={t.id}>
+                                  {t.display_name}
+                                  {t.is_owner && (
+                                    <small className="df-muted">
+                                      {" "}
+                                      · Lead teacher
+                                    </small>
+                                  )}
+                                </span>
+                              ))
+                            : c.teacher_name}
+                        </div>
+                        <small className="df-muted">
+                          {c.teachers?.length || 1}{" "}
+                          {(c.teachers?.length || 1) === 1
+                            ? "teacher"
+                            : "teachers"}
+                        </small>
+                      </td>
+                      <td>{c.students}</td>
+                      <td>
+                        <div className="df-inline">
+                          <button
+                            type="button"
+                            className="df-button secondary small"
+                            onClick={() => setSelected(c.id)}
+                            aria-label={`View ${c.name}`}
+                          >
+                            View classroom
+                          </button>
+                          <SchoolSetup
+                            teachers={initial.teachers}
+                            classroom={c}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!initial.classes.length && (
+                    <tr>
+                      <td colSpan={4} className="df-directory-empty">
+                        No classrooms yet. Create a classroom to get started.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </>
