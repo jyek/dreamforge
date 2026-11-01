@@ -330,3 +330,10 @@
   accent-color: #6b3ff7;
   box-shadow: none;
 }
+
+/* Form values should not inherit the heavier weight of their labels. */
+input:not([type="button"]):not([type="submit"]):not([type="reset"]),
+textarea,
+select {
+  font-weight: 400;
+}

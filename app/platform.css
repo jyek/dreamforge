@@ -3489,3 +3489,5 @@
 .df-project-assignment-status .df-guidance-tag,
 .df-project-assignment-status .df-project-classroom-tag { display: inline-flex; align-items: center; box-sizing: border-box; min-height: 24px; padding: 3px 8px; margin: 0; border: 1px solid transparent; font-size: 12px; line-height: 16px; }
 .df-project-assignment-status .df-project-classroom-tag { border-color: #e0dfea; }
+
+.df-input { font-weight: 400; }
