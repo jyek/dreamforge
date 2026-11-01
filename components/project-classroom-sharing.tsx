@@ -8,7 +8,6 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "./ui/dialog";
-import { SimpleLoading } from "./dream-loading";
 export function ProjectClassroomSharing({
   projectId,
   name,
@@ -25,17 +24,25 @@ export function ProjectClassroomSharing({
       { id: string; name: string; attached: boolean }[] | null
     >(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(false);
   async function load() {
+    if (loading || busy) return;
+    setLoading(true);
     setError("");
     setClasses(null);
     try {
-      const r = await fetch(`/api/projects/${projectId}/classrooms`),
+      const r = await fetch(`/api/projects/${projectId}/classrooms`, {
+          cache: "no-store",
+        }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
       setClasses(d.classes);
+      setOpen(true);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
   }
   async function save() {
@@ -64,15 +71,28 @@ export function ProjectClassroomSharing({
       open={open}
       onOpenChange={(value) => {
         if (busy) return;
-        setOpen(value);
         if (value) void load();
+        else setOpen(false);
       }}
     >
       <DialogTrigger asChild>
-        <button className="df-button secondary small">
-          {student ? "Assign to classroom" : "Share with classrooms"}
+        <button
+          className="df-button secondary small"
+          disabled={loading || busy}
+          aria-busy={loading}
+        >
+          {loading
+            ? "Loading…"
+            : student
+              ? "Assign to classroom"
+              : "Share with classrooms"}
         </button>
       </DialogTrigger>
+      {!open && error && (
+        <p role="alert" className="df-error">
+          {error}
+        </p>
+      )}
       <DialogContent className="df-card">
         <DialogTitle>Share {name}</DialogTitle>
         <DialogDescription>
@@ -80,9 +100,6 @@ export function ProjectClassroomSharing({
             ? "Choose the classrooms for this project. You can assign it to more than one classroom."
             : "Choose the classrooms that can view this project. Students can explore it, but cannot edit your copy."}
         </DialogDescription>
-        {!classes && !error && (
-          <SimpleLoading inline label="Loading classrooms…" />
-        )}
         {classes?.length === 0 && (
           <p>
             {student
