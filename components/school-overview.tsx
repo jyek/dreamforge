@@ -75,13 +75,9 @@ export function SchoolOverview({
     router.push(schoolSectionPath(s));
   }
   const sectionCount =
-    section === "teachers"
-      ? `${initial.teachers.length} ${initial.teachers.length === 1 ? "teacher" : "teachers"}`
-      : section === "students"
-        ? `${initial.students} ${initial.students === 1 ? "student" : "students"}`
-        : section === "classes"
-          ? `${initial.classes.length} ${initial.classes.length === 1 ? "classroom" : "classrooms"}`
-          : null;
+    section === "classes"
+      ? `${initial.classes.length} ${initial.classes.length === 1 ? "classroom" : "classrooms"}`
+      : null;
   return (
     <PlatformDashboardLayout
       teacher
