@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreateProjectDialog } from "./create-project-dialog";
+import { StudentProjectActions } from "./student-project-actions";
 import { ProjectClassroomSharing } from "./project-classroom-sharing";
 import { CreateClassDialog } from "./create-class-dialog";
 import { JoinClassDialog } from "./join-class-dialog";
@@ -415,6 +416,12 @@ export function PlatformDashboard({
                           {teacher ? "Open project" : "Keep building ↗"}
                         </footer>
                       </Link>
+                      {!teacher && (
+                        <StudentProjectActions
+                          projectId={p.vm_id}
+                          name={p.metadata.name}
+                        />
+                      )}
                       {teacher && (
                         <ProjectClassroomSharing
                           projectId={p.vm_id}

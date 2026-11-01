@@ -11,9 +11,11 @@ import { SimpleLoading } from "./dream-loading";
 export function ProjectClassroomSharing({
   projectId,
   name,
+  student = false,
 }: {
   projectId: string;
   name: string;
+  student?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [classes, setClasses] = useState<
@@ -64,20 +66,25 @@ export function ProjectClassroomSharing({
     >
       <DialogTrigger asChild>
         <button className="df-button secondary small">
-          Share with classrooms
+          {student ? "Assign to classrooms" : "Share with classrooms"}
         </button>
       </DialogTrigger>
       <DialogContent className="df-card">
         <DialogTitle>Share {name}</DialogTitle>
         <DialogDescription>
-          Choose the classrooms that can view this project. Students can explore
-          it, but cannot edit your copy.
+          {student
+            ? "Choose the classrooms for this project. You can assign it to more than one classroom."
+            : "Choose the classrooms that can view this project. Students can explore it, but cannot edit your copy."}
         </DialogDescription>
         {!classes && !error && (
           <SimpleLoading inline label="Loading classrooms…" />
         )}
         {classes?.length === 0 && (
-          <p>Create a classroom first to share your project.</p>
+          <p>
+            {student
+              ? "Join a classroom first to assign your project."
+              : "Create a classroom first to share your project."}
+          </p>
         )}
         <div className="df-form">
           {classes?.map((c) => (

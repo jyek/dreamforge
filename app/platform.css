@@ -3439,3 +3439,10 @@
 .df-active-invitations .df-guidance-table .df-table th, .df-active-invitations .df-guidance-table .df-table td { padding:10px; }
 .df-account-other-school { display:block; max-width:240px; margin-top:4px; color:#8b5b16; white-space:normal; }
 .df-people-search-results button:disabled { cursor:default; background:#faf9fc; }
+
+.df-student-project-actions { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.df-project { position: relative; }
+.df-student-project-actions > summary { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; cursor: pointer; border-radius: 10px; background: white; list-style: none; }
+.df-student-project-actions > summary::-webkit-details-marker { display: none; }
+.df-student-project-actions > summary:focus-visible { outline: 2px solid #7040ff; outline-offset: 2px; }
+.df-student-project-menu { position: absolute; right: 0; top: 42px; display: grid; gap: 8px; padding: 12px; min-width: 220px; background: white; border: 1px solid #e0dfea; border-radius: 12px; box-shadow: 0 8px 24px #21163d22; }
