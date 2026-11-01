@@ -3344,3 +3344,5 @@
 .df-guidance-table .df-table td { padding:12px 16px; vertical-align:middle; }
 .df-guidance-table .df-table th:first-child, .df-guidance-table .df-table td:first-child { padding-left:22px; }
 .df-guidance-table .df-table tr:last-child > td { border-bottom:0; }
+
+.df-project-spend > .df-guidance-table { margin-top:16px; }
