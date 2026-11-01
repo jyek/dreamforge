@@ -105,7 +105,9 @@ export function StudentProjectActions({
             editDescription
             onRenamed={() => void onChanged?.()}
             className="df-button secondary small"
-          />
+          >
+            Rename project
+          </ProjectRename>
           <ProjectClassroomSharing
             projectId={projectId}
             name={name}
