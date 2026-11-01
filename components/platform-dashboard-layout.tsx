@@ -4,6 +4,7 @@ import {
   Home,
   School,
   UsersRound,
+  Presentation,
   FolderKanban,
   ShieldCheck,
   Building2,
@@ -63,7 +64,7 @@ export const SCHOOL_ADMIN_SECTIONS = [
   {
     id: "teachers",
     label: "Teachers",
-    icon: UsersRound,
+    icon: Presentation,
     description: "Your school’s teachers and their classrooms.",
   },
   {
