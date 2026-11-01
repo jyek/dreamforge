@@ -13,6 +13,7 @@ import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassroomProjectFilter } from "./classroom-project-filter";
 import { StudentReviewTable } from "./student-review-table";
+import { ClassroomPeople } from "./classroom-people";
 import { ClassroomAvatar } from "./classroom-avatar";
 import { MAX_CLASSROOM_GROUPS } from "@/lib/classroom-group-names";
 type Student = {
@@ -249,7 +250,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
         </p>
       )}
       {!data ? (
-        !error && <p role="status">Loading classroom groups…</p>
+        !error && <ClassroomPeople people={[]} role="student" loading />
       ) : view && (activeGroup || activeStudent) ? (
         <div>
           <DashboardDetailHeader

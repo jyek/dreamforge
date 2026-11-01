@@ -63,7 +63,11 @@ export function TeacherClassroomDetail({
             />
           }
         />
-        <ClassroomPeople people={data?.teachers || []} role="teacher" />
+        <ClassroomPeople
+          people={data?.teachers || []}
+          role="teacher"
+          loading={!data && !error}
+        />
       </section>
       <ClassProjectAssignments
         classId={classId}

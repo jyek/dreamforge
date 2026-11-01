@@ -1,13 +1,22 @@
+import { SimpleLoading } from "./dream-loading";
 import { ClassroomAvatar } from "./classroom-avatar";
 export function ClassroomPeople({
   people,
   role,
   userId,
+  loading = false,
 }: {
   people: { id: string; display_name: string; is_owner?: boolean }[];
   role: "teacher" | "student";
   userId?: string;
+  loading?: boolean;
 }) {
+  if (loading)
+    return (
+      <div className="df-class-people" aria-busy="true">
+        <SimpleLoading inline label="Loading…" />
+      </div>
+    );
   return (
     <div className="df-class-people">
       {people.map((p) => (
