@@ -10,6 +10,7 @@ import {
 import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
+import { AddPersonDialog } from "./people-toolbar";
 import { SchoolTeachers } from "./school-teachers";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
 import { TeacherActionSummary } from "./teacher-action-summary";
@@ -165,12 +166,7 @@ export function SchoolOverviewContent({
               />
               <ClassroomSectionHeader
                 title="Teachers"
-                action={
-                  <SchoolSetup
-                    teachers={initial.teachers}
-                    classroom={current}
-                  />
-                }
+                action={<AddPersonDialog role="teacher" classroom={current} />}
               />
               <ClassroomPeople people={current.teachers || []} role="teacher" />
               <ClassroomGroups classId={current.id} />

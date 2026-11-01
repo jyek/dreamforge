@@ -13,11 +13,15 @@ export function PeopleToolbar({
   classrooms,
   filter,
   onFilter,
+  buttonOnly = false,
+  onChanged,
 }: {
   role: "student" | "teacher";
   classrooms: { id: string; name: string }[];
   filter: string;
   onFilter: (s: string) => void;
+  buttonOnly?: boolean;
+  onChanged?: () => Promise<void>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false),
@@ -48,6 +52,7 @@ export function PeopleToolbar({
       if (action === "add") {
         setOpen(false);
         setNotice(`${d.person.display_name} added to classroom.`);
+        if (onChanged) await onChanged();
         router.refresh();
       }
     } catch (e) {
@@ -58,22 +63,24 @@ export function PeopleToolbar({
   }
   return (
     <>
-      <div className="df-people-toolbar">
-        <label>
-          Classroom
-          <select
-            className="df-input"
-            value={filter}
-            onChange={(e) => onFilter(e.target.value)}
-          >
-            <option value="">All classrooms</option>
-            {classrooms.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className={buttonOnly ? "df-inline" : "df-people-toolbar"}>
+        {!buttonOnly && (
+          <label>
+            Classroom
+            <select
+              className="df-input"
+              value={filter}
+              onChange={(e) => onFilter(e.target.value)}
+            >
+              <option value="">All classrooms</option>
+              {classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button
           className="df-button"
           disabled={!classrooms.length}
@@ -89,7 +96,11 @@ export function PeopleToolbar({
           Add {role}
         </button>
       </div>
-      {notice && <p role="status">{notice}</p>}
+      {notice && (
+        <p className={buttonOnly ? "sr-only" : undefined} role="status">
+          {notice}
+        </p>
+      )}
       <Dialog
         open={open}
         onOpenChange={(v) => {
@@ -216,5 +227,26 @@ export function PeopleToolbar({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+export function AddPersonDialog({
+  role,
+  classroom,
+  onChanged,
+}: {
+  role: "student" | "teacher";
+  classroom: { id: string; name: string };
+  onChanged?: () => Promise<void>;
+}) {
+  return (
+    <PeopleToolbar
+      role={role}
+      classrooms={[classroom]}
+      filter={classroom.id}
+      onFilter={() => {}}
+      buttonOnly
+      onChanged={onChanged}
+    />
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomSafetyReport } from "./classroom-safety-report";
-import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
+import { AddPersonDialog } from "./people-toolbar";
 import { StudentReviewTable } from "./student-review-table";
 import { NoClassroomProjects } from "./no-classroom-projects";
 import { useEffect, useState } from "react";
@@ -93,8 +93,12 @@ export function TeacherStudentProjects({
       headerAction={
         classId && data?.availableProjects ? (
           <div className="df-inline">
-            <ClassroomTeachersDialog
-              classId={classId}
+            <AddPersonDialog
+              role="teacher"
+              classroom={{
+                id: classId,
+                name: data?.classroom?.name || "Classroom",
+              }}
               onChanged={async () => {
                 const r = await fetch(`/api/platform/classes/${classId}`);
                 const d = await r.json();

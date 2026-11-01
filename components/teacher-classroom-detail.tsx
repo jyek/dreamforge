@@ -8,7 +8,7 @@ import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import { ClassroomSafetyReport } from "./classroom-safety-report";
 import { ClassProjectAssignments } from "./class-project-assignments";
 import { ClassroomGroups } from "./classroom-groups";
-import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
+import { AddPersonDialog } from "./people-toolbar";
 import { ClassroomPeople } from "./classroom-people";
 import type { StudentProjectsData } from "./teacher-student-projects";
 export function TeacherClassroomDetail({
@@ -53,7 +53,14 @@ export function TeacherClassroomDetail({
         <ClassroomSectionHeader
           title="Teachers"
           action={
-            <ClassroomTeachersDialog classId={classId} onChanged={refresh} />
+            <AddPersonDialog
+              role="teacher"
+              classroom={{
+                id: classId,
+                name: data?.classroom?.name || "Classroom",
+              }}
+              onChanged={refresh}
+            />
           }
         />
         <ClassroomPeople people={data?.teachers || []} role="teacher" />
