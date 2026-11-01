@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogFooter,
 } from "./ui/dialog";
 import { SimpleLoading } from "./dream-loading";
 export function ProjectClassroomSharing({
@@ -88,7 +89,7 @@ export function ProjectClassroomSharing({
         )}
         <div className="df-form">
           {classes?.map((c) => (
-            <label key={c.id} className="df-inline">
+            <label key={c.id} className="df-assignment-option">
               <input
                 type="checkbox"
                 checked={c.attached}
@@ -103,7 +104,7 @@ export function ProjectClassroomSharing({
                   )
                 }
               />
-              {c.name}
+              <span>{c.name}</span>
             </label>
           ))}
         </div>
@@ -112,13 +113,24 @@ export function ProjectClassroomSharing({
             {error}
           </p>
         )}
-        <button
-          className="df-button"
-          disabled={busy || !classes}
-          onClick={save}
-        >
-          {busy ? "Saving…" : "Save sharing"}
-        </button>
+        <DialogFooter>
+          <button
+            type="button"
+            className="df-button secondary small"
+            disabled={busy}
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="df-button small"
+            disabled={busy || !classes}
+            onClick={save}
+          >
+            {busy ? "Saving…" : "Save sharing"}
+          </button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

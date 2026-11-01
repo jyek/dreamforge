@@ -283,7 +283,7 @@
   display: grid;
   gap: var(--df-modal-section-gap);
 }
-.df-dialog-spacing[data-slot="dialog-content"] label:has(> :is(input, select, textarea)),
+.df-dialog-spacing[data-slot="dialog-content"] label:has(> :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea)),
 .df-dialog-spacing[data-slot="dialog-content"] .df-group-name-field {
   display: grid;
   gap: var(--df-modal-field-gap);
@@ -313,4 +313,20 @@
   .df-dialog-spacing[data-slot="dialog-content"] form > .df-inline:last-child {
     flex-wrap: wrap;
   }
+}
+
+/* Choice controls stay beside their label rather than stretching as text fields. */
+.df-dialog-spacing[data-slot="dialog-content"] label:has(> input:is([type="checkbox"], [type="radio"])) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.df-dialog-spacing[data-slot="dialog-content"] label > input:is([type="checkbox"], [type="radio"]) {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #6b3ff7;
+  box-shadow: none;
 }
