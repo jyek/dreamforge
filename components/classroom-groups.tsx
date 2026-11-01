@@ -2,6 +2,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  ClassProjectAssignments,
+  type AssignableProject,
+} from "./class-project-assignments";
 import { StatusToast } from "./status-toast";
 import { MoreVertical } from "lucide-react";
 import {
@@ -45,7 +49,15 @@ export type ClassroomGroupsData = {
   projects: Project[];
   classroomProjects?: (Project & { group_name?: string | null })[];
 };
-export function ClassroomGroups({ classId }: { classId: string }) {
+export function ClassroomGroups({
+  classId,
+  availableProjects,
+  onProjectsChanged,
+}: {
+  classId: string;
+  availableProjects?: AssignableProject[];
+  onProjectsChanged?: () => Promise<void>;
+}) {
   const router = useRouter();
   const [projectOwner, setProjectOwner] = useState("");
   const endpoint = `/api/platform/classes/${classId}/groups`;
@@ -160,9 +172,12 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               </Link>
             )}
             {student.pending_count > 0 && (
-              <a className="df-group-pending" href="#safety-report-title">
+              <Link
+                className="df-group-pending"
+                href={`/students/${student.id}/projects`}
+              >
                 {student.pending_count} awaiting approval
-              </a>
+              </Link>
             )}
           </div>
         )}
@@ -384,6 +399,18 @@ export function ClassroomGroups({ classId }: { classId: string }) {
             )}
             value={projectOwner}
             onChange={setProjectOwner}
+            action={
+              availableProjects && (
+                <ClassProjectAssignments
+                  classId={classId}
+                  projects={availableProjects}
+                  onChanged={async () => {
+                    await onProjectsChanged?.();
+                    await load();
+                  }}
+                />
+              )
+            }
           />
           <StudentReviewTable
             busy={!data && !error}

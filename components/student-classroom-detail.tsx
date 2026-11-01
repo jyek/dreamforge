@@ -90,13 +90,6 @@ export function StudentClassroomDetail({
       name={user.display_name}
       section="classrooms"
       onSectionChange={(s) => router.push(`/${s}`)}
-      headerAction={
-        <ClassProjectAssignments
-          classId={classId}
-          projects={data.availableProjects}
-          onChanged={refresh}
-        />
-      }
     >
       <DashboardDetailHeader
         title={preview ? preview.name : data.classroom.name}
@@ -189,6 +182,13 @@ export function StudentClassroomDetail({
               ]}
               value={student}
               onChange={setStudent}
+              action={
+                <ClassProjectAssignments
+                  classId={classId}
+                  projects={data.availableProjects}
+                  onChanged={refresh}
+                />
+              }
             />
             <StudentReviewTable
               columns={4}

@@ -8,8 +8,6 @@ import {
   schoolSectionPath,
   PlatformDashboardLayout,
 } from "./platform-dashboard-layout";
-import { ClassroomSafetyReport } from "./classroom-safety-report";
-import { ClassProjectAssignments } from "./class-project-assignments";
 import { ClassroomGroups } from "./classroom-groups";
 import { AddPersonDialog } from "./people-toolbar";
 import { ClassroomPeople } from "./classroom-people";
@@ -80,13 +78,11 @@ export function TeacherClassroomDetail({
           loading={!data && !error}
         />
       </section>
-      <ClassProjectAssignments
+      <ClassroomGroups
         classId={classId}
-        projects={data?.availableProjects || []}
-        onChanged={refresh}
+        availableProjects={data?.availableProjects || []}
+        onProjectsChanged={refresh}
       />
-      <ClassroomGroups classId={classId} />
-      <ClassroomSafetyReport classId={classId} />
     </PlatformDashboardLayout>
   );
 }

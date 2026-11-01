@@ -3457,3 +3457,5 @@
 .df-ungrouped-roster .df-group-avatar-student { flex: 0 0 100px; }
 @media (max-width: 1000px) { .df-group-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 640px) { .df-group-grid { grid-template-columns: minmax(0,1fr); } }
+
+.df-classroom-project-filter-action { margin-left: auto; align-self: flex-end; }

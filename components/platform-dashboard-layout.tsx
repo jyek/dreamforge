@@ -87,6 +87,13 @@ export const SCHOOL_ADMIN_SECTIONS = [
     description: "Enroll students and manage classroom membership.",
   },
   {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    description:
+      "Create your own projects and share them with your classrooms.",
+  },
+  {
     id: "alerts",
     label: "Safety",
     icon: ShieldCheck,
@@ -209,20 +216,18 @@ export function PlatformDashboardLayout({
                 <span>{s.label}</span>
               </button>
             ))}
-            {!teacher && (
-              <CreateProjectDialog
-                trigger={
-                  <button
-                    type="button"
-                    aria-label="Create a project"
-                    title="Create a project"
-                  >
-                    <Plus size={20} aria-hidden="true" />
-                    <span>Create a project</span>
-                  </button>
-                }
-              />
-            )}
+            <CreateProjectDialog
+              trigger={
+                <button
+                  type="button"
+                  aria-label="Create a project"
+                  title="Create a project"
+                >
+                  <Plus size={20} aria-hidden="true" />
+                  <span>Create a project</span>
+                </button>
+              }
+            />
           </nav>
         }
       />
