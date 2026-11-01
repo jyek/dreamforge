@@ -3374,3 +3374,7 @@
 .df-guidance-table .df-table tbody td { font-size:14px; line-height:1.5; padding:12px 16px; }
 .df-guidance-table .df-table tbody td:first-child { padding-left:22px; }
 .df-guidance-table .df-table tbody td[colspan] { color:#71677f; padding-top:16px; padding-bottom:16px; font-weight:400; }
+
+.df-clickable-row { cursor:pointer; }
+.df-guidance-table .df-table tbody tr.df-clickable-row:hover { background:#faf8fe; }
+.df-clickable-row:focus-visible { outline:2px solid #6b3ff7; outline-offset:-2px; background:#faf8fe; }

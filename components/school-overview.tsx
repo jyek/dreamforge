@@ -171,7 +171,7 @@ export function SchoolOverviewContent({
             </>
           ) : (
             <StudentReviewTable
-              columns={4}
+              columns={3}
               compact={false}
               className="df-school-classroom-directory"
             >
@@ -180,20 +180,28 @@ export function SchoolOverviewContent({
                   <th scope="col">Classroom</th>
                   <th scope="col">Teaching team</th>
                   <th scope="col">Students</th>
-                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {initial.classes.map((c) => (
-                  <tr key={c.id}>
+                  <tr
+                    key={c.id}
+                    className="df-clickable-row"
+                    tabIndex={0}
+                    aria-label={`Enter classroom ${c.name}`}
+                    onClick={() => setSelected(c.id)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.target === e.currentTarget &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        e.preventDefault();
+                        setSelected(c.id);
+                      }
+                    }}
+                  >
                     <td>
-                      <button
-                        className="df-class-text-link"
-                        type="button"
-                        onClick={() => setSelected(c.id)}
-                      >
-                        {c.name}
-                      </button>
+                      <strong>{c.name}</strong>
                     </td>
                     <td>
                       <div className="df-directory-classes">
@@ -219,23 +227,11 @@ export function SchoolOverviewContent({
                       </small>
                     </td>
                     <td>{c.students}</td>
-                    <td>
-                      <div className="df-inline">
-                        <button
-                          type="button"
-                          className="df-button secondary small"
-                          onClick={() => setSelected(c.id)}
-                          aria-label={`View ${c.name}`}
-                        >
-                          Enter classroom
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
                 {!initial.classes.length && (
                   <tr>
-                    <td colSpan={4} className="df-directory-empty">
+                    <td colSpan={3} className="df-directory-empty">
                       No classrooms yet. Create a classroom to get started.
                     </td>
                   </tr>
