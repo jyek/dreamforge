@@ -3418,3 +3418,9 @@
 .df-student-actions-menu button { display:block; width:100%; padding:10px 12px; border:0; border-radius:6px; background:transparent; text-align:left; font-size:13px; cursor:pointer; }
 .df-student-actions-menu button:hover, .df-student-actions-menu button:focus-visible {background:#f6f1ff; outline:none;}
 .df-student-actions-menu button:disabled {opacity:.45; cursor:default;}
+
+/* Compact characters in classroom rosters and group assignments. */
+.df-class-person .df-classroom-avatar, .df-group-avatar-button .df-classroom-avatar { width:44px; height:44px; }
+.df-class-person, .df-group-avatar-student { width:112px; }
+.df-class-person { gap:6px; }
+.df-group-avatar-button { gap:6px; padding:6px; }
