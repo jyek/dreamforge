@@ -276,7 +276,7 @@ export function SchoolOverviewContent({
                             onClick={() => setSelected(c.id)}
                             aria-label={`View ${c.name}`}
                           >
-                            View classroom
+                            Enter classroom
                           </button>
                           <SchoolSetup
                             teachers={initial.teachers}

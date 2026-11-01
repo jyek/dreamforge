@@ -1,3 +1,7 @@
+import {
+  changeClassroomGroups,
+  shareGroupProject,
+} from "../lib/classroom-groups";
 import { schoolStudentSafetyAccessSQL } from "../lib/classroom-permissions";
 import { setupSchool } from "../lib/school-setup";
 import { platformDirectory } from "../lib/platform-directory";
@@ -375,6 +379,115 @@ test("schools keep their people, classes and data separate", async () => {
     ),
   );
   assert.ok(!("auth_email" in directory.teachers[0]));
+
+  await assert.rejects(
+    changeClassroomGroups(pool, classA, person.teacher2, {
+      action: "create",
+      count: 2,
+    }),
+  );
+  await assert.rejects(
+    changeClassroomGroups(pool, classA, person.student1, {
+      action: "create",
+      count: 2,
+    }),
+  );
+  await assert.rejects(
+    changeClassroomGroups(pool, classA, person.teacher1, {
+      action: "create",
+      count: 0,
+    }),
+  );
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "create",
+    count: 3,
+  });
+  const groups = (
+    await pool.query("select id,name from classroom_groups where class_id=$1", [
+      classA,
+    ])
+  ).rows;
+  assert.equal(groups.length, 3);
+  assert.equal(new Set(groups.map((g) => g.name)).size, 3);
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "rename",
+    groupId: groups[0].id,
+    name: "Team Rockets",
+  });
+  await assert.rejects(
+    changeClassroomGroups(pool, classA, person.teacher1, {
+      action: "assign",
+      groupId: groups[0].id,
+      studentId: person.student2,
+    }),
+  );
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "assign",
+    groupId: groups[0].id,
+    studentId: person.student1,
+  });
+  await pool.query(
+    "insert into class_projects(class_id,vm_id,assigned_by) values($1,'vm-schoolalerta',$2) on conflict do nothing",
+    [classA, person.student1],
+  );
+  await shareGroupProject(
+    pool,
+    classA,
+    person.student1,
+    "vm-schoolalerta",
+    groups[0].id,
+  );
+  assert.equal(
+    (
+      await pool.query(
+        "select classroom_group_id from projects where vm_id='vm-schoolalerta'",
+      )
+    ).rows[0].classroom_group_id,
+    groups[0].id,
+  );
+  await assert.rejects(
+    shareGroupProject(
+      pool,
+      classA,
+      person.teacher1,
+      "vm-schoolalerta",
+      groups[0].id,
+    ),
+  );
+  await assert.rejects(
+    changeClassroomGroups(pool, classA, person.teacher1, {
+      action: "delete",
+      groupId: groups[0].id,
+    }),
+  );
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "assign",
+    groupId: groups[1].id,
+    studentId: person.student1,
+  });
+  assert.equal(
+    (
+      await pool.query(
+        "select group_id from classroom_group_members where child_id=$1 and class_id=$2",
+        [person.student1, classA],
+      )
+    ).rows[0].group_id,
+    groups[1].id,
+  );
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "assign",
+    groupId: null,
+    studentId: person.student1,
+  });
+  assert.equal(
+    (
+      await pool.query(
+        "select 1 from classroom_group_members where child_id=$1 and class_id=$2",
+        [person.student1, classA],
+      )
+    ).rowCount,
+    0,
+  );
   // The database refuses an admin invitation that has no school.
   await assert.rejects(
     pool.query(

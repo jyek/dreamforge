@@ -12,12 +12,15 @@ import { ClassroomAvatar, classroomAvatarShapes } from "./classroom-avatar";
 import { SimpleLoading } from "./dream-loading";
 type Project = {
   vm_id: string;
+  group_name?: string;
+  classroom_group_id?: string;
   owner_id: string;
   owner_name: string;
   name: string;
   conversation_id: string | null;
 };
 type Data = {
+  myGroups?: { id: string; name: string }[];
   classroom: { name: string; teacher_name: string; teacher_id?: string };
   teachers?: { id: string; display_name: string; is_owner: boolean }[];
   students: { id: string; display_name: string }[];
@@ -42,6 +45,26 @@ export function StudentClassroomDetail({
     const d = await r.json();
     if (!r.ok) throw Error(d.error || "Could not load classroom.");
     setData(d);
+  }
+  const [groupError, setGroupError] = useState("");
+  const [sharing, setSharing] = useState(false);
+  async function shareGroup(projectId: string, groupId: string) {
+    setSharing(true);
+    setGroupError("");
+    try {
+      const r = await fetch(`/api/platform/classes/${classId}/groups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, groupId }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw Error(d.error);
+      await refresh();
+    } catch (e) {
+      setGroupError((e as Error).message);
+    } finally {
+      setSharing(false);
+    }
   }
   const shown = data.projects.filter((p) => !student || p.owner_id === student);
   const teachers = data.teachers || [
@@ -101,6 +124,39 @@ export function StudentClassroomDetail({
           ))}
         </div>
       </section>
+      {groupError && <p role="alert">{groupError}</p>}
+      {!!data.myGroups?.length && (
+        <section>
+          <h3>Share projects with your group</h3>
+          {data.projects
+            .filter((p) => p.owner_id === user.id)
+            .map((p) => (
+              <div className="df-school-row" key={p.vm_id}>
+                <strong>{p.name}</strong>
+                <span>{p.group_name || "Individual project"}</span>
+                <label>
+                  Group
+                  <select
+                    className="df-input"
+                    disabled={sharing}
+                    aria-label={`Share ${p.name} with your group`}
+                    value={p.classroom_group_id || ""}
+                    onChange={(e) => void shareGroup(p.vm_id, e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Make group project…
+                    </option>
+                    {data.myGroups?.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ))}
+        </section>
+      )}
       {preview ? (
         <>
           <button

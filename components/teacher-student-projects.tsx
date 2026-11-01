@@ -28,6 +28,7 @@ type Project = {
   group_members?: string[];
 };
 export type StudentProjectsData = {
+  teachers?: { id: string; display_name: string; is_owner: boolean }[];
   classroom?: { name: string; teacher_name?: string };
   availableProjects?: AssignableProject[];
   students: GuidanceStudent[];

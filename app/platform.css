@@ -3008,6 +3008,7 @@
   border-bottom: 0;
 }
 .df-guidance-filters select.df-input,
+.df-group-assign select.df-input,
 .df-school-classroom-form select.df-input,
 .df-student-membership-form select.df-input,
 .df-staff-invite-form select.df-input {

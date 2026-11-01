@@ -48,7 +48,7 @@ export async function loadGroup(db: Db, vmId: string) {
   if (!project?.owner_id) return null;
   const members = (
     await db.query(
-      "select pr.id,pr.display_name,pr.username from project_members m join profiles pr on pr.id=m.child_id join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id where m.vm_id=$1 and pr.school_id is not distinct from owner.school_id and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=pr.id) order by lower(pr.display_name)",
+      "select pr.id,pr.display_name,pr.username from project_members m join profiles pr on pr.id=m.child_id join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id where m.vm_id=$1 and pr.school_id is not distinct from owner.school_id and (p.classroom_group_id is null or exists(select 1 from classroom_group_members ng join class_members own on own.class_id=ng.class_id and own.child_id=p.owner_id where ng.group_id=p.classroom_group_id and ng.child_id=m.child_id)) and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=pr.id) order by lower(pr.display_name)",
       [vmId],
     )
   ).rows;
@@ -78,7 +78,7 @@ async function canManage(
   const { rowCount } = await db.query(
     `select 1 from projects p join class_members m on m.child_id=p.owner_id
     join classes c on c.id=m.class_id join profiles owner on owner.id=p.owner_id join profiles teacher on teacher.id=c.teacher_id
-    where p.vm_id=$1 and p.owner_id=$2 and (p.group_class_id is null or p.group_class_id=c.id)
+    where p.vm_id=$1 and p.owner_id=$2 and p.classroom_group_id is null and (p.group_class_id is null or p.group_class_id=c.id)
     and owner.school_id is not distinct from teacher.school_id and ${groupManagerSQL("c.id", "$3")}`,
     [vmId, ownerId, actorId],
   );

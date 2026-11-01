@@ -66,7 +66,7 @@ export async function platformProjectAccess(
       ? !!(
           await database()
             .query(
-              "select 1 from project_members m join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id join profiles member on member.id=m.child_id where m.vm_id=$1 and m.child_id=$2 and member.school_id is not distinct from owner.school_id and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=m.child_id)",
+              "select 1 from project_members m join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id join profiles member on member.id=m.child_id where m.vm_id=$1 and m.child_id=$2 and member.school_id is not distinct from owner.school_id and (p.classroom_group_id is null or exists(select 1 from classroom_group_members ng join class_members own on own.class_id=ng.class_id and own.child_id=p.owner_id where ng.group_id=p.classroom_group_id and ng.child_id=m.child_id)) and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=m.child_id)",
               [projectId, profile.id],
             )
             .catch((error) => {

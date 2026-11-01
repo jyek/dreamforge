@@ -32,10 +32,10 @@ export async function classroomData(
     [classId],
   );
   const { rows: projects } = await db.query(
-    `select p.vm_id,p.owner_id,pr.display_name as owner_name,p.metadata->>'name' as name,case when $2::boolean or p.owner_id=$3 then p.metadata->'conversations'->0->>'id' else null end as conversation_id,
+    `select p.vm_id,p.classroom_group_id,g.name as group_name,p.owner_id,pr.display_name as owner_name,p.metadata->>'name' as name,case when $2::boolean or p.owner_id=$3 then p.metadata->'conversations'->0->>'id' else null end as conversation_id,
  ${teacher ? "(select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id)" : "0"} as prompt_count,
  ${teacher ? `(select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and cardinality(${guidanceSQL})>0)` : "0"} as guidance_count
- from class_projects cp join projects p on p.vm_id=cp.vm_id join profiles pr on pr.id=p.owner_id where cp.class_id=$1 and (${classroomTeacherSQL("$1", "p.owner_id")} or exists(select 1 from class_members m where m.class_id=$1 and m.child_id=p.owner_id)) order by cp.created_at desc`,
+ from class_projects cp join projects p on p.vm_id=cp.vm_id left join classroom_groups g on g.id=p.classroom_group_id join profiles pr on pr.id=p.owner_id where cp.class_id=$1 and (${classroomTeacherSQL("$1", "p.owner_id")} or exists(select 1 from class_members m where m.class_id=$1 and m.child_id=p.owner_id)) order by cp.created_at desc`,
     [classId, teacher, user.id],
   );
   const groups = await groupNames(
@@ -52,7 +52,14 @@ export async function classroomData(
     `select pr.id,pr.display_name,(pr.id=c.teacher_id) as is_owner from classes c join profiles pr on pr.id=c.teacher_id or exists(select 1 from class_teachers t where t.class_id=c.id and t.teacher_id=pr.id) where c.id=$1 order by (pr.id=c.teacher_id) desc,lower(pr.display_name)`,
     [classId],
   );
+  const myGroups = (
+    await db.query(
+      "select g.id,g.name from classroom_groups g join classroom_group_members m on m.group_id=g.id where g.class_id=$1 and m.child_id=$2",
+      [classId, user.id],
+    )
+  ).rows;
   return {
+    myGroups,
     teachers,
     classroom,
     students: students.map((s) => ({ ...s, categories: {} })),
