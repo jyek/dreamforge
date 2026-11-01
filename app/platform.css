@@ -3477,3 +3477,7 @@
 .df-project-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
 .df-project-card-heading > .df-project-main { min-width: 0; }
 .df-project-card-heading h3 { margin: 0; overflow-wrap: anywhere; }
+
+.df-project-assignment-status { display: grid; justify-items: start; gap: 8px; margin-top: 12px; font-size: 12px; }
+.df-project-classroom-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.df-project-classroom-tag { display: inline-block; border: 1px solid #e0dfea; padding: 3px 8px; border-radius: 6px; color: #71677f; }

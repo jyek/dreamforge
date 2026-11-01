@@ -13,9 +13,13 @@ type Group = { id: string; name: string; class_id: string };
 export function StudentProjectActions({
   projectId,
   name,
+  canMakeGroup = false,
+  onChanged,
 }: {
   projectId: string;
   name: string;
+  canMakeGroup?: boolean;
+  onChanged?: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false),
     [classes, setClasses] = useState<Classroom[]>([]),
@@ -59,6 +63,7 @@ export function StudentProjectActions({
         }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
+      await onChanged?.();
       setOpen(false);
     } catch (e) {
       setError((e as Error).message);
@@ -73,14 +78,21 @@ export function StudentProjectActions({
           <EllipsisVertical size={20} />
         </summary>
         <div className="df-student-project-menu">
-          <ProjectClassroomSharing projectId={projectId} name={name} student />
-          <button
-            type="button"
-            className="df-button secondary small"
-            onClick={() => void load()}
-          >
-            Make group project
-          </button>
+          <ProjectClassroomSharing
+            projectId={projectId}
+            name={name}
+            student
+            onChanged={onChanged}
+          />
+          {canMakeGroup && (
+            <button
+              type="button"
+              className="df-button secondary small"
+              onClick={() => void load()}
+            >
+              Make group project
+            </button>
+          )}
         </div>
       </details>
       <Dialog

@@ -48,6 +48,10 @@ type Project = {
   vm_id: string;
   metadata: { name: string; conversations: { id: string }[] };
   child_name: string;
+  assigned_classrooms?: { id: string; name: string }[];
+  is_group_project?: boolean;
+  group_name?: string | null;
+  can_make_group?: boolean;
 };
 type Wallet = CreditWallet & {
   token_limit: string;
@@ -419,8 +423,33 @@ export function PlatformDashboard({
                           <StudentProjectActions
                             projectId={p.vm_id}
                             name={p.metadata.name}
+                            canMakeGroup={p.can_make_group}
+                            onChanged={load}
                           />
                         )}
+                      </div>
+                      <div className="df-project-assignment-status">
+                        <span className="df-guidance-tag">
+                          {p.is_group_project
+                            ? `Group project · ${p.group_name || "Unassigned"}`
+                            : "Individual project"}
+                        </span>
+                        <div className="df-project-classroom-tags">
+                          {p.assigned_classrooms?.length ? (
+                            p.assigned_classrooms.map((c) => (
+                              <span
+                                key={c.id}
+                                className="df-project-classroom-tag"
+                              >
+                                {c.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="df-muted">
+                              Not assigned to a classroom
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Link
                         className="df-project-main"
@@ -439,6 +468,7 @@ export function PlatformDashboard({
                         <ProjectClassroomSharing
                           projectId={p.vm_id}
                           name={p.metadata.name}
+                          onChanged={load}
                         />
                       )}
                     </article>

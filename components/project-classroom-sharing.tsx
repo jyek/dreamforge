@@ -13,10 +13,12 @@ export function ProjectClassroomSharing({
   projectId,
   name,
   student = false,
+  onChanged,
 }: {
   projectId: string;
   name: string;
   student?: boolean;
+  onChanged?: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false),
     [classes, setClasses] = useState<
@@ -49,6 +51,7 @@ export function ProjectClassroomSharing({
         }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
+      await onChanged?.();
       setOpen(false);
     } catch (e) {
       setError((e as Error).message);
