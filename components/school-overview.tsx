@@ -7,6 +7,7 @@ import {
 } from "./platform-dashboard-layout";
 import { SchoolTeachers } from "./school-teachers";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
+import { TeacherActionSummary } from "./teacher-action-summary";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { SchoolSetup } from "./school-setup";
 import { ClassroomGroups } from "./classroom-groups";
@@ -135,7 +136,7 @@ export function SchoolOverviewContent({
     <>
       {section === "overview" && (
         <>
-          <div className="df-projects">
+          <div className="df-overview-badges">
             {[
               ["classes", "Classrooms", initial.classes.length],
               ["teachers", "Teachers", initial.teachers.length],
@@ -151,16 +152,16 @@ export function SchoolOverviewContent({
               ],
             ].map(([target, label, count], i) => (
               <button
-                className="df-card df-project"
+                className="df-overview-badge"
                 key={i}
                 onClick={() => onNavigate?.(String(target))}
               >
-                <h3>{label}</h3>
+                <span>{label}</span>
                 <strong>{count}</strong>
-                <footer>View →</footer>
               </button>
             ))}
           </div>
+          <TeacherActionSummary />
           <h3>Recent safety activity</h3>
           {alerts.slice(0, 5).map((a) => (
             <div className="df-school-row" key={a.id}>

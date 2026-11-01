@@ -11,7 +11,7 @@ export async function GET() {
   const { rows } = await database().query(
     `select c.id,c.name,
  count(distinct r.id) filter(where r.hold_status='pending')::int as waiting,
- count(distinct r.id) filter(where r.decision<>'allow' and r.reviewed_at is null)::int as unreviewed
+ count(distinct r.id) filter(where r.decision<>'allow' and r.reviewed_at is null and r.hold_status is distinct from 'pending')::int as unreviewed
  from classes c left join class_members m on m.class_id=c.id
  left join prompt_reviews r on r.child_id=m.child_id
  where ${classroomTeacherSQL("c.id")}

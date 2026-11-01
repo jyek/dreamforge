@@ -3294,3 +3294,9 @@
 .df-table-skeleton-row:nth-child(even) .df-table-skeleton-bar { width:75%; }
 @keyframes df-table-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
 @media(prefers-reduced-motion:reduce) { .df-table-skeleton-bar { animation:none; } }
+
+.df-overview-badges { display:flex; flex-wrap:nowrap; gap:12px; overflow-x:auto; margin:24px 0; padding-bottom:4px; }
+.df-overview-badge { display:inline-flex; align-items:center; gap:12px; white-space:nowrap; padding:10px 16px; border:1px solid #ded7eb; border-radius:999px; background:#fff; color:#71677f; cursor:pointer; font-size:14px; }
+.df-overview-badge strong { color:#251d35; }
+.df-overview-badge:hover { background:#f6f1ff; border-color:#b8a3f4; }
+.df-overview-badge:focus-visible { outline:2px solid #6b3ff7; outline-offset:2px; }

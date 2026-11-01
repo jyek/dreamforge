@@ -72,27 +72,37 @@ export function TeacherActionSummary() {
             </span>
           </p>
         ) : (
-          pending.map((c) => (
-            <Link
-              key={c.id}
-              href={`/classrooms/${c.id}`}
-              className="df-action-row df-action-link"
-            >
-              <ShieldCheck size={20} aria-hidden="true" />
-              <strong className="df-action-class">{c.name}</strong>
-              <span className="df-action-counts">
-                {[
-                  c.waiting > 0 ? `${c.waiting} awaiting approval` : null,
-                  c.unreviewed > 0
-                    ? `${c.unreviewed} safety ${c.unreviewed === 1 ? "item" : "items"} to review`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-              <ArrowRight size={18} aria-hidden="true" />
-            </Link>
-          ))
+          pending.flatMap((c) =>
+            [
+              ...(c.waiting > 0
+                ? [
+                    {
+                      key: `${c.id}-approve`,
+                      label: `Approve ${c.waiting} ${c.waiting === 1 ? "prompt" : "prompts"}`,
+                    },
+                  ]
+                : []),
+              ...(c.unreviewed > 0
+                ? [
+                    {
+                      key: `${c.id}-review`,
+                      label: `Review ${c.unreviewed} safety ${c.unreviewed === 1 ? "flag" : "flags"}`,
+                    },
+                  ]
+                : []),
+            ].map((action) => (
+              <Link
+                key={action.key}
+                href={`/classrooms/${c.id}#safety-report-title`}
+                className="df-action-row df-action-link"
+              >
+                <ShieldCheck size={20} aria-hidden="true" />
+                <strong className="df-action-class">{action.label}</strong>
+                <span className="df-action-counts">{c.name}</span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            )),
+          )
         )}
       </div>
     </section>

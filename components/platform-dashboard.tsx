@@ -351,53 +351,23 @@ export function PlatformDashboard({
           )}
           {teacher && view === "home" && (
             <>
+              <div className="df-overview-badges">
+                {[
+                  ["classrooms", "Classrooms", data.classes.length],
+                  ["projects", "Projects", data.projects.length],
+                  ["safety", "Prompts with guidance", guidanceCount],
+                ].map(([target, label, count]) => (
+                  <button
+                    className="df-overview-badge"
+                    key={target}
+                    onClick={() => selectSection(String(target))}
+                  >
+                    <span>{label}</span>
+                    <strong>{count}</strong>
+                  </button>
+                ))}
+              </div>
               <TeacherActionSummary />
-              <div className="df-section-head">
-                <h2>Your studio at a glance</h2>
-              </div>
-              <div className="df-projects df-home-shortcuts">
-                <button
-                  className="df-card df-project"
-                  onClick={() => selectSection("classrooms")}
-                >
-                  <span className="df-project-icon">
-                    <School size={23} aria-hidden="true" />
-                  </span>
-                  <h3>Classrooms</h3>
-                  <p className="df-muted">
-                    {data.classes.length}{" "}
-                    {data.classes.length === 1 ? "class" : "classes"} · Manage
-                    students in your classrooms
-                  </p>
-                  <footer>Manage classrooms →</footer>
-                </button>
-                <button
-                  className="df-card df-project"
-                  onClick={() => selectSection("projects")}
-                >
-                  <span className="df-project-icon">
-                    <FolderKanban size={23} aria-hidden="true" />
-                  </span>
-                  <h3>Projects</h3>
-                  <p className="df-muted">
-                    Create projects and share them with your classrooms.
-                  </p>
-                  <footer>Browse projects →</footer>
-                </button>
-                <button
-                  className="df-card df-project"
-                  onClick={() => selectSection("safety")}
-                >
-                  <span className="df-project-icon">
-                    <ShieldCheck size={23} aria-hidden="true" />
-                  </span>
-                  <h3>Safety</h3>
-                  <p className="df-muted">
-                    {guidanceCount} prompts with guidance suggestions
-                  </p>
-                  <footer>Review safety →</footer>
-                </button>
-              </div>
             </>
           )}
           {(view === "projects" || (!teacher && view === "home")) && (
