@@ -3478,10 +3478,14 @@
 .df-project-card-heading > .df-project-main { min-width: 0; }
 .df-project-card-heading h3 { margin: 0; overflow-wrap: anywhere; }
 
-.df-project-assignment-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: 12px; }
+.df-project-assignment-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; margin-bottom: 14px; font-size: 12px; }
 .df-project-classroom-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .df-project-classroom-tag { display: inline-block; border: 1px solid #e0dfea; padding: 3px 8px; border-radius: 6px; color: #71677f; }
 
 .df-student-project-menu .df-button { width: 100%; justify-content: flex-start; min-height: 40px; padding: 10px 12px; border: 0; border-radius: 7px; background: transparent; color: #35264a; box-shadow: none; font-size: 13px; font-weight: 500; text-align: left; transform: none; }
 .df-student-project-menu .df-button:hover, .df-student-project-menu .df-button:focus-visible { background: #f3effb; color: #6b3ff7; box-shadow: none; transform: none; }
 .df-student-project-menu .df-button:focus-visible { outline: 2px solid #9a80e8; outline-offset: -2px; }
+
+.df-project-assignment-status .df-guidance-tag,
+.df-project-assignment-status .df-project-classroom-tag { display: inline-flex; align-items: center; box-sizing: border-box; min-height: 24px; padding: 3px 8px; margin: 0; border: 1px solid transparent; font-size: 12px; line-height: 16px; }
+.df-project-assignment-status .df-project-classroom-tag { border-color: #e0dfea; }
