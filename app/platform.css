@@ -3466,3 +3466,5 @@
 .df-group-manage-dialog form { display: grid; gap: 28px; }
 .df-group-name-field { display: grid; gap: 12px; }
 .df-group-manage-dialog form > .df-inline { justify-content: flex-end; gap: 16px; }
+
+.df-group-card > .df-section-head { margin: 0 0 8px; gap: 12px; }

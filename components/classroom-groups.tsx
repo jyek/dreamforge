@@ -50,6 +50,8 @@ export function ClassroomGroups({ classId }: { classId: string }) {
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [count, setCount] = useState("4");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [addingSingle, setAddingSingle] = useState(false);
   const [manage, setManage] = useState<Group | null>(null);
   const [manageAction, setManageAction] = useState<"rename" | "delete">(
     "rename",
@@ -228,12 +230,14 @@ export function ClassroomGroups({ classId }: { classId: string }) {
             className="df-button small"
             disabled={!data || busy}
             onClick={() => {
+              setAddingSingle(!!data?.groups.length);
+              setNewGroupName("");
               setCount(String(Math.min(4, Math.max(1, remaining))));
               setError("");
               setCreateOpen(true);
             }}
           >
-            Create groups
+            {data?.groups.length ? "Add group" : "Create Groups"}
           </button>
         }
       />
@@ -373,7 +377,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                         >
                           {action === "rename"
                             ? "Rename Group"
-                            : "Delete Group"}
+                            : "Remove Group"}
                         </button>
                       ))}
                     </div>
@@ -484,14 +488,29 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       >
         <DialogContent className="df-group-create-dialog">
           <DialogHeader>
-            <DialogTitle>Create groups</DialogTitle>
+            <DialogTitle>
+              {addingSingle ? "Add group" : "Create Groups"}
+            </DialogTitle>
             <DialogDescription>
-              How many groups would you like to break into?
+              {addingSingle
+                ? "Enter a name for the new group."
+                : "How many groups would you like to break into?"}
             </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (addingSingle) {
+                if (remaining < 1) {
+                  setError("A classroom can have up to 20 groups.");
+                  return;
+                }
+                void act(
+                  { action: "create", count: 1, name: newGroupName.trim() },
+                  "Group added.",
+                );
+                return;
+              }
               if (
                 !Number.isInteger(Number(count)) ||
                 Number(count) < 1 ||
@@ -508,19 +527,37 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               );
             }}
           >
-            <label htmlFor="classroom-group-count">Number of groups</label>
-            <input
-              autoFocus
-              id="classroom-group-count"
-              className="df-input"
-              type="number"
-              min={1}
-              step={1}
-              required
-              value={count}
-              onChange={(e) => setCount(e.target.value)}
-              disabled={busy}
-            />
+            {addingSingle ? (
+              <div className="df-group-name-field">
+                <label htmlFor="new-classroom-group-name">Group name</label>
+                <input
+                  autoFocus
+                  id="new-classroom-group-name"
+                  className="df-input"
+                  value={newGroupName}
+                  maxLength={60}
+                  required
+                  disabled={busy}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                />
+              </div>
+            ) : (
+              <>
+                <label htmlFor="classroom-group-count">Number of groups</label>
+                <input
+                  autoFocus
+                  id="classroom-group-count"
+                  className="df-input"
+                  type="number"
+                  min={1}
+                  step={1}
+                  required
+                  value={count}
+                  onChange={(e) => setCount(e.target.value)}
+                  disabled={busy}
+                />
+              </>
+            )}
             {error && (
               <p role="alert" className="df-error">
                 {error}
@@ -536,7 +573,11 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                 Cancel
               </button>
               <button className="df-button" disabled={busy}>
-                {busy ? "Creating…" : "Create groups"}
+                {busy
+                  ? "Creating…"
+                  : addingSingle
+                    ? "Add group"
+                    : "Create Groups"}
               </button>
             </div>
           </form>
@@ -551,12 +592,12 @@ export function ClassroomGroups({ classId }: { classId: string }) {
         <DialogContent className="df-group-manage-dialog">
           <DialogHeader>
             <DialogTitle>
-              {manageAction === "rename" ? "Rename Group" : "Delete Group"}
+              {manageAction === "rename" ? "Rename Group" : "Remove Group"}
             </DialogTitle>
             <DialogDescription>
               {manageAction === "rename"
                 ? "Choose a new name for this group."
-                : `Delete ${manage?.name}? Students will return to Unassigned. Student projects are preserved.`}
+                : `Remove ${manage?.name}? Students will return to Unassigned. Group projects become individual projects and remain in the classroom.`}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -570,7 +611,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                 },
                 manageAction === "rename"
                   ? "Group renamed."
-                  : "Group deleted. Students are now unassigned.",
+                  : "Group removed. Students are now unassigned.",
               );
             }}
           >
@@ -611,7 +652,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                   ? "Saving…"
                   : manageAction === "rename"
                     ? "Rename"
-                    : "Delete Group"}
+                    : "Remove Group"}
               </button>
             </div>
           </form>

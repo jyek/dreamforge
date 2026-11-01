@@ -470,10 +470,45 @@ test("schools keep their people, classes and data separate", async () => {
       groups[0].id,
     ),
   );
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "delete",
+    groupId: groups[0].id,
+  });
+  assert.equal(
+    (
+      await pool.query(
+        "select 1 from classroom_group_members where group_id=$1",
+        [groups[0].id],
+      )
+    ).rowCount,
+    0,
+  );
+  const preserved = (
+    await pool.query(
+      "select classroom_group_id, group_class_id from projects where vm_id='vm-schoolalerta'",
+    )
+  ).rows[0];
+  assert.equal(preserved.classroom_group_id, null);
+  assert.equal(preserved.group_class_id, null);
+  await changeClassroomGroups(pool, classA, person.teacher1, {
+    action: "create",
+    count: 1,
+    name: "Friendly Foxes",
+  });
+  assert.equal(
+    (
+      await pool.query(
+        "select 1 from classroom_groups where class_id=$1 and name='Friendly Foxes'",
+        [classA],
+      )
+    ).rowCount,
+    1,
+  );
   await assert.rejects(
     changeClassroomGroups(pool, classA, person.teacher1, {
-      action: "delete",
-      groupId: groups[0].id,
+      action: "create",
+      count: 1,
+      name: "friendly foxes",
     }),
   );
   await changeClassroomGroups(pool, classA, person.teacher1, {

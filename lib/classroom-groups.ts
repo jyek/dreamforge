@@ -52,11 +52,30 @@ export async function changeClassroomGroups(
           400,
           `A classroom can have up to ${MAX_CLASSROOM_GROUPS} groups. You can create up to ${Math.max(0, MAX_CLASSROOM_GROUPS - (existing.rowCount || 0))} more groups.`,
         );
+      const customName = typeof body.name === "string" ? body.name.trim() : "";
+      if (
+        body.name !== undefined &&
+        (body.count !== 1 || !customName || customName.length > 60)
+      )
+        throw new ClassroomGroupError(
+          400,
+          "Use a group name between 1 and 60 characters.",
+        );
+      if (
+        customName &&
+        existing.rows.some(
+          (r) => r.name.toLowerCase() === customName.toLowerCase(),
+        )
+      )
+        throw new ClassroomGroupError(
+          409,
+          "That group name is already in use.",
+        );
       const batch = classroomGroupNames(
         body.count,
         existing.rows.map((r) => r.name),
       );
-      for (const name of batch.names)
+      for (const name of customName ? [customName] : batch.names)
         await tx.query(
           "insert into classroom_groups(class_id,name,category) values($1,$2,$3)",
           [classId, name, batch.category],
@@ -94,19 +113,6 @@ export async function changeClassroomGroups(
         );
       }
     } else if (body.action === "rename" || body.action === "delete") {
-      if (
-        body.action === "delete" &&
-        (
-          await tx.query(
-            "select 1 from projects where classroom_group_id=$1 limit 1",
-            [body.groupId],
-          )
-        ).rowCount
-      )
-        throw new ClassroomGroupError(
-          409,
-          "This group has projects. Keep it until those projects are reassigned.",
-        );
       if (!uuid(body.groupId))
         throw new ClassroomGroupError(400, "Choose a group.");
       const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -115,6 +121,38 @@ export async function changeClassroomGroups(
           400,
           "Use a group name between 1 and 60 characters.",
         );
+      if (body.action === "delete") {
+        const projects = await tx.query(
+          "select vm_id from projects where classroom_group_id=$1 and group_class_id=$2 order by vm_id for update",
+          [body.groupId, classId],
+        );
+        for (const p of projects.rows) {
+          await tx.query(
+            "insert into project_execution(project_id) values($1) on conflict do nothing",
+            [p.vm_id],
+          );
+          const run = await tx.query(
+            "select active_run from project_execution where project_id=$1 for update",
+            [p.vm_id],
+          );
+          if (run.rows[0].active_run)
+            throw new ClassroomGroupError(
+              409,
+              "Wait for active project requests to finish before removing this group.",
+            );
+          await tx.query("delete from project_members where vm_id=$1", [
+            p.vm_id,
+          ]);
+          await tx.query(
+            "update projects set classroom_group_id=null,group_class_id=null,editor_id=null where vm_id=$1",
+            [p.vm_id],
+          );
+          await tx.query(
+            "update project_execution set revision=revision+1,verification=null where project_id=$1",
+            [p.vm_id],
+          );
+        }
+      }
       const result =
         body.action === "delete"
           ? await tx.query(
