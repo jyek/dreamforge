@@ -132,29 +132,27 @@ export function TeacherPromptGuidance({
     : Boolean(studentSearch || category);
   return (
     <section className="df-guidance">
-      <div className="df-section-head">
-        <h2>
-          {selected ? `${selected.display_name} · Safety` : overviewTitle}
-        </h2>
-        {selected && !initialStudent && (
-          <button
-            className="df-button secondary small"
-            onClick={() => {
-              setSelected(null);
-              setCategory("");
-              setSearch("");
-              setProject("");
-              setOffset(0);
-            }}
-          >
-            ← All students
-          </button>
-        )}
-      </div>
-      <p className="df-muted">
-        See where students may need guidance. Categories are text-based
-        suggestions, not a judgement of the student. Images are not assessed.
-      </p>
+      {(selected || overviewTitle !== "Safety overview") && (
+        <div className="df-section-head">
+          <h2>
+            {selected ? `${selected.display_name} · Safety` : overviewTitle}
+          </h2>
+          {selected && !initialStudent && (
+            <button
+              className="df-button secondary small"
+              onClick={() => {
+                setSelected(null);
+                setCategory("");
+                setSearch("");
+                setProject("");
+                setOffset(0);
+              }}
+            >
+              ← All students
+            </button>
+          )}
+        </div>
+      )}
       {alertCount > 0 && (
         <div className="df-school-safety-summary" role="status">
           {alertCount} safety {alertCount === 1 ? "alert" : "alerts"} recorded
