@@ -72,6 +72,14 @@ export function SchoolOverview({
     setSection(s);
     router.push(schoolSectionPath(s));
   }
+  const sectionCount =
+    section === "teachers"
+      ? `${initial.teachers.length} ${initial.teachers.length === 1 ? "teacher" : "teachers"}`
+      : section === "students"
+        ? `${initial.students} ${initial.students === 1 ? "student" : "students"}`
+        : section === "classes"
+          ? `${initial.classes.length} ${initial.classes.length === 1 ? "classroom" : "classrooms"}`
+          : null;
   return (
     <PlatformDashboardLayout
       teacher
@@ -80,6 +88,11 @@ export function SchoolOverview({
       schoolName={initial.school.name}
       section={section}
       onSectionChange={navigate}
+      headerAction={
+        sectionCount ? (
+          <span className="df-pill">{sectionCount}</span>
+        ) : undefined
+      }
     >
       <SchoolOverviewContent
         initial={initial}
@@ -141,27 +154,11 @@ export function SchoolOverviewContent({
   );
   return (
     <>
-      <div className="df-section-head">
-        <h2>{initial.school.name}</h2>
-        <span>
-          {initial.teachers.length}{" "}
-          {initial.teachers.length === 1 ? "teacher" : "teachers"}
-          {section !== "teachers" && (
-            <>
-              {" "}
-              · {initial.classes.length}{" "}
-              {initial.classes.length === 1 ? "class" : "classes"} ·{" "}
-              {initial.students}{" "}
-              {initial.students === 1 ? "student" : "students"}
-            </>
-          )}
-        </span>
-      </div>
       {section === "overview" && (
         <>
           <div className="df-projects">
             {[
-              ["classes", "Classes", initial.classes.length],
+              ["classes", "Classrooms", initial.classes.length],
               ["teachers", "Teachers", initial.teachers.length],
               [
                 "alerts",
@@ -212,7 +209,7 @@ export function SchoolOverviewContent({
                 className="df-button secondary small"
                 onClick={() => setSelected(null)}
               >
-                ← All classes
+                ← All classrooms
               </button>
               <h3>{current.name}</h3>
               <p>
@@ -250,7 +247,7 @@ export function SchoolOverviewContent({
                   <footer>{c.students} students · View classroom →</footer>
                 </button>
               ))}
-              {!initial.classes.length && <p>No classes yet.</p>}
+              {!initial.classes.length && <p>No classrooms yet.</p>}
             </div>
           )}
         </>
@@ -262,7 +259,7 @@ export function SchoolOverviewContent({
               <tr>
                 <th scope="col">Teacher</th>
                 <th scope="col">Role</th>
-                <th scope="col">Classes</th>
+                <th scope="col">Classrooms</th>
               </tr>
             </thead>
             <tbody>
@@ -300,7 +297,7 @@ export function SchoolOverviewContent({
                           </button>
                         ))}
                       {t.classes === 0 && (
-                        <span className="df-muted">No classes assigned</span>
+                        <span className="df-muted">No classrooms assigned</span>
                       )}
                     </div>
                   </td>
@@ -343,7 +340,7 @@ export function SchoolOverviewContent({
               </select>
             </label>
             <label>
-              Class{" "}
+              Classroom{" "}
               <select
                 className="df-input"
                 value={classFilter}
@@ -352,7 +349,7 @@ export function SchoolOverviewContent({
                   setLimit(50);
                 }}
               >
-                <option value="all">All classes</option>
+                <option value="all">All classrooms</option>
                 {initial.classes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -363,8 +360,8 @@ export function SchoolOverviewContent({
             <span>{visible.length} alerts</span>
           </div>
           <p className="df-muted">
-            Class labels reflect current enrollment. They do not identify where
-            an older request originated.
+            Classroom labels reflect current enrollment. They do not identify
+            where an older request originated.
           </p>
           {visible.slice(0, limit).map((a) => (
             <article

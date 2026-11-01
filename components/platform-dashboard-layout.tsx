@@ -74,7 +74,7 @@ export const SCHOOL_ADMIN_SECTIONS = [
   },
   {
     id: "classes",
-    label: "Classes",
+    label: "Classrooms",
     icon: School,
     description: "Teaching teams and students in each classroom.",
   },
