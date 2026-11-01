@@ -1,4 +1,6 @@
 import { classroomTeacherSQL } from "./classroom-permissions";
+import { groupManagerSQL } from "./project-group";
+import { projectGroupMemberSQL, groupNames } from "./project-group";
 import { database } from "./database";
 import type { Profile } from "./platform-auth";
 import { guidanceSQL } from "./prompt-guidance";
@@ -9,7 +11,7 @@ export async function classroomAccess(
   db: Queryable = database(),
 ) {
   const { rows } = await db.query(
-    `select c.id,c.name,c.teacher_id,pr.display_name as teacher_name from classes c join profiles pr on pr.id=c.teacher_id where c.id=$1 and (${classroomTeacherSQL("c.id", "$2")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$2))`,
+    `select c.id,c.name,c.invite_code,c.teacher_id,pr.display_name as teacher_name from classes c join profiles pr on pr.id=c.teacher_id where c.id=$1 and (${groupManagerSQL("c.id", "$2")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$2))`,
     [classId, user.id],
   );
   return rows[0] || null;
@@ -31,12 +33,18 @@ export async function classroomData(
     [classId],
   );
   const { rows: projects } = await db.query(
-    `select p.vm_id,p.owner_id,pr.display_name as owner_name,p.metadata->>'name' as name,case when $2::boolean or p.owner_id=$3 then p.metadata->'conversations'->0->>'id' else null end as conversation_id,
- ${teacher ? "(select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and r.child_id=p.owner_id)" : "0"} as prompt_count,
- ${teacher ? `(select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and r.child_id=p.owner_id and cardinality(${guidanceSQL})>0)` : "0"} as guidance_count
- from class_projects cp join projects p on p.vm_id=cp.vm_id join profiles pr on pr.id=p.owner_id where cp.class_id=$1 and (${classroomTeacherSQL("$1", "p.owner_id")} or exists(select 1 from class_members m where m.class_id=$1 and m.child_id=p.owner_id)) order by cp.created_at desc`,
+    `select p.vm_id,p.classroom_group_id,(p.group_class_id is not null) as is_group_project,g.name as group_name,p.owner_id,pr.display_name as owner_name,${projectGroupMemberSQL("p", "$3")} as can_collaborate,p.metadata->>'name' as name,case when $2::boolean or p.owner_id=$3 or ${projectGroupMemberSQL("p", "$3")} then p.metadata->'conversations'->0->>'id' else null end as conversation_id,
+ ${teacher ? "(select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id)" : "0"} as prompt_count,
+ ${teacher ? `(select count(*)::int from prompt_reviews r where r.vm_id=p.vm_id and cardinality(${guidanceSQL})>0)` : "0"} as guidance_count
+ from class_projects cp join projects p on p.vm_id=cp.vm_id left join classroom_groups g on g.id=p.classroom_group_id join profiles pr on pr.id=p.owner_id where cp.class_id=$1 and (${classroomTeacherSQL("$1", "p.owner_id")} or exists(select 1 from class_members m where m.class_id=$1 and m.child_id=p.owner_id)) order by cp.created_at desc`,
     [classId, teacher, user.id],
   );
+  const groups = await groupNames(
+    db,
+    projects.map((project) => project.vm_id),
+  );
+  for (const project of projects)
+    project.group_members = groups.get(project.vm_id) || [];
   const { rows: availableProjects } = await db.query(
     `select p.vm_id,p.metadata->>'name' as name,exists(select 1 from class_projects cp where cp.class_id=$1 and cp.vm_id=p.vm_id) as assigned from projects p where p.owner_id=$2 and not p.is_example order by p.updated_at desc`,
     [classId, user.id],
@@ -45,7 +53,14 @@ export async function classroomData(
     `select pr.id,pr.display_name,(pr.id=c.teacher_id) as is_owner from classes c join profiles pr on pr.id=c.teacher_id or exists(select 1 from class_teachers t where t.class_id=c.id and t.teacher_id=pr.id) where c.id=$1 order by (pr.id=c.teacher_id) desc,lower(pr.display_name)`,
     [classId],
   );
+  const myGroups = (
+    await db.query(
+      "select g.id,g.name from classroom_groups g join classroom_group_members m on m.group_id=g.id where g.class_id=$1 and m.child_id=$2",
+      [classId, user.id],
+    )
+  ).rows;
   return {
+    myGroups,
     teachers,
     classroom,
     students: students.map((s) => ({ ...s, categories: {} })),
@@ -61,7 +76,7 @@ export async function assignClassroomProject(
   db: Queryable = database(),
 ) {
   const sql = remove
-    ? `delete from class_projects cp using projects p where cp.class_id=$1 and cp.vm_id=$2 and p.vm_id=cp.vm_id and p.owner_id=$3 and exists(select 1 from classes c where c.id=$1 and (${classroomTeacherSQL("c.id", "$3")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$3))) returning cp.vm_id`
+    ? `delete from class_projects cp using projects p where cp.class_id=$1 and cp.vm_id=$2 and p.vm_id=cp.vm_id and p.owner_id=$3 and (p.classroom_group_id is null or p.group_class_id is distinct from $1) and exists(select 1 from classes c where c.id=$1 and (${classroomTeacherSQL("c.id", "$3")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$3))) returning cp.vm_id`
     : `insert into class_projects(class_id,vm_id,assigned_by) select c.id,p.vm_id,$3 from classes c cross join projects p where c.id=$1 and p.vm_id=$2 and p.owner_id=$3 and not p.is_example and (${classroomTeacherSQL("c.id", "$3")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$3)) on conflict(class_id,vm_id) do update set assigned_by=excluded.assigned_by returning vm_id`;
   const { rowCount } = await db.query(sql, [classId, projectId, user.id]);
   return !!rowCount;

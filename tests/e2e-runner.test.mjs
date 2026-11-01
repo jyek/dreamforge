@@ -7,12 +7,20 @@ import os from "node:os";
 import path from "node:path";
 // Exercise the CLI itself over HTTP. Provider/runtime behavior is a fixture here;
 // this validates test-runner failures, not DreamForge's live deployment.
-for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "moderation-unavailable"])
+for (const mode of [
+  "success",
+  "reused-text-id",
+  "tool-only",
+  "stream-error",
+  "moderation-unavailable",
+  "diagnostics-unavailable",
+])
   test(`E2E runner: ${mode}`, async () => {
     const output = await mkdtemp(path.join(os.tmpdir(), "dreamforge-e2e-"));
     const histories = new Map();
     let seq = 0,
-      project;
+      project,
+      failed = false;
     const server = createServer(async (req, res) => {
       const chunks = [];
       for await (const c of req) chunks.push(c);
@@ -63,8 +71,24 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "m
         return json({ files: ["app/page.tsx"] });
       if (req.url.startsWith("/api/projects/vm-fixture/files?"))
         return json({ content: "DreamForge E2E Counter" });
-      if (req.url === "/api/projects/vm-fixture/execution")
-        return json({ revision: 0 });
+      if (req.url === "/api/projects/vm-fixture/execution") {
+        if (mode === "diagnostics-unavailable" && failed) return json({}, 503);
+        return json({
+          revision: 0,
+          events: [
+            {
+              kind: "moderation.failed",
+              data: {
+                phase: "input",
+                reason: "http_error",
+                status: 429,
+                content: "private student prompt",
+                providerBody: "private provider response",
+              },
+            },
+          ],
+        });
+      }
       if (req.url === "/api/projects/vm-fixture/runtime")
         return json({ ready: true });
       if (req.url === "/preview") {
@@ -77,19 +101,18 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "m
         const user = body.messages[0],
           blocked = user.parts[0].text.includes("keylogger"),
           build = user.parts[0].text.includes("click counter");
-        const answer = mode === "moderation-unavailable" && !build
-          ? "Safety checks are busy. Please retry."
-          : blocked
-          ? "Please choose a safe project."
-          : build
-            ? "E2E_BUILD_COMPLETE"
-            : "DREAMFORGE_E2E_READY";
+        const answer =
+          mode === "moderation-unavailable" && !build
+            ? "Safety checks are busy. Please retry."
+            : blocked
+              ? "Please choose a safe project."
+              : build
+                ? "E2E_BUILD_COMPLETE"
+                : "DREAMFORGE_E2E_READY";
         histories.set(body.conversationId, [
           {
             ...user,
-            parts: blocked
-              ? [{ type: "text", text: "[Request blocked by safety checks]" }]
-              : user.parts,
+            ...(blocked ? { metadata: { custom: { blocked: true } } } : {}),
           },
           { role: "assistant", parts: [{ type: "text", text: answer }] },
         ]);
@@ -116,8 +139,13 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "m
           events.push({ type: "text-start", id: "answer" });
         if (!(build && mode === "tool-only"))
           events.push({ type: "text-delta", id: "answer", delta: answer });
-        if (build && mode === "stream-error")
+        if (
+          build &&
+          ["stream-error", "diagnostics-unavailable"].includes(mode)
+        ) {
+          failed = true;
           events.push({ type: "error", errorText: "fixture error" });
+        }
         events.push({ type: "finish" });
         const sse =
           events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") +
@@ -167,7 +195,25 @@ for (const mode of ["success", "reused-text-id", "tool-only", "stream-error", "m
             : "code edit, app check, final answer and saved history",
         );
       if (mode === "moderation-unavailable")
-        assert.match(report.checks.at(-1).error, /Returned: Safety checks are busy/);
+        assert.match(
+          report.checks.at(-1).error,
+          /Returned: Safety checks are busy/,
+        );
+      if (!success && mode !== "diagnostics-unavailable")
+        assert.deepEqual(report.moderationDiagnostics, [
+          {
+            kind: "moderation.failed",
+            phase: "input",
+            reason: "http_error",
+            status: 429,
+          },
+        ]);
+      if (mode === "diagnostics-unavailable")
+        assert.equal(report.diagnosticsUnavailable, true);
+      assert.doesNotMatch(
+        JSON.stringify(report),
+        /private student prompt|private provider response/,
+      );
       assert.equal(report.cleanup.status, "passed");
       assert.equal(
         project,

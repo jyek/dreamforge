@@ -252,3 +252,88 @@
     display: none;
   }
 }
+
+/* Shared spacing for form and confirmation dialogs, including portalled modals. */
+.df-dialog-spacing[data-slot="dialog-content"] {
+  --df-modal-section-gap: 24px;
+  --df-modal-field-gap: 12px;
+  padding: 32px;
+  gap: var(--df-modal-section-gap);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+.df-dialog-spacing [data-slot="dialog-header"] {
+  gap: var(--df-modal-field-gap);
+  text-align: left;
+}
+.df-dialog-spacing [data-slot="dialog-title"],
+.df-dialog-spacing [data-slot="dialog-description"] {
+  margin: 0;
+  line-height: 1.5;
+}
+.df-dialog-spacing [data-slot="dialog-title"] {
+  padding-right: 24px;
+  line-height: 1.25;
+}
+.df-dialog-spacing > [data-slot="dialog-title"] + [data-slot="dialog-description"] {
+  margin-top: calc(var(--df-modal-field-gap) - var(--df-modal-section-gap));
+}
+.df-dialog-spacing[data-slot="dialog-content"] > form:not(.flex),
+.df-dialog-spacing[data-slot="dialog-content"] .df-form {
+  display: grid;
+  gap: var(--df-modal-section-gap);
+}
+.df-dialog-spacing[data-slot="dialog-content"] label:has(> :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea)),
+.df-dialog-spacing[data-slot="dialog-content"] .df-group-name-field {
+  display: grid;
+  gap: var(--df-modal-field-gap);
+}
+.df-dialog-spacing[data-slot="dialog-content"] form > label:has(+ :is(input, select, textarea)) {
+  margin-bottom: calc(var(--df-modal-field-gap) - var(--df-modal-section-gap));
+}
+.df-dialog-spacing[data-slot="dialog-content"] [data-slot="dialog-footer"],
+.df-dialog-spacing[data-slot="dialog-content"] form > .df-inline:last-child {
+  gap: 16px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+.df-dialog-spacing[data-slot="dialog-content"] > [data-slot="dialog-close"] {
+  top: 20px;
+  right: 20px;
+}
+@media (max-width: 639px) {
+  .df-dialog-spacing[data-slot="dialog-content"] {
+    padding: 24px;
+    max-height: calc(100dvh - 32px);
+  }
+  .df-dialog-spacing[data-slot="dialog-content"] > [data-slot="dialog-close"] {
+    top: 16px;
+    right: 16px;
+  }
+  .df-dialog-spacing[data-slot="dialog-content"] form > .df-inline:last-child {
+    flex-wrap: wrap;
+  }
+}
+
+/* Choice controls stay beside their label rather than stretching as text fields. */
+.df-dialog-spacing[data-slot="dialog-content"] label:has(> input:is([type="checkbox"], [type="radio"])) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.df-dialog-spacing[data-slot="dialog-content"] label > input:is([type="checkbox"], [type="radio"]) {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #6b3ff7;
+  box-shadow: none;
+}
+
+/* Form values should not inherit the heavier weight of their labels. */
+input:not([type="button"]):not([type="submit"]):not([type="reset"]),
+textarea,
+select {
+  font-weight: 400;
+}

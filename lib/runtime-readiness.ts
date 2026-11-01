@@ -134,8 +134,8 @@ export function runtimeFailure(error: unknown) {
         state: "blocked",
         ready: false,
         error: failure.message?.includes("allowance")
-          ? "Your Freestyle compute allowance has been used up. Wait for it to reset or upgrade your Freestyle plan, then try again."
-          : "Freestyle cannot start this VM because an account limit was reached. Check your Freestyle limits, then try again.",
+          ? "Your Runtime compute allowance has been used up. Wait for it to reset or upgrade your Runtime plan, then try again."
+          : "Runtime cannot start this VM because an account limit was reached. Check your Runtime limits, then try again.",
       },
     };
   }

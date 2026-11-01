@@ -13,6 +13,7 @@ export async function signOut() {
  * persisted collapse preference across dashboard and project routes. */
 export function StudioSidebar({
   name,
+  schoolName,
   accountLoading = false,
   accountError = false,
   onRetryAccount,
@@ -20,6 +21,7 @@ export function StudioSidebar({
   onProfileOpen,
   role,
   caption,
+  roleLabel,
   navigation,
   children,
   toggle,
@@ -28,6 +30,7 @@ export function StudioSidebar({
   hideCollapseControl = false,
 }: {
   name?: string;
+  schoolName?: string | null;
   accountLoading?: boolean;
   accountError?: boolean;
   onRetryAccount?: () => void;
@@ -35,6 +38,7 @@ export function StudioSidebar({
   onProfileOpen?: () => void;
   role?: "teacher" | "child";
   caption?: string;
+  roleLabel?: string;
   navigation: ReactNode;
   children?: ReactNode;
   toggle?: ReactNode;
@@ -43,6 +47,23 @@ export function StudioSidebar({
   hideCollapseControl?: boolean;
 }) {
   const { collapsed, toggle: toggleCollapsed } = useSidebarState();
+  const [fetchedSchool, setFetchedSchool] = useState<string | null>(null);
+  const showSchoolBrand = role === "teacher" && caption !== "DREAMFORGE ADMIN";
+  useEffect(() => {
+    if (!showSchoolBrand || schoolName !== undefined) return;
+    const controller = new AbortController();
+    void fetch("/api/platform/school/status", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!controller.signal.aborted)
+          setFetchedSchool(data?.schoolName || null);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [showSchoolBrand, schoolName]);
   const [fetchedCredit, setFetchedCredit] = useState<number | null>(null);
   useEffect(() => {
     if (role !== "child" || creditBalanceMicros !== undefined) return;
@@ -94,13 +115,15 @@ export function StudioSidebar({
             </small>
           )
         ) : (
-          <small>{role === "teacher" ? "Teacher" : "Project explorer"}</small>
+          <small>
+            {roleLabel || (role === "teacher" ? "Teacher" : "Project explorer")}
+          </small>
         )}
       </div>
     </>
   );
   const sidebarCaption =
-    caption || (role === "teacher" ? "TEACHER STUDIO" : "");
+    caption ?? (role === "teacher" ? "TEACHER STUDIO" : "");
   return (
     <aside
       className={`df-studio-sidebar ${sidebarCaption ? "" : "without-caption"} ${className}`}
@@ -108,7 +131,17 @@ export function StudioSidebar({
       data-collapsed={hideCollapseControl ? false : collapsed}
     >
       <div className="df-sidebar-brand">
-        {!hideCollapseControl && <DreamForgeBrand />}
+        {!hideCollapseControl && (
+          <DreamForgeBrand
+            schoolName={
+              showSchoolBrand
+                ? schoolName !== undefined
+                  ? schoolName
+                  : fetchedSchool
+                : null
+            }
+          />
+        )}
         {!hideCollapseControl && (
           <button
             className="df-sidebar-collapse"

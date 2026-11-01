@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
   output: "standalone",
   outputFileTracingIncludes: {
-    "/*": ["./config/supabase-ca.crt"],
+    "/*": ["./config/supabase-ca.crt", "./config/project-starter.tar.gz"],
     // Only chat runs browser verification. Do not duplicate Chromium into
     // every page and API function retained by Vercel.
     "/api/chat": [

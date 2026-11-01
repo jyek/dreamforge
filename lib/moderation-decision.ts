@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isTeacherApprovedPrompt, maskBlockedPrompts } from "./blocked-prompts";
 export const moderationDecisionSchema = z.object({
   decision: z.enum(["allow", "block", "review"]),
   categories: z.array(
@@ -24,22 +25,29 @@ export function parseModerationDecision(content: unknown) {
     .replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, "$1");
   return moderationDecisionSchema.parse(JSON.parse(json));
 }
-/** Keep all conversational text, including earlier intent, without resending old tool payloads. */
+/** Keep earlier intent during input checks. Final output checks screen the model's
+ * answer without reclassifying the exact student request a teacher already approved.
+ * Unapproved requests, assistant answers and streamed tool checks remain screened. */
 export function moderationConversation(
   messages: Array<{
     role: string;
     parts?: Array<{ type: string; text?: string }>;
+    metadata?: unknown;
   }>,
+  phase: "input" | "output" = "input",
 ) {
   return JSON.stringify(
-    messages
+    maskBlockedPrompts(messages)
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({
         role: m.role,
-        content: (m.parts || [])
-          .filter((p) => p.type === "text" && typeof p.text === "string")
-          .map((p) => p.text)
-          .join("\n"),
+        content:
+          phase === "output" && isTeacherApprovedPrompt(m)
+            ? "[Student request reviewed and approved by a classroom teacher]"
+            : (m.parts || [])
+                .filter((p) => p.type === "text" && typeof p.text === "string")
+                .map((p) => p.text)
+                .join("\n"),
       }))
       .filter((m) => m.content),
   );

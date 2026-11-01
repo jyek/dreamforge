@@ -6,31 +6,43 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogFooter,
 } from "./ui/dialog";
-import { SimpleLoading } from "./dream-loading";
 export function ProjectClassroomSharing({
   projectId,
   name,
+  student = false,
+  onChanged,
 }: {
   projectId: string;
   name: string;
+  student?: boolean;
+  onChanged?: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false),
     [classes, setClasses] = useState<
       { id: string; name: string; attached: boolean }[] | null
     >(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(false);
   async function load() {
+    if (loading || busy) return;
+    setLoading(true);
     setError("");
     setClasses(null);
     try {
-      const r = await fetch(`/api/projects/${projectId}/classrooms`),
+      const r = await fetch(`/api/projects/${projectId}/classrooms`, {
+          cache: "no-store",
+        }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
       setClasses(d.classes);
+      setOpen(true);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
   }
   async function save() {
@@ -46,6 +58,7 @@ export function ProjectClassroomSharing({
         }),
         d = await r.json();
       if (!r.ok) throw Error(d.error);
+      await onChanged?.();
       setOpen(false);
     } catch (e) {
       setError((e as Error).message);
@@ -58,30 +71,45 @@ export function ProjectClassroomSharing({
       open={open}
       onOpenChange={(value) => {
         if (busy) return;
-        setOpen(value);
         if (value) void load();
+        else setOpen(false);
       }}
     >
       <DialogTrigger asChild>
-        <button className="df-button secondary small">
-          Share with classrooms
+        <button
+          className="df-button secondary small"
+          disabled={loading || busy}
+          aria-busy={loading}
+        >
+          {loading
+            ? "Loading…"
+            : student
+              ? "Assign to classroom"
+              : "Share with classrooms"}
         </button>
       </DialogTrigger>
+      {!open && error && (
+        <p role="alert" className="df-error">
+          {error}
+        </p>
+      )}
       <DialogContent className="df-card">
         <DialogTitle>Share {name}</DialogTitle>
         <DialogDescription>
-          Choose the classrooms that can view this project. Students can explore
-          it, but cannot edit your copy.
+          {student
+            ? "Choose the classrooms for this project. You can assign it to more than one classroom."
+            : "Choose the classrooms that can view this project. Students can explore it, but cannot edit your copy."}
         </DialogDescription>
-        {!classes && !error && (
-          <SimpleLoading inline label="Loading classrooms…" />
-        )}
         {classes?.length === 0 && (
-          <p>Create a classroom first to share your project.</p>
+          <p>
+            {student
+              ? "Join a classroom first to assign your project."
+              : "Create a classroom first to share your project."}
+          </p>
         )}
         <div className="df-form">
           {classes?.map((c) => (
-            <label key={c.id} className="df-inline">
+            <label key={c.id} className="df-assignment-option">
               <input
                 type="checkbox"
                 checked={c.attached}
@@ -96,7 +124,7 @@ export function ProjectClassroomSharing({
                   )
                 }
               />
-              {c.name}
+              <span>{c.name}</span>
             </label>
           ))}
         </div>
@@ -105,13 +133,24 @@ export function ProjectClassroomSharing({
             {error}
           </p>
         )}
-        <button
-          className="df-button"
-          disabled={busy || !classes}
-          onClick={save}
-        >
-          {busy ? "Saving…" : "Save sharing"}
-        </button>
+        <DialogFooter>
+          <button
+            type="button"
+            className="df-button secondary small"
+            disabled={busy}
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="df-button small"
+            disabled={busy || !classes}
+            onClick={save}
+          >
+            {busy ? "Saving…" : "Save sharing"}
+          </button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

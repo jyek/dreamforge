@@ -55,7 +55,7 @@ export function ClassProjectAssignments({
       }}
     >
       <DialogTrigger asChild>
-        <button className="df-button">Assign projects</button>
+        <button className="df-button secondary small">Assign projects</button>
       </DialogTrigger>
       <DialogContent
         className="df-card"

@@ -1,17 +1,22 @@
 "use client";
-import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
+import { ClassroomGroups } from "./classroom-groups";
+import { ClassroomSafetyReport } from "./classroom-safety-report";
+import { AddPersonDialog } from "./people-toolbar";
 import { StudentReviewTable } from "./student-review-table";
 import { NoClassroomProjects } from "./no-classroom-projects";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DreamLoading } from "./dream-loading";
 import {
   ClassProjectAssignments,
   type AssignableProject,
 } from "./class-project-assignments";
 import { TableEmptyState } from "./table-empty-state";
-import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import { DashboardDetailHeader } from "./dashboard-detail-header";
+import {
+  schoolSectionPath,
+  PlatformDashboardLayout,
+} from "./platform-dashboard-layout";
 import {
   TeacherPromptGuidance,
   type GuidanceStudent,
@@ -24,9 +29,11 @@ type Project = {
   conversation_id: string | null;
   prompt_count: number;
   guidance_count: number;
+  group_members?: string[];
 };
 export type StudentProjectsData = {
-  classroom?: { name: string; teacher_name?: string };
+  teachers?: { id: string; display_name: string; is_owner: boolean }[];
+  classroom?: { name: string; teacher_name?: string; invite_code?: string };
   availableProjects?: AssignableProject[];
   students: GuidanceStudent[];
   projects: Project[];
@@ -36,11 +43,15 @@ export function TeacherStudentProjects({
   classId,
   studentId,
   initialData,
+  schoolMode = false,
+  schoolName,
 }: {
   teacherName: string;
   classId?: string;
   studentId?: string;
   initialData?: StudentProjectsData;
+  schoolMode?: boolean;
+  schoolName?: string | null;
 }) {
   const router = useRouter();
   const [data, setData] = useState<StudentProjectsData | null>(
@@ -84,13 +95,19 @@ export function TeacherStudentProjects({
   return (
     <PlatformDashboardLayout
       teacher
+      schoolMode={schoolMode}
+      schoolName={schoolName}
       name={teacherName}
       section={classId ? "classrooms" : "students"}
       headerAction={
         classId && data?.availableProjects ? (
           <div className="df-inline">
-            <ClassroomTeachersDialog
-              classId={classId}
+            <AddPersonDialog
+              role="teacher"
+              classroom={{
+                id: classId,
+                name: data?.classroom?.name || "Classroom",
+              }}
               onChanged={async () => {
                 const r = await fetch(`/api/platform/classes/${classId}`);
                 const d = await r.json();
@@ -111,22 +128,26 @@ export function TeacherStudentProjects({
           </div>
         ) : undefined
       }
-      onSectionChange={(s) => router.push(`/${s}`)}
+      onSectionChange={(s) =>
+        router.push(schoolMode ? schoolSectionPath(s) : `/${s}`)
+      }
     >
-      <Link className="df-purple" href={classId ? "/classrooms" : "/students"}>
-        ← {classId ? "Classrooms" : "Students"}
-      </Link>
-      <div className="df-section-head">
-        <h2>
-          {data?.classroom?.name ||
-            (data?.students[0]
-              ? `${data.students[0].display_name} · Projects`
-              : "Student projects")}
-        </h2>
-        {classId && data && (
-          <span className="df-muted">{data.students.length} students</span>
-        )}
-      </div>
+      <DashboardDetailHeader
+        title={
+          data?.classroom?.name ||
+          (data?.students[0]
+            ? `${data.students[0].display_name} · Projects`
+            : "Student projects")
+        }
+        back={
+          <Link
+            className="df-button secondary small"
+            href={classId ? "/classrooms" : "/students"}
+          >
+            ← {classId ? "Classrooms" : "Students"}
+          </Link>
+        }
+      />
       <p className="df-muted">
         Explore student projects, prompts and safety alerts. Student workspaces
         are read-only for teachers.
@@ -136,16 +157,41 @@ export function TeacherStudentProjects({
           {error}
         </p>
       ) : !data ? (
-        <DreamLoading label="Loading projects…" />
+        <StudentReviewTable
+          busy
+          columns={5}
+          loadingLabel="Loading…"
+          className="df-student-project-table"
+        >
+          <thead>
+            <tr>
+              {[
+                "Student",
+                "Project",
+                "Prompts",
+                "Safety alerts",
+                "Explore",
+              ].map((label) => (
+                <th key={label}>{label}</th>
+              ))}
+            </tr>
+          </thead>
+        </StudentReviewTable>
       ) : selection ? (
         <>
-          <button
-            className="df-button secondary small"
-            onClick={() => setSelection(null)}
-          >
-            ← Student projects
-          </button>
+          <DashboardDetailHeader
+            title={selection.project.name}
+            back={
+              <button
+                className="df-button secondary small"
+                onClick={() => setSelection(null)}
+              >
+                ← Student projects
+              </button>
+            }
+          />
           <TeacherPromptGuidance
+            scope={schoolMode ? "school" : "teacher"}
             key={selection.project.vm_id}
             initialStudent={selection.student}
             initialProjectId={selection.project.vm_id}
@@ -153,6 +199,8 @@ export function TeacherStudentProjects({
         </>
       ) : (
         <>
+          {classId && <ClassroomGroups classId={classId} />}
+          {classId && <ClassroomSafetyReport classId={classId} />}
           {classId && (
             <label className="df-guidance-filters">
               Find a student
@@ -185,7 +233,14 @@ export function TeacherStudentProjects({
                     <strong>{project.owner_name || teacherName}</strong>
                     <div className="df-muted">Teacher</div>
                   </td>
-                  <td>{project.name}</td>
+                  <td>
+                    {project.name}
+                    {!!project.group_members?.length && (
+                      <small style={{ display: "block" }}>
+                        Group project with {project.group_members.join(", ")}
+                      </small>
+                    )}
+                  </td>
                   <td>{project.prompt_count}</td>
                   <td>{project.guidance_count}</td>
                   <td>

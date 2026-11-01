@@ -41,7 +41,7 @@ export function TeacherProfile({
     <section className="df-card df-teacher-profile df-profile-module">
       <ProfileModuleHeader
         title="Your profile"
-        description="Update the name shown in your teacher studio."
+        description="Update the name shown in your workspace."
       />
       <form className="df-form" onSubmit={save}>
         <label>

@@ -19,6 +19,12 @@ export class SafetyError extends Error {
       | "unavailable"
       | "configuration"
       | "quota" = "blocked",
+    /** The moderation outcome, when the content was actually classified. */
+    readonly outcome?: {
+      decision: "allow" | "block" | "review";
+      categories: string[];
+      severity: string;
+    },
   ) {
     super(message);
   }
@@ -133,13 +139,28 @@ export async function screenContent(
     ],
   );
   const rows = event.rows;
-  if (result.decision !== "allow")
+  if (result.decision !== "allow") {
+    const run = currentRun();
+    if (run)
+      await executionEvent(run, "moderation.rejected", {
+        phase,
+        decision: result.decision,
+        categories: result.categories,
+        severity: result.severity,
+      }).catch(() => {});
     throw new SafetyError(
       result.categories.includes("self_harm")
         ? "You deserve support. Please talk to someone you trust about how you are feeling."
         : result.decision === "review"
           ? "I couldn’t confirm this request is safe. Try describing what you want to build more clearly."
           : "I can’t help with that request. Try a different game, app, or coding idea.",
+      "blocked",
+      {
+        decision: result.decision,
+        categories: result.categories,
+        severity: result.severity,
+      },
     );
+  }
   return rows[0].id;
 }

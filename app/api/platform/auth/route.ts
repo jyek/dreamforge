@@ -1,3 +1,4 @@
+import { lockStudentSchoolInvite } from "@/lib/student-invites";
 import { childPolicy } from "@/lib/child-policy";
 import { database } from "@/lib/database";
 import {
@@ -37,10 +38,10 @@ export async function PATCH(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   if (!name || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name))
     return fail("Use a display name with 1–60 characters.");
-  await database().query(
-    "update profiles set display_name=$2 where id=$1",
-    [user.id, name],
-  );
+  await database().query("update profiles set display_name=$2 where id=$1", [
+    user.id,
+    name,
+  ]);
   return Response.json({ ok: true, name });
 }
 export async function POST(req: Request) {
@@ -81,6 +82,10 @@ export async function POST(req: Request) {
       typeof body.teacherInvite === "string" && body.teacherInvite.length > 0;
     if (teacher && !suppliedEmail)
       return fail("Teachers need an email address.");
+    const studentInvite =
+      typeof body.studentInvite === "string" ? body.studentInvite : "";
+    if (studentInvite && (teacher || body.classCode))
+      return fail("Use one invitation at a time.");
     const code =
       typeof body.classCode === "string"
         ? body.classCode.trim().toUpperCase()
@@ -92,16 +97,22 @@ export async function POST(req: Request) {
       await db.query("begin");
       const invitation = teacher
         ? await db.query(
-            "select token_hash,classroom_id,created_by from teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
+            "select token_hash,classroom_id,created_by,school_id,make_admin from teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
             [tokenHash(body.teacherInvite)],
           )
-        : code
-          ? await db.query(
-              "select id from classes where invite_code=$1 for share",
-              [code],
-            )
-          : { rows: [] };
-      if ((teacher || code) && !invitation.rows[0]) {
+        : studentInvite
+          ? {
+              rows: [await lockStudentSchoolInvite(db, studentInvite)].filter(
+                Boolean,
+              ),
+            }
+          : code
+            ? await db.query(
+                "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1 for share of c",
+                [code],
+              )
+            : { rows: [] };
+      if ((teacher || code || studentInvite) && !invitation.rows[0]) {
         await db.query("rollback");
         return fail("This invitation code is invalid or expired.");
       }
@@ -128,10 +139,24 @@ export async function POST(req: Request) {
         );
       }
       authId = result.id;
+      // New accounts join the school of the invitation or class they came from.
+      const schoolId = invitation.rows[0]?.school_id ?? null;
       await db.query(
-        "insert into profiles(id,username,display_name,auth_email,role) values($1,$2,$3,$4,$5)",
-        [authId, username, name, email, teacher ? "teacher" : "child"],
+        "insert into profiles(id,username,display_name,auth_email,role,school_id) values($1,$2,$3,$4,$5,$6)",
+        [
+          authId,
+          username,
+          name,
+          email,
+          teacher ? "teacher" : "child",
+          schoolId,
+        ],
       );
+      if (teacher && invitation.rows[0].make_admin && schoolId)
+        await db.query(
+          "insert into school_admins(school_id,profile_id) values($1,$2)",
+          [schoolId, authId],
+        );
       if (teacher) {
         if (invitation.rows[0].classroom_id)
           await db.query(
@@ -147,15 +172,19 @@ export async function POST(req: Request) {
           [tokenHash(body.teacherInvite), authId],
         );
       } else {
+        if (studentInvite)
+          await db.query(
+            "update student_invites set used_by=$2,used_at=now() where token_hash=$1",
+            [tokenHash(studentInvite), authId],
+          );
         if (code)
           await db.query(
             "insert into class_members(class_id,child_id) values($1,$2)",
             [invitation.rows[0].id, authId],
           );
-        await db.query(
-          "insert into token_accounts(child_id) values($1)",
-          [authId],
-        );
+        await db.query("insert into token_accounts(child_id) values($1)", [
+          authId,
+        ]);
       }
       await db.query("commit");
     } catch {

@@ -15,14 +15,6 @@ export const VM_PORT = 3000;
 export const BASE_SNAPSHOT_SLUG = "adorable-base-small";
 export { PROJECT_IDLE_SECONDS } from "./project-idle.mjs";
 
-/** The template the base snapshot is built from. */
-export const TEMPLATE_REPO =
-  "https://github.com/freestyle-sh/freestyle-base-nextjs-shadcn";
-
-/** Preview domain suffix. style.dev requires no custom-domain setup. */
-export const DOMAIN_SUFFIX =
-  process.env["FREESTYLE_DOMAIN_SUFFIX"] || "style.dev";
-
 /**
  * The named PTY session running a VM's app server — `npm run dev`, on the dev
  * VM and the production VM alike. Naming it makes `pty.open` get-or-create, so

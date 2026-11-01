@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { uiReplyMarker } from "./e2e-markers.mjs";
+import { waitForPreviewReady } from "./e2e-preview-ready.mjs";
 import { config } from "dotenv";
 config({ path: ".env.e2e.local", quiet: true });
 const origin = new URL(
@@ -359,7 +360,10 @@ try {
     if (page) {
       await page.goto(origin + "/projects");
       await page
-        .getByText("E2E Prompting Playground", { exact: true })
+        .getByRole("link", {
+          name: "Open E2E Prompting Playground",
+          exact: true,
+        })
         .first()
         .click();
       await page.waitForURL(`**/${project.id}/**`);
@@ -516,11 +520,10 @@ try {
       !result.events.some((e) => e.type.startsWith("tool-")),
       "Blocked prompt invoked tools",
     );
+    // The student keeps their own words, flagged as blocked.
     assert(
       result.history.some(
-        (m) =>
-          m.role === "user" &&
-          m.parts.some((p) => p.text === "[Request blocked by safety checks]"),
+        (m) => m.role === "user" && m.metadata?.custom?.blocked === true,
       ),
       "Prompt was not blocked by the safety harness",
     );
@@ -535,14 +538,7 @@ try {
     await check("browser counter interactions", async () => {
       try {
         await page.goto(`${origin}/${project.id}/${report.conversationId}`);
-        const frame = page.frameLocator("iframe").first();
-        await frame
-          .getByRole("heading", { name: "DreamForge E2E Counter", exact: true })
-          .waitFor();
-        const child = page
-          .frames()
-          .find((f) => f.parentFrame() === page.mainFrame());
-        await child.waitForLoadState("networkidle", { timeout: 30000 });
+        const frame = await waitForPreviewReady(page, "DreamForge E2E Counter");
         await frame.getByRole("button", { name: "Reset", exact: true }).click();
         await frame.getByText("0", { exact: true }).waitFor();
         await frame
@@ -622,11 +618,9 @@ try {
           .getByText("Loading preview…", { exact: true })
           .waitFor({ state: "hidden", timeout: 60000 });
         assert.equal(await reload.getAttribute("aria-busy"), "false");
-        const frame = page.frameLocator("iframe").first();
-        await frame
-          .getByRole("heading", { name: "DreamForge E2E Counter", exact: true })
-          .waitFor();
+        const frame = await waitForPreviewReady(page, "DreamForge E2E Counter");
         await frame.getByRole("button", { name: "Reset", exact: true }).click();
+        await frame.getByText("0", { exact: true }).waitFor();
         await frame
           .getByRole("button", { name: "Add one", exact: true })
           .click();
@@ -748,6 +742,56 @@ try {
 } catch (error) {
   report.status = "failed";
   console.error(`FAIL ${safeError(error)}`);
+  // Capture fixed safety codes before finally removes the disposable project.
+  // Never copy prompts, tool data, provider bodies or cookies into the report.
+  if (project?.id) {
+    try {
+      const response = await fetch(
+        `${origin}/api/projects/${project.id}/execution`,
+        {
+          headers: { Origin: origin, Cookie: cookie },
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+      if (!response.ok) throw Error("Diagnostics unavailable");
+      const state = await response.json();
+      report.moderationDiagnostics = (state.events || [])
+        .filter((e) =>
+          ["moderation.failed", "moderation.rejected"].includes(e.kind),
+        )
+        .map(({ kind, data = {} }) => ({
+          kind,
+          phase: ["input", "output", "tool"].includes(data.phase)
+            ? data.phase
+            : undefined,
+          reason: [
+            "http_error",
+            "response_error",
+            "invalid_response",
+            "invalid_decision",
+            "decision_truncated",
+            "timeout",
+            "network_error",
+          ].includes(data.reason)
+            ? data.reason
+            : undefined,
+          status:
+            Number.isInteger(data.status) &&
+            data.status >= 100 &&
+            data.status <= 599
+              ? data.status
+              : undefined,
+          decision: ["allow", "review", "block"].includes(data.decision)
+            ? data.decision
+            : undefined,
+        }));
+      console.error(
+        `Moderation diagnostics: ${JSON.stringify(report.moderationDiagnostics)}`,
+      );
+    } catch {
+      report.diagnosticsUnavailable = true;
+    }
+  }
   process.exitCode = 1;
 } finally {
   if (page && report.status === "failed")

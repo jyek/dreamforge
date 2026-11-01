@@ -1,5 +1,7 @@
 "use client";
 
+import { flagBlockedPrompt, flagHeldPrompt } from "@/lib/blocked-prompts";
+import { HELD_PROMPT_MESSAGE } from "@/lib/prompt-hold";
 import { AssistantRuntimeProvider, useAuiState } from "@assistant-ui/react";
 import {
   useAISDKRuntime,
@@ -62,6 +64,10 @@ export const Assistant = ({
     revisionRef.current = { project, revision };
   }, []);
   const [progress, setProgress] = useState("");
+  const [promptSafety, setPromptSafety] = useState<{
+    messageId: string;
+    status: "blocked" | "held";
+  } | null>(null);
   const { choice: modelChoice, ready: modelReady } = useModelSettings();
   const modelChoiceRef = useRef(modelChoice);
   modelChoiceRef.current = modelChoice;
@@ -361,6 +367,14 @@ export const Assistant = ({
     onData: (part) => {
       if (part.type === "data-progress")
         setProgress((part.data as { message: string }).message);
+      if (part.type === "data-prompt-safety") {
+        const value = part.data as { messageId?: unknown; status?: unknown };
+        if (
+          typeof value.messageId === "string" &&
+          (value.status === "blocked" || value.status === "held")
+        )
+          setPromptSafety({ messageId: value.messageId, status: value.status });
+      }
     },
     onError: () => setProgress(""),
     transport: new AssistantChatTransport({
@@ -418,6 +432,91 @@ export const Assistant = ({
     messages: seedMessages,
     onFinish: handleChatFinish,
   });
+
+  useEffect(() => {
+    if (!promptSafety) return;
+    chat.setMessages((messages) =>
+      messages.map((message) =>
+        message.id === promptSafety.messageId && message.role === "user"
+          ? promptSafety.status === "held"
+            ? flagHeldPrompt(message)
+            : flagBlockedPrompt(message)
+          : message,
+      ),
+    );
+  }, [promptSafety, chat.setMessages]);
+
+  // A questionable prompt waits for the teacher. While the chat is open, pick up
+  // their decision: approved prompts continue on their own.
+  const lastMessage = chat.messages.at(-1);
+  const waitingForTeacher =
+    lastMessage?.role === "assistant" &&
+    lastMessage.parts.some(
+      (part) => part.type === "text" && part.text === HELD_PROMPT_MESSAGE,
+    );
+  useEffect(() => {
+    if (
+      readOnly ||
+      !selectedConversationId ||
+      !selectedProjectId ||
+      !waitingForTeacher ||
+      chat.status === "submitted" ||
+      chat.status === "streaming"
+    )
+      return;
+    let stopped = false;
+    const check = async () => {
+      const r = await fetch(
+        `/api/platform/held-prompts?conversationId=${selectedConversationId}&projectId=${selectedProjectId}`,
+        { cache: "no-store" },
+      ).catch(() => null);
+      if (!r?.ok || stopped) return;
+      const { holds } = (await r.json()) as {
+        holds: { id: string; status: string; content: string }[];
+      };
+      const approved = holds.find((hold) => hold.status === "approved");
+      const denied = holds.find((hold) => hold.status === "denied");
+      if (approved && !stopped) {
+        stopped = true;
+        void chat.sendMessage({ text: approved.content });
+      } else if (denied && !stopped) {
+        stopped = true;
+        await fetch("/api/platform/held-prompts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: denied.id }),
+        }).catch(() => {});
+        chat.setMessages([
+          ...chat.messages,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                text: "Your teacher didn’t approve that request. Try a different game, app, or coding idea.",
+              },
+            ],
+          },
+        ]);
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 5000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [
+    readOnly,
+    selectedConversationId,
+    selectedProjectId,
+    waitingForTeacher,
+    chat.status,
+    chat.sendMessage,
+    chat.setMessages,
+    chat.messages,
+  ]);
 
   const startedInitialPrompt = useRef(false);
   useEffect(() => {

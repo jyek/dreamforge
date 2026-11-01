@@ -4,10 +4,13 @@ import {
   Home,
   School,
   UsersRound,
+  Presentation,
   FolderKanban,
   ShieldCheck,
+  Building2,
   Menu,
   X,
+  Plus,
 } from "lucide-react";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { StudioSidebar } from "./studio-sidebar";
@@ -23,6 +26,12 @@ export const TEACHER_SECTIONS = [
     label: "Classrooms",
     icon: School,
     description: "Manage your students and classrooms.",
+  },
+  {
+    id: "teachers",
+    label: "Teachers",
+    icon: Presentation,
+    description: "Your classroom teaching teams.",
   },
   {
     id: "students",
@@ -44,6 +53,54 @@ export const TEACHER_SECTIONS = [
     description: "Review safety concerns and guide your students.",
   },
 ] as const;
+export const schoolSectionPath = (section: string) =>
+  section === "overview"
+    ? "/home"
+    : section === "classes"
+      ? "/classrooms"
+      : section === "alerts"
+        ? "/safety"
+        : `/${section}`;
+export const SCHOOL_ADMIN_SECTIONS = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: Home,
+    description: "Your school, classrooms and safety activity.",
+  },
+  {
+    id: "classes",
+    label: "Classrooms",
+    icon: School,
+    description: "Teaching teams and students in each classroom.",
+  },
+  {
+    id: "teachers",
+    label: "Teachers",
+    icon: Presentation,
+    description: "Your school’s teachers and their classrooms.",
+  },
+  {
+    id: "students",
+    label: "Students",
+    icon: UsersRound,
+    description: "Enroll students and manage classroom membership.",
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    description:
+      "Create your own projects and share them with your classrooms.",
+  },
+  {
+    id: "alerts",
+    label: "Safety",
+    icon: ShieldCheck,
+    description:
+      "Review student safety, prompting guidance and alerts across your school.",
+  },
+] as const;
 export const BUILDER_SECTIONS = [
   {
     id: "home",
@@ -57,10 +114,18 @@ export const BUILDER_SECTIONS = [
     icon: School,
     description: "A place to learn, create, and build together.",
   },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    description: "View and edit your creations.",
+  },
 ] as const;
 export function PlatformDashboardLayout({
   teacher,
+  schoolMode = false,
   name,
+  schoolName,
   accountLoading = false,
   creditBalanceMicros,
   section,
@@ -69,8 +134,10 @@ export function PlatformDashboardLayout({
   headerAction,
 }: {
   teacher: boolean;
+  schoolMode?: boolean;
   accountLoading?: boolean;
   name?: string;
+  schoolName?: string | null;
   creditBalanceMicros?: number;
   section: string;
   onSectionChange: (section: string) => void;
@@ -78,25 +145,38 @@ export function PlatformDashboardLayout({
   headerAction?: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
-  const sections = teacher ? TEACHER_SECTIONS : BUILDER_SECTIONS;
+  const sections = schoolMode
+    ? SCHOOL_ADMIN_SECTIONS
+    : teacher
+      ? TEACHER_SECTIONS
+      : BUILDER_SECTIONS;
   const current =
     (section === "profile"
       ? {
           label: "Profile",
           description: teacher
-            ? "Manage your teacher profile and account."
+            ? "Manage your profile and account."
             : "Your spending, account and parent top-ups.",
         }
       : sections.find((s) => s.id === section)) || sections[0];
   return (
     <div className="df-teacher-dashboard">
       <StudioSidebar
+        roleLabel={schoolMode ? "School Admin" : undefined}
+        caption={schoolMode ? "" : undefined}
         onProfileOpen={() => setNavOpen(false)}
         name={name}
+        schoolName={schoolName}
         accountLoading={accountLoading}
         creditBalanceMicros={creditBalanceMicros}
         role={teacher ? "teacher" : "child"}
-        label={teacher ? "Teacher sidebar" : "Builder sidebar"}
+        label={
+          schoolMode
+            ? "School Admin sidebar"
+            : teacher
+              ? "Teacher sidebar"
+              : "Builder sidebar"
+        }
         className={navOpen ? "is-open" : ""}
         toggle={
           <button
@@ -113,7 +193,13 @@ export function PlatformDashboardLayout({
           <nav
             id="studio-sections"
             className="df-studio-nav"
-            aria-label={teacher ? "Teacher sections" : "Builder sections"}
+            aria-label={
+              schoolMode
+                ? "School sections"
+                : teacher
+                  ? "Teacher sections"
+                  : "Builder sections"
+            }
           >
             {sections.map((s) => (
               <button
@@ -130,24 +216,31 @@ export function PlatformDashboardLayout({
                 <span>{s.label}</span>
               </button>
             ))}
+            <CreateProjectDialog
+              trigger={
+                <button
+                  type="button"
+                  aria-label="Create a project"
+                  title="Create a project"
+                >
+                  <Plus size={20} aria-hidden="true" />
+                  <span>Create a project</span>
+                </button>
+              }
+            />
           </nav>
         }
-      >
-        {!teacher && section !== "classrooms" && (
-          <div className="df-sidebar-create">
-            <CreateProjectDialog />
-          </div>
-        )}
-      </StudioSidebar>
+      />
       <main
         className={`df-page df-teacher-content ${!teacher && section === "home" ? "df-builder-home" : ""}`}
       >
         {(teacher || section !== "home") && (
           <header className="df-teacher-header">
-            <div>
+            <div className="df-header-default">
               <h1>{current.label}</h1>
               <p className="df-muted">{current.description}</p>
             </div>
+            <div id="dashboard-detail-header" />
             {headerAction}
           </header>
         )}

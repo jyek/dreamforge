@@ -176,12 +176,11 @@ test("conversion preserves old balances and receipts, refuses unresolved usage, 
   const admin = new pg.Pool({ connectionString: url.toString() });
   await admin.query(`create database "${name}"`);
   url.pathname = `/${name}`;
-  const fixture = new pg.Pool({
+  const c = new pg.Client({
     connectionString: url.toString(),
     options: APPLICATION_DATABASE_OPTIONS,
-    max: 1,
   });
-  const c = await fixture.connect();
+  await c.connect();
   try {
     await c.query(
       "create schema auth;create table auth.users(id uuid primary key)",
@@ -262,10 +261,14 @@ test("conversion preserves old balances and receipts, refuses unresolved usage, 
     );
     await c.query("reset role");
   } finally {
-    c.release();
-    await fixture.end();
-    await admin.query(`drop database "${name}" with (force)`);
-    await admin.end();
+    // Pool.end() may resolve before its idle socket closes. Await this socket
+    // explicitly so DROP DATABASE cannot kill it and fail the test on CI.
+    await c.end();
+    try {
+      await admin.query(`drop database "${name}" with (force)`);
+    } finally {
+      await admin.end();
+    }
   }
 });
 

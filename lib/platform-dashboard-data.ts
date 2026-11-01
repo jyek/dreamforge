@@ -1,3 +1,4 @@
+import { projectGroupMemberSQL } from "./project-group";
 import { groupProjectSpending } from "./project-spending";
 import { creditWalletSelect, USD_TO_SGD, MARKUP_PERCENT } from "./billing";
 import {
@@ -36,7 +37,12 @@ export async function loadDashboardData(user: Profile, section?: string) {
     };
   }
   const { rows: projects } = await db.query(
-    `select p.vm_id,p.metadata,pr.display_name as child_name from projects p join profiles pr on pr.id=p.owner_id where not p.is_example and (p.owner_id=$1) order by p.updated_at desc`,
+    `select p.vm_id,p.owner_id,p.metadata,pr.display_name as child_name,
+      (p.group_class_id is not null or p.metadata->>'classroomGroupProject'='true') as is_group_project,
+      g.name as group_name,
+      coalesce((select json_agg(json_build_object('id',c.id,'name',c.name) order by lower(c.name)) from class_projects cp join classes c on c.id=cp.class_id where cp.vm_id=p.vm_id),'[]'::json) as assigned_classrooms,
+      exists(select 1 from class_projects cp join classroom_groups cg on cg.class_id=cp.class_id where cp.vm_id=p.vm_id) as can_make_group
+    from projects p join profiles pr on pr.id=p.owner_id left join classroom_groups g on g.id=p.classroom_group_id where not p.is_example and (p.owner_id=$1 or ${projectGroupMemberSQL("p", "$1")}) order by p.updated_at desc`,
     [user.id],
   );
   const { rows: children } =

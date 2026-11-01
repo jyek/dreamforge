@@ -1,4 +1,6 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
+
 import {
   availableCreditMicros,
   formatCredit,
@@ -13,13 +15,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreateProjectDialog } from "./create-project-dialog";
+import { StudentProjectActions } from "./student-project-actions";
 import { ProjectClassroomSharing } from "./project-classroom-sharing";
 import { CreateClassDialog } from "./create-class-dialog";
 import { JoinClassDialog } from "./join-class-dialog";
 import { BuilderGreeting } from "./builder-greeting";
 import { BuilderIdeaArt } from "./builder-idea-art";
+import { TeacherActionSummary } from "./teacher-action-summary";
 import { BuilderHomePrompt } from "./builder-home-prompt";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
+import { StaffInvitation } from "./staff-invitation";
 import { TeacherProfile } from "./teacher-profile";
 import { ProfileModuleHeader } from "./profile-module-header";
 import { CopyButton } from "./copy-button";
@@ -35,11 +40,23 @@ import {
   Clock3,
 } from "lucide-react";
 import { DreamForgeProjectArt } from "./dreamforge-brand";
-import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import {
+  PlatformDashboardLayout,
+  schoolSectionPath,
+} from "./platform-dashboard-layout";
 type Project = {
   vm_id: string;
-  metadata: { name: string; conversations: { id: string }[] };
+  owner_id?: string;
+  metadata: {
+    name: string;
+    description?: string;
+    conversations: { id: string }[];
+  };
   child_name: string;
+  assigned_classrooms?: { id: string; name: string }[];
+  is_group_project?: boolean;
+  group_name?: string | null;
+  can_make_group?: boolean;
 };
 type Wallet = CreditWallet & {
   token_limit: string;
@@ -49,7 +66,12 @@ type Wallet = CreditWallet & {
   output_tokens: string;
 };
 type Data = {
-  user: { display_name: string; role: "child" | "teacher" };
+  user: {
+    id?: string;
+    display_name: string;
+    role: "child" | "teacher";
+    school_name?: string | null;
+  };
   classes: {
     id: string;
     name: string;
@@ -87,10 +109,12 @@ export function PlatformDashboard({
   initialUser,
   initialData,
   initialSection = "home",
+  schoolMode = false,
 }: {
   initialUser?: Data["user"];
   initialData?: Data;
   initialSection?: string;
+  schoolMode?: boolean;
 }) {
   const router = useRouter();
   const [data, setData] = useState<Data | null>(initialData || null),
@@ -104,7 +128,9 @@ export function PlatformDashboard({
     if (initialData) setData(initialData);
   }, [initialSection, initialData]);
   function selectSection(section: string) {
-    router.push(`/${section}`, { scroll: false });
+    router.push(schoolMode ? schoolSectionPath(section) : `/${section}`, {
+      scroll: false,
+    });
   }
   async function load() {
     try {
@@ -181,6 +207,8 @@ export function PlatformDashboard({
   return (
     <PlatformDashboardLayout
       teacher={!!teacher}
+      schoolMode={schoolMode}
+      schoolName={data?.user.school_name ?? initialUser?.school_name}
       accountLoading={!data && !initialUser}
       creditBalanceMicros={
         !teacher && data?.wallet
@@ -271,8 +299,8 @@ export function PlatformDashboard({
                         size={22}
                         aria-hidden="true"
                       />
-                      Ideas in progress<strong>{data.projects.length}</strong>
-                      Projects to explore
+                      Your projects<strong>{data.projects.length}</strong>
+                      Created by you
                     </div>
                     <div className="df-card df-stat">
                       <ShieldCheck
@@ -336,52 +364,23 @@ export function PlatformDashboard({
           )}
           {teacher && view === "home" && (
             <>
-              <div className="df-section-head">
-                <h2>Your studio at a glance</h2>
+              <div className="df-overview-badges">
+                {[
+                  ["classrooms", "Classrooms", data.classes.length],
+                  ["projects", "Projects", data.projects.length],
+                  ["safety", "Prompts with guidance", guidanceCount],
+                ].map(([target, label, count]) => (
+                  <button
+                    className="df-overview-badge"
+                    key={target}
+                    onClick={() => selectSection(String(target))}
+                  >
+                    <span>{label}</span>
+                    <strong>{count}</strong>
+                  </button>
+                ))}
               </div>
-              <div className="df-projects df-home-shortcuts">
-                <button
-                  className="df-card df-project"
-                  onClick={() => selectSection("classrooms")}
-                >
-                  <span className="df-project-icon">
-                    <School size={23} aria-hidden="true" />
-                  </span>
-                  <h3>Classrooms</h3>
-                  <p className="df-muted">
-                    {data.classes.length}{" "}
-                    {data.classes.length === 1 ? "class" : "classes"} · Manage
-                    students in your classrooms
-                  </p>
-                  <footer>Manage classrooms →</footer>
-                </button>
-                <button
-                  className="df-card df-project"
-                  onClick={() => selectSection("projects")}
-                >
-                  <span className="df-project-icon">
-                    <FolderKanban size={23} aria-hidden="true" />
-                  </span>
-                  <h3>Projects</h3>
-                  <p className="df-muted">
-                    Create projects and share them with your classrooms.
-                  </p>
-                  <footer>Browse projects →</footer>
-                </button>
-                <button
-                  className="df-card df-project"
-                  onClick={() => selectSection("safety")}
-                >
-                  <span className="df-project-icon">
-                    <ShieldCheck size={23} aria-hidden="true" />
-                  </span>
-                  <h3>Safety</h3>
-                  <p className="df-muted">
-                    {guidanceCount} prompts with guidance suggestions
-                  </p>
-                  <footer>Review safety →</footer>
-                </button>
-              </div>
+              <TeacherActionSummary />
             </>
           )}
           {(view === "projects" || (!teacher && view === "home")) && (
@@ -389,10 +388,9 @@ export function PlatformDashboard({
               id={!teacher ? "builder-projects" : undefined}
               className={!teacher ? "df-home-project-section" : undefined}
             >
-              <div className="df-section-head">
-                <h2>{"Your projects"}</h2>
-                <div className="df-inline">
-                  {teacher && <CreateProjectDialog />}
+              {view !== "projects" && (
+                <div className="df-section-head">
+                  <h2>Your projects</h2>
                   {data.projects.length > 0 && (
                     <span className="df-project-count">
                       {data.projects.length}{" "}
@@ -400,31 +398,71 @@ export function PlatformDashboard({
                     </span>
                   )}
                 </div>
-              </div>
+              )}
+              {teacher && (
+                <div
+                  className="df-inline"
+                  style={{ justifyContent: "flex-end", marginBottom: 24 }}
+                >
+                  <CreateProjectDialog />
+                </div>
+              )}
               {data.projects.length ? (
                 <div className="df-projects">
                   {data.projects.map((p, index) => (
                     <article key={p.vm_id} className="df-card df-project">
                       <Link
-                        className="df-project-main"
+                        className="df-project-main df-project-open-link"
+                        aria-label={`Open ${p.metadata.name}`}
                         href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
                       >
                         <DreamForgeProjectArt variant={index} />
-                        <h3>{p.metadata.name}</h3>
-                        <p className="df-muted">
-                          {teacher
-                            ? "Your teaching project"
-                            : "Built with your imagination"}
-                        </p>
-                        <footer>
-                          {teacher ? "Open project" : "Keep building ↗"}
-                        </footer>
                       </Link>
+                      <div className="df-project-card-heading">
+                        <h3>{p.metadata.name}</h3>
+                        {!teacher && p.owner_id === data.user.id && (
+                          <StudentProjectActions
+                            projectId={p.vm_id}
+                            name={p.metadata.name}
+                            description={p.metadata.description}
+                            canMakeGroup={p.can_make_group}
+                            onChanged={load}
+                          />
+                        )}
+                      </div>
+                      <div className="df-project-assignment-status">
+                        <span className="df-guidance-tag">
+                          {p.is_group_project
+                            ? `Group project · ${p.group_name || "Unassigned"}`
+                            : "Individual project"}
+                        </span>
+                        <div className="df-project-classroom-tags">
+                          {p.assigned_classrooms?.length
+                            ? p.assigned_classrooms.map((c) => (
+                                <span
+                                  key={c.id}
+                                  className="df-project-classroom-tag"
+                                >
+                                  {c.name}
+                                </span>
+                              ))
+                            : null}
+                        </div>
+                      </div>
+                      <p className="df-muted">
+                        {p.metadata.description ||
+                          (teacher
+                            ? "Your teaching project"
+                            : "Built with your imagination")}
+                      </p>
                       {teacher && (
-                        <ProjectClassroomSharing
-                          projectId={p.vm_id}
-                          name={p.metadata.name}
-                        />
+                        <div className="df-project-card-controls">
+                          <ProjectClassroomSharing
+                            projectId={p.vm_id}
+                            name={p.metadata.name}
+                            onChanged={load}
+                          />
+                        </div>
                       )}
                     </article>
                   ))}
@@ -505,68 +543,62 @@ export function PlatformDashboard({
                       <summary>
                         <span>{project.project_name}</span>
                       </summary>
-                      <div className="df-table-scroll">
-                        <table className="df-table">
-                          <caption className="sr-only">
-                            Model spending for {project.project_name}
-                          </caption>
-                          <thead>
-                            <tr>
-                              <th>Model</th>
-                              <th>Input tokens</th>
-                              <th>Output tokens</th>
-                              <th>Total tokens</th>
-                              <th>Charged (SGD)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(project.models || []).map((model) => (
-                              <tr key={model.model}>
-                                <td>{modelLabel(model.model)}</td>
-                                <td>
-                                  {Number(model.input_tokens).toLocaleString()}
-                                </td>
-                                <td>
-                                  {Number(model.output_tokens).toLocaleString()}
-                                </td>
-                                <td>
-                                  {Number(model.used_tokens).toLocaleString()}
-                                </td>
-                                <td>
-                                  {formatCreditBalance(
-                                    Number(model.credit_cost_micros || 0) +
-                                      Number(
-                                        model.estimated_credit_micros || 0,
-                                      ),
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr>
-                              <th scope="row">Project total</th>
+                      <StudentReviewTable columns={5} compact={false}>
+                        <caption className="sr-only">
+                          Model spending for {project.project_name}
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th>Model</th>
+                            <th>Input tokens</th>
+                            <th>Output tokens</th>
+                            <th>Total tokens</th>
+                            <th>Charged (SGD)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(project.models || []).map((model) => (
+                            <tr key={model.model}>
+                              <td>{modelLabel(model.model)}</td>
                               <td>
-                                {Number(project.input_tokens).toLocaleString()}
+                                {Number(model.input_tokens).toLocaleString()}
                               </td>
                               <td>
-                                {Number(project.output_tokens).toLocaleString()}
+                                {Number(model.output_tokens).toLocaleString()}
                               </td>
                               <td>
-                                {Number(project.used_tokens).toLocaleString()}
+                                {Number(model.used_tokens).toLocaleString()}
                               </td>
                               <td>
                                 {formatCreditBalance(
-                                  Number(project.credit_cost_micros || 0) +
-                                    Number(
-                                      project.estimated_credit_micros || 0,
-                                    ),
+                                  Number(model.credit_cost_micros || 0) +
+                                    Number(model.estimated_credit_micros || 0),
                                 )}
                               </td>
                             </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <th scope="row">Project total</th>
+                            <td>
+                              {Number(project.input_tokens).toLocaleString()}
+                            </td>
+                            <td>
+                              {Number(project.output_tokens).toLocaleString()}
+                            </td>
+                            <td>
+                              {Number(project.used_tokens).toLocaleString()}
+                            </td>
+                            <td>
+                              {formatCreditBalance(
+                                Number(project.credit_cost_micros || 0) +
+                                  Number(project.estimated_credit_micros || 0),
+                              )}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </StudentReviewTable>
                       {!project.models?.length && (
                         <p className="df-muted">
                           No confirmed model usage yet.
@@ -621,23 +653,10 @@ export function PlatformDashboard({
             </section>
           )}
           {teacher && view === "profile" && (
-            <section className="df-card df-settings-card df-profile-module">
-              <ProfileModuleHeader
-                eyebrow="TEACHER INVITATIONS"
-                title="Invite a teacher"
-                description="Create a private invitation link for another teacher. Each link can be used once and expires after seven days."
-              />
-              <button
-                style={{ marginTop: 16 }}
-                className="df-button secondary"
-                disabled={busy}
-                onClick={() =>
-                  action("/api/platform/classes", { action: "inviteTeacher" })
-                }
-              >
-                Invite a teacher
-              </button>
-            </section>
+            <StaffInvitation
+              schoolAdmin={schoolMode}
+              schoolName={data.user.school_name ?? initialUser?.school_name}
+            />
           )}
           {link && view === "profile" && (
             <div className="df-notice" style={{ marginTop: 20 }}>

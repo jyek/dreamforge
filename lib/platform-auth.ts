@@ -1,8 +1,14 @@
 import { safetyEnabled } from "./safety-mode";
 import {
+  isMissingGroupSchema,
+  projectAccessLevel,
+  projectGroupMemberSQL,
+} from "./project-group";
+import {
   classroomTeacherSQL,
+  schoolProjectReadAccessSQL,
   sharedTeachingProjectSQL,
-  teacherStudentAccessSQL,
+  studentReadAccessSQL,
 } from "./classroom-permissions";
 import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
@@ -15,12 +21,13 @@ export type Profile = {
   username: string;
   display_name: string;
   role: "teacher" | "child";
+  school_name?: string | null;
 };
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const session = await getStudentSession();
   if (!session) return null;
   const { rows } = await database().query(
-    "select id,username,display_name,role from profiles where id=$1",
+    "select p.id,p.username,p.display_name,p.role,s.name as school_name from profiles p left join schools s on s.id=p.school_id where p.id=$1",
     [session.id],
   );
   return rows[0] || null;
@@ -30,7 +37,7 @@ export const tokenHash = (token: string) =>
 export const inviteToken = () => randomBytes(24).toString("base64url");
 export async function canReadChild(teacherId: string, childId: string) {
   const { rowCount } = await database().query(
-    `select 1 where ${teacherStudentAccessSQL("$2")}`,
+    `select 1 where ${studentReadAccessSQL("$2")}`,
     [teacherId, childId],
   );
   return !!rowCount;
@@ -40,16 +47,45 @@ export async function platformProjectAccess(
   readOnly = false,
 ) {
   const profile = await getProfile();
-  const { rows } = await database().query(
-    `select metadata,owner_id,is_example from projects where vm_id=$1`,
-    [projectId],
-  );
+  // Until the group-projects migration is applied, projects have no editor.
+  const { rows } = await database()
+    .query(
+      `select p.metadata,p.owner_id,
+        case when p.editor_id=p.owner_id or ${projectGroupMemberSQL("p", "p.editor_id")} then p.editor_id else null end as editor_id,
+        p.is_example,${projectGroupMemberSQL("p", "$2")} as is_member from projects p where p.vm_id=$1`,
+      [projectId, profile?.id || null],
+    )
+    .catch(async (error) => {
+      if (!isMissingGroupSchema(error)) throw error;
+      return database().query(
+        `select metadata,owner_id,null::uuid as editor_id,is_example from projects where vm_id=$1`,
+        [projectId],
+      );
+    });
   const row = rows[0];
   if (!row) return null;
   if (readOnly && row.is_example)
     return !safetyEnabled() || profile ? row.metadata : null;
   if (!profile || row.is_example) return null;
-  if (row.owner_id === profile.id) return row.metadata;
+  // One student edits at a time; the owner and every group member can view.
+  const isMember = profile.role === "child" && row.is_member === true;
+  const level = projectAccessLevel({
+    ownerId: row.owner_id,
+    editorId:
+      row.editor_id === profile.id && row.owner_id !== profile.id && !isMember
+        ? row.owner_id
+        : row.editor_id,
+    isMember,
+    userId: profile.id,
+  });
+  if (level === "edit" || (readOnly && level === "view")) return row.metadata;
+  if (readOnly && profile.role === "teacher") {
+    const { rowCount } = await database().query(
+      `select 1 where ${schoolProjectReadAccessSQL("$2")}`,
+      [profile.id, row.owner_id],
+    );
+    if (rowCount) return row.metadata;
+  }
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
       `select 1 from class_projects pc join classes c on c.id=pc.class_id join class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,

@@ -1,0 +1,419 @@
+"use client";
+import { useEffect, useId, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
+import { ActiveInvitations } from "./active-invitations";
+import { CopyButton } from "./copy-button";
+export function PeopleToolbar({
+  role,
+  classrooms,
+  filter,
+  onFilter,
+  buttonOnly = false,
+  onChanged,
+}: {
+  role: "student" | "teacher";
+  classrooms: { id: string; name: string }[];
+  filter: string;
+  onFilter: (s: string) => void;
+  buttonOnly?: boolean;
+  onChanged?: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false),
+    [mode, setMode] = useState("account"),
+    [classId, setClassId] = useState(""),
+    [identifier, setIdentifier] = useState(""),
+    [person, setPerson] = useState<{
+      display_name: string;
+      username: string;
+    } | null>(null),
+    [link, setLink] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const [inviteRefresh, setInviteRefresh] = useState(0);
+  const resultsId = useId();
+  const [matches, setMatches] = useState<
+    {
+      id: string;
+      display_name: string;
+      username: string;
+      eligible?: boolean;
+      school_name?: string;
+    }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  useEffect(() => {
+    setMatches([]);
+    setSearched(false);
+    setSearchError("");
+    if (!open || mode !== "account" || person || identifier.trim().length < 2) {
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const timer = setTimeout(() => {
+      fetch("/api/platform/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          action: "search",
+          role,
+          classId: classId || undefined,
+          identifier,
+        }),
+      })
+        .then(async (r) => {
+          const d = await r.json();
+          if (!r.ok) throw Error(d.error || "Could not search accounts.");
+          if (!controller.signal.aborted) {
+            setMatches(d.people || []);
+            setSearched(true);
+          }
+        })
+        .catch((e) => {
+          if (e.name !== "AbortError" && !controller.signal.aborted)
+            setSearchError(e.message);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setSearching(false);
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, mode, person, identifier, role, classId]);
+  async function submit(action: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await fetch("/api/platform/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          role,
+          classId:
+            role === "student" && action === "invite"
+              ? undefined
+              : classId || undefined,
+          identifier,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw Error(d.error);
+      if (action === "lookup") setPerson(d.person);
+      if (action === "invite") {
+        setLink(d.link);
+        setInviteRefresh((n) => n + 1);
+      }
+      if (action === "add") {
+        setOpen(false);
+        setNotice(
+          `${d.person.display_name} added to ${classId ? "classroom" : "school"}.`,
+        );
+        if (onChanged) await onChanged();
+        router.refresh();
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <div className={buttonOnly ? "df-inline" : "df-people-toolbar"}>
+        {!buttonOnly && (
+          <label>
+            Classroom
+            <select
+              className="df-input"
+              value={filter}
+              onChange={(e) => onFilter(e.target.value)}
+            >
+              <option value="">All classrooms</option>
+              {classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button
+          className={buttonOnly ? "df-button secondary small" : "df-button"}
+          onClick={() => {
+            setOpen(true);
+            setClassId(buttonOnly ? classrooms[0]?.id || "" : filter || "");
+            setPerson(null);
+            setLink("");
+            setIdentifier("");
+            setError("");
+          }}
+        >
+          Add {role}
+        </button>
+      </div>
+      {notice && (
+        <p className={buttonOnly ? "sr-only" : undefined} role="status">
+          {notice}
+        </p>
+      )}
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          if (!busy) setOpen(v);
+        }}
+      >
+        <DialogContent
+          className="df-card df-add-person-dialog"
+          style={{ background: "white", color: "#1a0f2e" }}
+        >
+          <DialogTitle>Add {role}</DialogTitle>
+          <DialogDescription>
+            {role === "student"
+              ? "Add a student to your school or a classroom, or share a school invitation link."
+              : "Add an existing teacher account or share an invitation link."}
+          </DialogDescription>
+          <div className="df-inline" role="group" aria-label="Add method">
+            <button
+              className="df-button secondary small"
+              aria-pressed={mode === "account"}
+              onClick={() => {
+                setMode("account");
+                setError("");
+              }}
+            >
+              Username or email
+            </button>
+            <button
+              className="df-button secondary small"
+              aria-pressed={mode === "invite"}
+              onClick={() => {
+                setMode("invite");
+                setError("");
+              }}
+            >
+              Invite link
+            </button>
+          </div>
+          <form
+            className="df-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit(
+                mode === "invite" ? "invite" : person ? "add" : "lookup",
+              );
+            }}
+          >
+            {!buttonOnly && !(role === "student" && mode === "invite") && (
+              <label>
+                Classroom (optional)
+                <select
+                  className="df-input"
+                  disabled={busy}
+                  value={classId}
+                  onChange={(e) => {
+                    setClassId(e.target.value);
+                    setPerson(null);
+                    setLink("");
+                  }}
+                >
+                  <option value="">School only</option>
+                  {classrooms.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {mode === "account" && (
+              <label>
+                Username or email
+                <input
+                  className="df-input"
+                  placeholder="Start typing a username, name, or email"
+                  id={`${resultsId}-input`}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={matches.length > 0}
+                  aria-controls={resultsId}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown" && matches.length) {
+                      e.preventDefault();
+                      document
+                        .getElementById(resultsId)
+                        ?.querySelector<HTMLButtonElement>("button")
+                        ?.focus();
+                    }
+                    if (e.key === "Escape") setMatches([]);
+                  }}
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    setPerson(null);
+                  }}
+                  required
+                  disabled={busy}
+                />
+              </label>
+            )}
+            {mode === "account" && !person && (
+              <>
+                {searching && (
+                  <p className="df-people-search-status" role="status">
+                    Searching…
+                  </p>
+                )}
+                {searchError && <p role="alert">{searchError}</p>}
+                {matches.length > 0 && (
+                  <div
+                    id={resultsId}
+                    role="listbox"
+                    aria-label="Matching accounts"
+                    className="df-people-search-results"
+                  >
+                    {matches.map((match, index) => (
+                      <button
+                        type="button"
+                        key={match.id}
+                        role="option"
+                        aria-selected={false}
+                        disabled={match.eligible === false}
+                        aria-disabled={match.eligible === false}
+                        onClick={() => {
+                          setPerson(match);
+                          setIdentifier(match.username);
+                          document
+                            .getElementById(`${resultsId}-input`)
+                            ?.focus();
+                          setMatches([]);
+                          setError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                            e.preventDefault();
+                            const options =
+                              e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                                "button",
+                              );
+                            options?.[
+                              (index +
+                                (e.key === "ArrowDown" ? 1 : -1) +
+                                matches.length) %
+                                matches.length
+                            ]?.focus();
+                          }
+                          if (e.key === "Escape") {
+                            setMatches([]);
+                          }
+                        }}
+                      >
+                        <strong>{match.display_name}</strong>
+                        <small>
+                          @{match.username}
+                          {match.eligible === false && (
+                            <span className="df-account-other-school">
+                              Belongs to {match.school_name}. This teacher is in
+                              a different school.
+                            </span>
+                          )}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searched && !searching && !matches.length && !searchError && (
+                  <p role="status" className="df-people-search-status">
+                    No matching accounts. Try the full username or email, or use
+                    an invite link.
+                  </p>
+                )}
+              </>
+            )}
+            {mode === "account" && person && (
+              <div className="df-notice">
+                <strong>{person.display_name}</strong>
+                <span> @{person.username}</span>
+              </div>
+            )}
+            {mode === "invite" && link && (
+              <div className="df-invite-link-row">
+                <input
+                  className="df-input"
+                  aria-label={`${role} invitation link`}
+                  readOnly
+                  value={link}
+                />
+                <CopyButton value={link}>Copy link</CopyButton>
+              </div>
+            )}
+            {mode === "invite" && (
+              <ActiveInvitations role={role} refreshKey={inviteRefresh} />
+            )}
+            {error && (
+              <p role="alert" className="df-error">
+                {error}
+              </p>
+            )}
+            <div className="df-inline" style={{ justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="df-button secondary"
+                disabled={busy}
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </button>
+              <button className="df-button" disabled={busy}>
+                {busy
+                  ? "Loading…"
+                  : mode === "invite"
+                    ? "Create invite link"
+                    : person
+                      ? classId
+                        ? "Add to classroom"
+                        : "Add to school"
+                      : "Find account"}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function AddPersonDialog({
+  role,
+  classroom,
+  onChanged,
+}: {
+  role: "student" | "teacher";
+  classroom: { id: string; name: string };
+  onChanged?: () => Promise<void>;
+}) {
+  return (
+    <PeopleToolbar
+      role={role}
+      classrooms={[classroom]}
+      filter={classroom.id}
+      onFilter={() => {}}
+      buttonOnly
+      onChanged={onChanged}
+    />
+  );
+}

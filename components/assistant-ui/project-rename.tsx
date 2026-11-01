@@ -11,8 +11,6 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export function ProjectRename({
   projectId,
@@ -20,15 +18,20 @@ export function ProjectRename({
   onRenamed,
   children,
   className,
+  description = "",
+  editDescription = false,
 }: {
   projectId: string;
   name: string;
   onRenamed: (id: string, name: string) => void;
   children?: ReactNode;
   className?: string;
+  description?: string;
+  editDescription?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(name);
+  const [draftDescription, setDraftDescription] = useState(description);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const save = async (event: React.FormEvent) => {
@@ -45,7 +48,10 @@ export function ProjectRename({
       const response = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: next }),
+        body: JSON.stringify({
+          name: next,
+          ...(editDescription ? { description: draftDescription.trim() } : {}),
+        }),
       });
       const data = await response.json();
       if (!response.ok)
@@ -71,6 +77,7 @@ export function ProjectRename({
         if (saving) return;
         if (next) {
           setDraft(name);
+          setDraftDescription(description);
           setError("");
         }
         setOpen(next);
@@ -91,17 +98,20 @@ export function ProjectRename({
           )}
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="df-card">
         <DialogHeader>
           <DialogTitle>Rename project</DialogTitle>
           <DialogDescription>
-            Choose a name that makes your project easy to find.
+            {editDescription
+              ? "Set a name and description for your project."
+              : "Choose a name that makes your project easy to find."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={(event) => void save(event)} className="space-y-4">
-          <label className="block space-y-2 text-sm font-medium">
+        <form onSubmit={(event) => void save(event)} className="df-form">
+          <label className="df-project-details-field">
             Project name
-            <Input
+            <input
+              className="df-input"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               maxLength={80}
@@ -110,23 +120,42 @@ export function ProjectRename({
               disabled={saving}
             />
           </label>
+          {editDescription && (
+            <label className="df-project-details-field">
+              Description (optional)
+              <textarea
+                className="df-input"
+                value={draftDescription}
+                onChange={(e) => setDraftDescription(e.target.value)}
+                maxLength={500}
+                rows={3}
+                disabled={saving}
+                placeholder="What is this project about?"
+              />
+            </label>
+          )}
           {error && (
             <p role="alert" className="text-sm text-red-600">
               {error}
             </p>
           )}
-          <div className="flex justify-end gap-2">
-            <Button
+          <div className="df-inline" style={{ justifyContent: "flex-end" }}>
+            <button
               type="button"
-              variant="outline"
+              className="df-button secondary small"
               disabled={saving}
               onClick={() => setOpen(false)}
             >
               Cancel
-            </Button>
-            <Button type="submit" disabled={saving || !draft.trim()}>
-              {saving && <InlineSpinner className="size-4" />}Save name
-            </Button>
+            </button>
+            <button
+              type="submit"
+              className="df-button small"
+              disabled={saving || !draft.trim()}
+            >
+              {saving && <InlineSpinner className="size-4" />}
+              {editDescription ? "Save changes" : "Save name"}
+            </button>
           </div>
         </form>
       </DialogContent>

@@ -1,4 +1,5 @@
 import { authorizeProject } from "@/lib/project-access";
+import { projectDetailsPatch } from "@/lib/project-details";
 import { renameProject } from "@/lib/project-storage";
 
 export async function PATCH(
@@ -11,15 +12,19 @@ export async function PATCH(
   if (!(await authorizeProject(projectId)))
     return Response.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null);
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name))
-    return Response.json(
-      {
-        error:
-          "Enter a project name between 1 and 80 characters, without control characters.",
-      },
-      { status: 400 },
-    );
-  const metadata = await renameProject(projectId, name);
-  return Response.json({ name: metadata.name });
+  let details;
+  try {
+    details = projectDetailsPatch(body);
+  } catch (error) {
+    return Response.json({ error: (error as Error).message }, { status: 400 });
+  }
+  const metadata = await renameProject(
+    projectId,
+    details.name,
+    details.description,
+  );
+  return Response.json({
+    name: metadata.name,
+    description: metadata.description || "",
+  });
 }

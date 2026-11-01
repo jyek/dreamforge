@@ -59,7 +59,7 @@ test("an ambiguous failed write is never replayed or followed by a partial queue
 
 test("closing a terminal cancels unsent typing and resize work", async () => {
   const sent: TerminalInput[] = [];
-  const queue = terminalInputQueue(async (input) => { sent.push(input); }, assert.fail, 1000);
+  const queue = terminalInputQueue(async (input) => { sent.push(input); }, (error) => assert.fail(String(error)), 1000);
   queue.write("unsent");
   queue.resize(80, 24);
   queue.dispose();

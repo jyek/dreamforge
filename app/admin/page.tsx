@@ -1,8 +1,13 @@
+import { PlatformMonitor } from "@/components/platform-monitor";
+import { platformDirectory } from "@/lib/platform-directory";
 import { platformEnabled, getProfile } from "@/lib/platform-auth";
 import { isPlatformAdmin } from "@/lib/admin-auth";
 import { loadAdminProjects } from "@/lib/admin-showcase";
 import { AdminAccessDenied, AdminShowcase } from "@/components/admin-showcase";
 import { PlatformAuthForm } from "@/components/platform-auth-form";
+import { AdminSchools } from "@/components/admin-schools";
+import { database } from "@/lib/database";
+import { listSchools } from "@/lib/school-admin";
 import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
 export default async function Admin() {
@@ -11,10 +16,19 @@ export default async function Admin() {
   if (!user) return <PlatformAuthForm admin returnTo="/admin" />;
   if (!(await isPlatformAdmin(user.id)))
     return <AdminAccessDenied name={user.display_name} />;
+  const schools = await listSchools(database());
   return (
-    <AdminShowcase
-      initialProjects={await loadAdminProjects(user.id)}
+    <PlatformMonitor
       name={user.display_name}
+      data={await platformDirectory(database())}
+      schools={schools as { id: string; name: string }[]}
+      schoolManagement={<AdminSchools initialSchools={schools} />}
+      projects={
+        <AdminShowcase
+          initialProjects={await loadAdminProjects(user.id)}
+          name={user.display_name}
+        />
+      }
     />
   );
 }

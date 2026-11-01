@@ -1,4 +1,6 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
+
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff } from "lucide-react";
@@ -217,56 +219,58 @@ export function AdminShowcase({
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className={styles.scroll}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Project</th>
-                <th>Owner</th>
-                <th>Examples gallery</th>
+        <StudentReviewTable
+          columns={3}
+          compact={false}
+          tableClassName={styles.table}
+        >
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Owner</th>
+              <th>Examples gallery</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <div className={styles.name}>{p.name}</div>
+                  <div className={styles.muted}>
+                    {p.owned
+                      ? "Personal project · live preview"
+                      : "Example library"}
+                  </div>
+                  <a
+                    className={styles.preview}
+                    href={"/api/admin/projects/" + p.id + "/preview"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Preview project ↗
+                  </a>
+                </td>
+                <td>{p.owner}</td>
+                <td>
+                  <button
+                    disabled={!!busy}
+                    aria-label={(p.featured ? "Hide " : "Show ") + p.name}
+                    aria-pressed={p.featured}
+                    className={`${styles.button} ${p.featured ? styles.selected : styles.primary}`}
+                    onClick={() => toggle(p)}
+                  >
+                    {busy === p.id ? (
+                      <InlineSpinner className="size-3" />
+                    ) : p.featured ? (
+                      <Eye size={15} />
+                    ) : null}
+                    {p.featured ? "Shown" : "Show"}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div className={styles.name}>{p.name}</div>
-                    <div className={styles.muted}>
-                      {p.owned
-                        ? "Personal project · live preview"
-                        : "Example library"}
-                    </div>
-                    <a
-                      className={styles.preview}
-                      href={"/api/admin/projects/" + p.id + "/preview"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Preview project ↗
-                    </a>
-                  </td>
-                  <td>{p.owner}</td>
-                  <td>
-                    <button
-                      disabled={!!busy}
-                      aria-label={(p.featured ? "Hide " : "Show ") + p.name}
-                      aria-pressed={p.featured}
-                      className={`${styles.button} ${p.featured ? styles.selected : styles.primary}`}
-                      onClick={() => toggle(p)}
-                    >
-                      {busy === p.id ? (
-                        <InlineSpinner className="size-3" />
-                      ) : p.featured ? (
-                        <Eye size={15} />
-                      ) : null}
-                      {p.featured ? "Shown" : "Show"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </StudentReviewTable>
         {!filtered.length && (
           <p className={styles.empty}>No projects match your search.</p>
         )}

@@ -1,3 +1,4 @@
+import { starterInstallCommand } from "../lib/project-starter.mjs";
 /** Build a clean Runtime starter once; new projects inherit dependencies and warm state. */
 import "dotenv/config";
 import fs from "node:fs/promises";
@@ -34,22 +35,22 @@ try {
   await check(
     `sudo mkdir -p /workspace /adorable/conversations /adorable/terminals && sudo chown -R $(id -u):$(id -g) /workspace /adorable`,
   );
-  await check(
-    `git clone https://github.com/freestyle-sh/freestyle-base-nextjs-shadcn /tmp/starter && cd /tmp/starter && git checkout ${COMMIT} && cp -a . /workspace/ && rm -rf /workspace/.git /tmp/starter`,
-    120000,
-  );
+  await check(starterInstallCommand(), 120000);
   await check(BLANK_PROJECT_COMMAND + "\n" + TEMPLATE_COMPATIBILITY_COMMAND);
   await check("cd /workspace && npm ci --no-audit --no-fund", 240000);
   // The upstream template lock predates the React/Next security patches.
   // Resolve these exact patch releases once here, then freeze the resulting lock.
-  await check("cd /workspace && npm install --save-exact next@15.5.28 react@19.1.10 react-dom@19.1.10 --no-audit --no-fund", 240000);
+  await check(
+    "cd /workspace && npm install --save-exact next@15.5.28 react@19.1.10 react-dom@19.1.10 --no-audit --no-fund",
+    240000,
+  );
   await check(activityCommand);
   await check("cd /workspace && npx tsc --noEmit --incremental false", 60000);
   const lock = await builder.files.readText("/workspace/package-lock.json");
   const manifest = {
     version: VERSION,
     templateCommit: COMMIT,
-    dependencies: {next: "15.5.28", react: "19.1.10", "react-dom": "19.1.10"},
+    dependencies: { next: "15.5.28", react: "19.1.10", "react-dom": "19.1.10" },
     lockHash: createHash("sha256").update(lock).digest("hex"),
     createdAt: new Date().toISOString(),
   };
