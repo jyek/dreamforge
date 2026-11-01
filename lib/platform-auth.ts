@@ -1,7 +1,12 @@
 import { safetyEnabled } from "./safety-mode";
-import { isMissingGroupSchema, projectAccessLevel } from "./project-group";
+import {
+  isMissingGroupSchema,
+  projectAccessLevel,
+  projectGroupMemberSQL,
+} from "./project-group";
 import {
   classroomTeacherSQL,
+  schoolProjectReadAccessSQL,
   sharedTeachingProjectSQL,
   studentReadAccessSQL,
 } from "./classroom-permissions";
@@ -45,8 +50,10 @@ export async function platformProjectAccess(
   // Until the group-projects migration is applied, projects have no editor.
   const { rows } = await database()
     .query(
-      `select metadata,owner_id,editor_id,is_example from projects where vm_id=$1`,
-      [projectId],
+      `select p.metadata,p.owner_id,
+        case when p.editor_id=p.owner_id or ${projectGroupMemberSQL("p", "p.editor_id")} then p.editor_id else null end as editor_id,
+        p.is_example,${projectGroupMemberSQL("p", "$2")} as is_member from projects p where p.vm_id=$1`,
+      [projectId, profile?.id || null],
     )
     .catch(async (error) => {
       if (!isMissingGroupSchema(error)) throw error;
@@ -61,20 +68,7 @@ export async function platformProjectAccess(
     return !safetyEnabled() || profile ? row.metadata : null;
   if (!profile || row.is_example) return null;
   // One student edits at a time; the owner and every group member can view.
-  const isMember =
-    profile.role === "child" && row.owner_id !== profile.id
-      ? !!(
-          await database()
-            .query(
-              "select 1 from project_members m join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id join profiles member on member.id=m.child_id where m.vm_id=$1 and m.child_id=$2 and member.school_id is not distinct from owner.school_id and (p.classroom_group_id is null or exists(select 1 from classroom_group_members ng join class_members own on own.class_id=ng.class_id and own.child_id=p.owner_id where ng.group_id=p.classroom_group_id and ng.child_id=m.child_id)) and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=m.child_id)",
-              [projectId, profile.id],
-            )
-            .catch((error) => {
-              if (!isMissingGroupSchema(error)) throw error;
-              return { rowCount: 0 };
-            })
-        ).rowCount
-      : false;
+  const isMember = profile.role === "child" && row.is_member === true;
   const level = projectAccessLevel({
     ownerId: row.owner_id,
     editorId:
@@ -85,6 +79,13 @@ export async function platformProjectAccess(
     userId: profile.id,
   });
   if (level === "edit" || (readOnly && level === "view")) return row.metadata;
+  if (readOnly && profile.role === "teacher") {
+    const { rowCount } = await database().query(
+      `select 1 where ${schoolProjectReadAccessSQL("$2")}`,
+      [profile.id, row.owner_id],
+    );
+    if (rowCount) return row.metadata;
+  }
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
       `select 1 from class_projects pc join classes c on c.id=pc.class_id join class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,

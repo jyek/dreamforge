@@ -13,7 +13,8 @@ async function actor(projectId: string, mutate: boolean, req?: Request) {
   const user = platformEnabled() ? await getProfile() : null;
   if (!user || (mutate && !checkOrigin(req!))) return null;
   const group = await groupView(database(), projectId, user.id);
-  if (!group || (!group.canManage && !group.isMember)) return null;
+  if (!group || (!group.canManage && !group.canPass && !group.isMember))
+    return null;
   return user;
 }
 /** Who is in this project's group and who is editing. Anyone who can see the
@@ -30,7 +31,8 @@ export async function GET(
     const view = await groupView(database(), projectId, user.id);
     if (!view) return Response.json({ visible: false });
     // Students only get the dialog when they own the project or are in its group.
-    const visible = user.role === "teacher" ? view.canManage : view.isMember;
+    const visible =
+      user.role === "teacher" ? view.canManage || view.canPass : view.isMember;
     if (!visible) return Response.json({ visible: false });
     return Response.json({ visible, ...view, you: user.id });
   } catch (error) {

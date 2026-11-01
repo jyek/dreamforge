@@ -25,7 +25,8 @@
     "runtime:check-starter": "node --env-file-if-exists=.env.local scripts/check-runtime-starter.mjs",
     "test:e2e:startup": "node scripts/e2e-startup.mjs",
     "test:admin-ui": "node tests/admin-ui.mjs",
-    "test:e2e:payments": "node scripts/e2e-payments.mjs"
+    "test:e2e:payments": "node scripts/e2e-payments.mjs",
+    "test:classroom-ui": "node tests/project-cards-ui.mjs"
   },
   "prettier": {
     "plugins": [

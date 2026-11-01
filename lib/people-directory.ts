@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { syncClassroomGroupProjects } from "./classroom-groups";
 import { groupManagerSQL } from "./project-group";
 export async function directoryData(db: Pool, actorId: string) {
   const classes = (
@@ -83,11 +84,14 @@ export async function addDirectoryPerson(
       throw Error(
         "No matching account in your school. Check the username or email, or share an invitation link.",
       );
-    if (input.action === "remove" && role === "child")
+    if (input.action === "remove" && role === "child") {
+      if (!c.id) throw Error("Choose a classroom to remove this student from.");
       await tx.query(
         "delete from class_members where class_id=$1 and child_id=$2",
         [c.id, person.id],
       );
+      await syncClassroomGroupProjects(tx, c.id);
+    }
     if (input.action === "add") {
       if (role === "teacher") {
         const conflicts = await tx.query(

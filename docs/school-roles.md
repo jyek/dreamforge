@@ -11,7 +11,7 @@ Role grants are explicit and can overlap. `profiles.role` retains the existing t
 
 School administration alone never authorizes prompt approval. An administrator who also explicitly teaches a classroom may act through that teaching role. Blocked prompts cannot be approved; only pending moderation-review prompts can be approved or declined. Approval requires a current classroom and student membership. Legacy `teacher_builders` records no longer grant current student access.
 
-Groups are attached to a student's project and fixed to one classroom on the first member assignment. Staff manage membership; students cannot add classmates themselves. The existing owner retains ownership. A member can leave, and the current editor can pass control. School administrators and current classroom teachers can change the editor. Membership and editor changes lock the project and its execution state; active execution prevents editor changes, and control changes invalidate stale execution revisions. Students removed from classroom membership lose group-project access.
+Teachers create named classroom groups and assign students. A student owner can share an assigned project with their own group; a group may have multiple projects, and each group project collaborates within one classroom. Removing a group preserves the project as an unassigned group project and revokes peer access. Staff manage membership; students cannot add classmates themselves. The existing owner retains ownership. A member can leave, and the current editor can pass control. School administrators and current classroom teachers can change the editor. Membership and editor changes lock the project and its execution state; active execution prevents editor changes, and control changes invalidate stale execution revisions. Students removed from classroom membership lose group-project access.
 
 ## Migration
 
@@ -20,3 +20,5 @@ Groups are attached to a student's project and fixed to one classroom on the fir
 Production Supabase was migrated on 2026-11-01 using `scripts/migrate-school-roles.mjs --env-file=<private-production-env> --apply`, without a backup as explicitly requested. The runner verifies that the original pending migrations are absent, uses a transaction and bounded lock timeout, checks existing record counts, and records the applied SQL checksum in the server-only `dreamforge.migration_history` table. Re-running with the same checksum is a no-op; partially migrated environments require separate review. Do not rewrite the applied migration.
 
 The existing platform administrator can create a school in `/admin` and issue its first administrator invitation. Accepting that invitation grants the school-admin role. No school-administrator account was created by the migration.
+
+Current review and test plan: [Consolidated classroom review](reviews/consolidated-classroom-review.md).

@@ -38,6 +38,18 @@ export function projectAccessLevel(input: {
   if (input.ownerId === input.userId || input.isMember) return "view";
   return null;
 }
+/** Active membership requires both students to remain in the classroom and, for named groups, the same group. */
+export const projectGroupMemberSQL = (project = "p", actor = "$1") =>
+  `exists(select 1 from project_members _gm
+    join profiles _member on _member.id=_gm.child_id
+    join profiles _owner on _owner.id=${project}.owner_id
+    join class_members _cm on _cm.class_id=${project}.group_class_id and _cm.child_id=_gm.child_id
+    join class_members _own_class on _own_class.class_id=${project}.group_class_id and _own_class.child_id=${project}.owner_id
+    where _gm.vm_id=${project}.vm_id and _gm.child_id=${actor}
+    and _member.school_id is not distinct from _owner.school_id
+    and ((${project}.classroom_group_id is null and coalesce(${project}.metadata->>'classroomGroupProject','false')<>'true')
+      or exists(select 1 from classroom_group_members _ng join classroom_group_members _own_group on _own_group.group_id=_ng.group_id
+        where _ng.group_id=${project}.classroom_group_id and _ng.child_id=_gm.child_id and _own_group.child_id=${project}.owner_id)))`;
 export async function loadGroup(db: Db, vmId: string) {
   const project = (
     await db.query(
@@ -48,7 +60,7 @@ export async function loadGroup(db: Db, vmId: string) {
   if (!project?.owner_id) return null;
   const members = (
     await db.query(
-      "select pr.id,pr.display_name,pr.username from project_members m join profiles pr on pr.id=m.child_id join projects p on p.vm_id=m.vm_id join profiles owner on owner.id=p.owner_id where m.vm_id=$1 and pr.school_id is not distinct from owner.school_id and (p.classroom_group_id is null or exists(select 1 from classroom_group_members ng join class_members own on own.class_id=ng.class_id and own.child_id=p.owner_id where ng.group_id=p.classroom_group_id and ng.child_id=m.child_id)) and exists(select 1 from class_members cm where cm.class_id=p.group_class_id and cm.child_id=pr.id) order by lower(pr.display_name)",
+      `select pr.id,pr.display_name,pr.username from projects p join project_members m on m.vm_id=p.vm_id join profiles pr on pr.id=m.child_id where p.vm_id=$1 and ${projectGroupMemberSQL("p", "m.child_id")} order by lower(pr.display_name)`,
       [vmId],
     )
   ).rows;
@@ -83,6 +95,19 @@ async function canManage(
     [vmId, ownerId, actorId],
   );
   return !!rowCount;
+}
+async function canControlClassroom(
+  db: Db,
+  classId: string | null,
+  actorId: string,
+) {
+  if (!classId) return false;
+  return !!(
+    await db.query(`select 1 where ${groupManagerSQL("$1", "$2")}`, [
+      classId,
+      actorId,
+    ])
+  ).rowCount;
 }
 /** Candidates must share the group's classroom, which the actor manages. */
 export async function classmatesFor(
@@ -147,7 +172,10 @@ export async function groupView(db: Db, vmId: string, actorId: string) {
     ...group,
     canManage: manage,
     // Whoever holds the pen, or whoever manages the group, can pass it on.
-    canPass: manage || actorId === group.editorId,
+    canPass:
+      manage ||
+      actorId === group.editorId ||
+      (await canControlClassroom(db, group.classId, actorId)),
     isMember: member,
     candidates: manage
       ? await classmatesFor(db, group.ownerId, vmId, actorId)
@@ -259,6 +287,7 @@ export async function setEditor(
     if (!group) return fail(404, "Project not found.");
     const allowed =
       input.actorId === group.editorId ||
+      (await canControlClassroom(db, group.classId, input.actorId)) ||
       (await canManage(db, input.vmId, input.actorId, group.ownerId));
     if (!allowed)
       return fail(
@@ -295,8 +324,8 @@ export async function groupNames(db: Db, vmIds: string[]) {
   try {
     const { rows } = await db.query(
       `select m.vm_id,array_agg(pr.display_name order by lower(pr.display_name)) as names
-       from project_members m join profiles pr on pr.id=m.child_id
-       where m.vm_id=any($1::text[]) group by m.vm_id`,
+       from project_members m join profiles pr on pr.id=m.child_id join projects p on p.vm_id=m.vm_id
+       where m.vm_id=any($1::text[]) and ${projectGroupMemberSQL("p", "m.child_id")} group by m.vm_id`,
       [vmIds],
     );
     for (const row of rows) names.set(row.vm_id, row.names);

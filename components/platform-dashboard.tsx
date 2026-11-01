@@ -46,6 +46,7 @@ import {
 } from "./platform-dashboard-layout";
 type Project = {
   vm_id: string;
+  owner_id?: string;
   metadata: {
     name: string;
     description?: string;
@@ -66,6 +67,7 @@ type Wallet = CreditWallet & {
 };
 type Data = {
   user: {
+    id?: string;
     display_name: string;
     role: "child" | "teacher";
     school_name?: string | null;
@@ -418,7 +420,7 @@ export function PlatformDashboard({
                       </Link>
                       <div className="df-project-card-heading">
                         <h3>{p.metadata.name}</h3>
-                        {!teacher && (
+                        {!teacher && p.owner_id === data.user.id && (
                           <StudentProjectActions
                             projectId={p.vm_id}
                             name={p.metadata.name}

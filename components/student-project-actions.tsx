@@ -144,6 +144,7 @@ export function StudentProjectActions({
               Classroom and group
               <select
                 className="df-input"
+                aria-label="Classroom and group"
                 value={groupId}
                 disabled={busy}
                 onChange={(e) => setGroupId(e.target.value)}

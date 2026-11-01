@@ -268,6 +268,7 @@ test("native backup connects to the requested database and restores data with pr
     let created = false;
     try {
       const env = {
+        NODE_ENV: "test" as const,
         ...backupEnvironment(uri, "config/supabase-ca.crt"),
         PGSSLMODE: "disable",
       }; // This cluster is loopback-only, with no TLS.
@@ -313,6 +314,7 @@ test("native backup connects to the requested database and restores data with pr
         ],
         {
           env: {
+            NODE_ENV: "test" as const,
             ...backupEnvironment(
               destination.toString(),
               "config/supabase-ca.crt",

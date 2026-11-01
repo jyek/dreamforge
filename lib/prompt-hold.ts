@@ -59,16 +59,21 @@ export async function recordModerationOutcome(
 /** If the teacher approved exactly this prompt, use that approval once. */
 export async function consumeApprovedHold(
   db: Db,
-  input: { childId: string; conversationId: string; content: string },
+  input: {
+    childId: string;
+    projectId: string;
+    conversationId: string;
+    content: string;
+  },
 ) {
   return failSafe(false, async () => {
     const { rowCount } = await db.query(
       `update prompt_reviews set held_prompt_used_at=now()
      where id=(select id from prompt_reviews where child_id=$1 and conversation_id=$2
-       and content=$3 and hold_status='approved' and held_prompt_used_at is null
+       and content=$3 and vm_id=$4 and decision='review' and hold_status='approved' and held_prompt_used_at is null
        order by created_at desc limit 1)
      and held_prompt_used_at is null`,
-      [input.childId, input.conversationId, input.content],
+      [input.childId, input.conversationId, input.content, input.projectId],
     );
     return !!rowCount;
   });

@@ -6,15 +6,19 @@ export async function GET(req: Request) {
   const user = platformEnabled() ? await getProfile() : null;
   if (user?.role !== "child")
     return Response.json({ error: "Sign in as a student." }, { status: 403 });
-  const conversationId = new URL(req.url).searchParams.get("conversationId");
+  const params = new URL(req.url).searchParams;
+  const conversationId = params.get("conversationId");
+  const projectId = params.get("projectId");
+  if (!projectId || !/^vm-[a-z0-9]+$/.test(projectId))
+    return Response.json({ error: "Invalid project." }, { status: 400 });
   if (!conversationId || !/^[a-f0-9-]{36}$/i.test(conversationId))
     return Response.json({ error: "Invalid conversation." }, { status: 400 });
   const { rows } = await database().query(
     `select id,hold_status as status,content from prompt_reviews
-     where child_id=$1 and conversation_id=$2 and held_prompt_used_at is null
+     where child_id=$1 and conversation_id=$2 and vm_id=$3 and held_prompt_used_at is null
        and (hold_status in ('pending','approved') or (hold_status='denied' and reviewed_at>now()-interval '10 minutes'))
      order by created_at`,
-    [user.id, conversationId],
+    [user.id, conversationId, projectId],
   );
   return Response.json({ holds: rows });
 }

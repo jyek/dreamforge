@@ -166,7 +166,7 @@ export async function changeClassroomGroups(
       if (!result.rowCount)
         throw new ClassroomGroupError(404, "Group not found.");
     } else throw new ClassroomGroupError(400, "Unknown group action.");
-    if (body.action === "assign") await syncProjects(tx, classId);
+    if (body.action === "assign") await syncClassroomGroupProjects(tx, classId);
     await tx.query("commit");
   } catch (error) {
     await tx.query("rollback");
@@ -178,12 +178,35 @@ export async function changeClassroomGroups(
   }
 }
 
-async function syncProjects(tx: import("pg").PoolClient, classId: string) {
+export async function syncClassroomGroupProjects(
+  tx: import("pg").PoolClient,
+  classId: string,
+) {
   const projects = await tx.query(
-    "select vm_id,owner_id,classroom_group_id from projects where classroom_group_id in(select id from classroom_groups where class_id=$1) order by vm_id for update",
+    "select vm_id,owner_id,editor_id,group_class_id,classroom_group_id from projects where classroom_group_id in(select id from classroom_groups where class_id=$1) order by vm_id for update",
     [classId],
   );
   for (const p of projects.rows) {
+    const desired = (
+      await tx.query(
+        "select m.child_id from classroom_group_members m join classroom_group_members owner on owner.group_id=m.group_id and owner.child_id=$2 where m.group_id=$1 and m.child_id<>$2 order by m.child_id",
+        [p.classroom_group_id, p.owner_id],
+      )
+    ).rows.map((r) => r.child_id as string);
+    const previous = (
+      await tx.query(
+        "select child_id from project_members where vm_id=$1 order by child_id",
+        [p.vm_id],
+      )
+    ).rows.map((r) => r.child_id as string);
+    const nextEditor =
+      p.editor_id && desired.includes(p.editor_id) ? p.editor_id : null;
+    if (
+      p.group_class_id === classId &&
+      nextEditor === p.editor_id &&
+      desired.join(",") === previous.join(",")
+    )
+      continue;
     await tx.query(
       "insert into project_execution(project_id) values($1) on conflict do nothing",
       [p.vm_id],
@@ -203,8 +226,8 @@ async function syncProjects(tx: import("pg").PoolClient, classId: string) {
       [p.vm_id, p.owner_id, p.classroom_group_id],
     );
     await tx.query(
-      "update projects set editor_id=null,group_class_id=$2 where vm_id=$1",
-      [p.vm_id, classId],
+      "update projects set editor_id=$3,group_class_id=$2 where vm_id=$1",
+      [p.vm_id, classId, nextEditor],
     );
     await tx.query(
       "update project_execution set revision=revision+1,verification=null where project_id=$1",
@@ -236,7 +259,7 @@ export async function shareGroupProject(
       "update projects set classroom_group_id=$2,metadata=jsonb_set(metadata,'{classroomGroupProject}','true'::jsonb) where vm_id=$1",
       [projectId, groupId],
     );
-    await syncProjects(tx, classId);
+    await syncClassroomGroupProjects(tx, classId);
     await tx.query("commit");
   } catch (e) {
     await tx.query("rollback");

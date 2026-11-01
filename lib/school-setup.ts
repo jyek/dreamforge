@@ -1,13 +1,9 @@
 import { randomBytes } from "node:crypto";
-type Db = {
-  query: (
-    sql: string,
-    values: unknown[],
-  ) => Promise<{ rows: any[]; rowCount: number | null }>;
-};
+import type { Pool } from "pg";
+import { addDirectoryPerson } from "./people-directory";
 /** Every mutation checks the actor and both endpoints of the relationship in SQL. */
 export async function setupSchool(
-  db: Db,
+  db: Pool,
   actorId: string,
   schoolId: string,
   input: Record<string, unknown>,
@@ -56,14 +52,20 @@ export async function setupSchool(
     uuid(input.classId) &&
     uuid(input.personId)
   ) {
-    const result = await db.query(
-      `delete from class_members m using classes c, profiles owner, profiles p
-       where m.class_id=c.id and owner.id=c.teacher_id and p.id=m.child_id
-       and c.id=$3 and p.id=$4 and owner.school_id=$1 and p.school_id=$1
-       and p.role='child' and ${authorized} returning m.class_id`,
+    const { rows } = await db.query(
+      `select p.username from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id join profiles p on p.id=m.child_id
+      where c.id=$3 and p.id=$4 and owner.school_id=$1 and p.school_id=$1 and p.role='child' and ${authorized}`,
       [schoolId, actorId, input.classId, input.personId],
     );
-    return !!result.rowCount;
+    if (!rows[0]) return false;
+    await addDirectoryPerson(db, actorId, {
+      action: "remove",
+      role: "student",
+      classId: input.classId,
+      identifier: rows[0].username,
+    });
+    return true;
   }
+
   return false;
 }

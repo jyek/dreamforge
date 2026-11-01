@@ -94,6 +94,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
   const content = "make a scary ghost game";
   const same = {
     childId: ids.child,
+    projectId: "vm-holdchild",
     conversationId: ids.conversation,
     content,
   };
@@ -183,7 +184,15 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     }),
     false,
   );
-  assert.equal(await consumeApprovedHold(pool, same), true);
+  assert.equal(
+    await consumeApprovedHold(pool, { ...same, projectId: "vm-otherproject" }),
+    false,
+  );
+  const attempts = await Promise.all([
+    consumeApprovedHold(pool, same),
+    consumeApprovedHold(pool, same),
+  ]);
+  assert.deepEqual(attempts.sort(), [false, true]);
   assert.equal(await consumeApprovedHold(pool, same), false);
 
   // A blocked prompt is recorded for the teacher but can never be approved.

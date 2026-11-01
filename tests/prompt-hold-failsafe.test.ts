@@ -31,6 +31,7 @@ test("chat keeps working when the hold columns are not in the database yet", asy
     assert.equal(
       await consumeApprovedHold(missingColumn, {
         childId: "c",
+        projectId: "vm-fixture",
         conversationId: "v",
         content: "hi",
       }),

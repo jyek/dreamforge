@@ -202,8 +202,14 @@ test("school roles manage only their scope; only classroom teachers approve; stu
     false,
   );
   const overview = await schoolOverview(db, school);
-  assert.ok(overview!.alerts.some((r) => r.hold_status === "approved"));
-  assert.ok(overview!.alerts.some((r) => r.decision === "block"));
+  assert.ok(
+    overview!.alerts.some(
+      (r: { hold_status: string | null }) => r.hold_status === "approved",
+    ),
+  );
+  assert.ok(
+    overview!.alerts.some((r: { decision: string }) => r.decision === "block"),
+  );
   assert.equal((await schoolOverview(db, otherSchool))!.alerts.length, 0);
   assert.equal(
     (

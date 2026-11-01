@@ -20,6 +20,7 @@ type Project = {
   is_group_project?: boolean;
   classroom_group_id?: string;
   owner_id: string;
+  can_collaborate?: boolean;
   owner_name: string;
   name: string;
   conversation_id: string | null;
@@ -222,7 +223,7 @@ export function StudentClassroomDetail({
                       )}
                     </td>
                     <td>
-                      {p.owner_id === user.id ? (
+                      {p.owner_id === user.id || p.can_collaborate ? (
                         <Link
                           className="df-button secondary small"
                           href={`/${p.vm_id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
