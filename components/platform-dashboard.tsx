@@ -449,12 +449,9 @@ export function PlatformDashboard({
                             : null}
                         </div>
                       </div>
-                      <p className="df-muted">
-                        {p.metadata.description ||
-                          (teacher
-                            ? "Your teaching project"
-                            : "Built with your imagination")}
-                      </p>
+                      {p.metadata.description && (
+                        <p className="df-muted">{p.metadata.description}</p>
+                      )}
                       {teacher && (
                         <div className="df-project-card-controls">
                           <ProjectClassroomSharing
