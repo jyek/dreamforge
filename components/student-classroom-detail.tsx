@@ -8,8 +8,9 @@ import {
   ClassProjectAssignments,
   type AssignableProject,
 } from "./class-project-assignments";
-import { TableEmptyState } from "./table-empty-state";
-import { ClassroomAvatar, classroomAvatarShapes } from "./classroom-avatar";
+import { ClassroomPeople } from "./classroom-people";
+import { ClassroomProjectFilter } from "./classroom-project-filter";
+import { StudentReviewTable } from "./student-review-table";
 import { SimpleLoading } from "./dream-loading";
 type Project = {
   vm_id: string;
@@ -80,10 +81,6 @@ export function StudentClassroomDetail({
       is_owner: true,
     },
   ];
-  const avatarShapes = classroomAvatarShapes([
-    ...teachers.map((t) => t.id),
-    ...data.students.map((s) => s.id),
-  ]);
   return (
     <PlatformDashboardLayout
       teacher={false}
@@ -120,25 +117,11 @@ export function StudentClassroomDetail({
           )
         }
       />
-      <section className="df-class-teaching-team" aria-label="Class teachers">
-        <h3>Teachers</h3>
-        <div>
-          {teachers.map((teacher) => (
-            <div className="df-class-teacher-person" key={teacher.id}>
-              <ClassroomAvatar
-                identity={teacher.id}
-                silhouette={avatarShapes[teacher.id]}
-                role="teacher"
-              />
-              <div>
-                <strong>{teacher.display_name}</strong>
-                <span className="df-muted">
-                  {teacher.is_owner ? "Classroom owner" : "Co-teacher"}
-                </span>
-              </div>
-            </div>
-          ))}
+      <section className="df-classroom-section">
+        <div className="df-section-head">
+          <h3>Teachers</h3>
         </div>
+        <ClassroomPeople people={teachers} role="teacher" />
       </section>
       {groupError && <p role="alert">{groupError}</p>}
       {!!data.myGroups?.length && (
@@ -179,101 +162,94 @@ export function StudentClassroomDetail({
         </>
       ) : (
         <>
-          <section className="df-class-roster">
-            <h3>Students</h3>
-            <div>
-              {data.students.length ? (
-                data.students.map((s) => (
-                  <div
-                    className="df-classmate"
-                    key={s.id}
-                    data-self={s.id === user.id}
-                  >
-                    <ClassroomAvatar
-                      identity={s.id}
-                      silhouette={avatarShapes[s.id]}
-                    />
-                    <strong title={s.display_name}>{s.display_name}</strong>
-                    {s.id === user.id && (
-                      <span className="df-classmate-you">You</span>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="df-muted">The dream team is still gathering.</p>
-              )}
+          <section className="df-classroom-section">
+            <div className="df-section-head">
+              <h3>Students</h3>
             </div>
+            <ClassroomPeople
+              people={data.students}
+              role="student"
+              userId={user.id}
+            />
           </section>
-          <div className="df-section-head">
-            <h2>Classroom projects</h2>
-            <label className="df-guidance-filters">
-              Student
-              <select
-                className="df-input"
-                value={student}
-                onChange={(e) => setStudent(e.target.value)}
-              >
-                <option value="">All students</option>
-                {data.students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.display_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="df-class-project-grid">
-            {shown.map((p) => (
-              <article className="df-card df-class-card" key={p.vm_id}>
-                <span className="df-class-project-spark" aria-hidden="true">
-                  ✦
-                </span>
-                <h3 className="df-class-card-title">{p.name}</h3>
-                <p className="df-muted">
-                  By {p.owner_name}
-                  {p.owner_id === user.id ? " · Your project" : ""}
-                </p>
-                {p.owner_id === user.id ? (
-                  <Link
-                    className="df-class-card-link"
-                    href={`/${p.vm_id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
-                  >
-                    Open project →
-                  </Link>
-                ) : (
-                  <button
-                    className="df-class-card-link"
-                    onClick={() => setPreview(p)}
-                  >
-                    View project →
-                  </button>
-                )}
-              </article>
-            ))}
-          </div>
-          {!shown.length && (
-            <div className="df-card df-class-empty">
-              <TableEmptyState
-                illustration="classrooms"
-                title="A classroom full of possibilities"
-                description={
-                  student
-                    ? "This student hasn’t assigned any projects here yet."
-                    : "Assign a project to this classroom and let your ideas inspire your classmates."
-                }
-                action={
-                  student ? (
-                    <button
-                      className="df-button secondary small"
-                      onClick={() => setStudent("")}
-                    >
-                      Show all students
-                    </button>
-                  ) : undefined
-                }
-              />
+          <section className="df-classroom-section">
+            <div className="df-section-head">
+              <h3>Classroom projects</h3>
             </div>
-          )}
+            <ClassroomProjectFilter
+              people={[
+                ...teachers.map((t) => ({
+                  id: t.id,
+                  name: t.display_name,
+                  role: "teacher" as const,
+                })),
+                ...data.students.map((t) => ({
+                  id: t.id,
+                  name: t.display_name,
+                  role: "student" as const,
+                })),
+              ]}
+              value={student}
+              onChange={setStudent}
+            />
+            <StudentReviewTable
+              columns={4}
+              compact={false}
+              empty={!shown.length}
+            >
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Created by</th>
+                  <th>Group</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((p) => (
+                  <tr key={p.vm_id}>
+                    <td>
+                      <strong>{p.name || "Untitled project"}</strong>
+                    </td>
+                    <td>{p.owner_name}</td>
+                    <td>
+                      {p.group_name ? (
+                        <span className="df-guidance-tag">{p.group_name}</span>
+                      ) : (
+                        <span className="df-muted">Individual project</span>
+                      )}
+                    </td>
+                    <td>
+                      {p.owner_id === user.id ? (
+                        <Link
+                          className="df-button secondary small"
+                          href={`/${p.vm_id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
+                        >
+                          Open project
+                        </Link>
+                      ) : (
+                        <button
+                          className="df-button secondary small"
+                          onClick={() => setPreview(p)}
+                        >
+                          View project
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {!shown.length && (
+                  <tr>
+                    <td colSpan={4}>
+                      {student
+                        ? "No projects assigned by this person."
+                        : "No projects assigned to this classroom yet."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </StudentReviewTable>
+          </section>
         </>
       )}
     </PlatformDashboardLayout>

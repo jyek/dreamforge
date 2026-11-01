@@ -3346,3 +3346,8 @@
 .df-guidance-table .df-table tr:last-child > td { border-bottom:0; }
 
 .df-project-spend > .df-guidance-table { margin-top:16px; }
+
+.df-class-people { display:flex; flex-wrap:wrap; gap:24px; padding:12px 0 20px; }
+.df-class-person { display:flex; flex-direction:column; align-items:center; gap:8px; width:140px; text-align:center; }
+.df-classroom-section { margin:24px 0; }
+.df-classroom-section > .df-section-head h3, .df-classroom-groups > .df-section-head h3, .df-classroom-project-list > .df-section-head h3, .df-class-teaching-team h3 { font-size:18px; font-weight:700; margin:0; }

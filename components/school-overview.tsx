@@ -14,7 +14,7 @@ import { TeacherActionSummary } from "./teacher-action-summary";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { SchoolSetup } from "./school-setup";
 import { ClassroomGroups } from "./classroom-groups";
-import { ClassroomAvatar } from "./classroom-avatar";
+import { ClassroomPeople } from "./classroom-people";
 type Person = {
   id: string;
   display_name: string;
@@ -98,33 +98,6 @@ export function SchoolOverviewContent({
   const [selected, setSelected] = useState<string | null>(null);
   const alerts = initial.alerts || [],
     current = initial.classes.find((c) => c.id === selected);
-  const people = (rows: Person[], teacher: boolean) => (
-    <div className="df-school-list">
-      {rows.length ? (
-        rows.map((p) => (
-          <div className="df-school-row" key={p.id}>
-            <div className="df-inline">
-              <ClassroomAvatar
-                identity={p.id}
-                role={teacher ? "teacher" : "student"}
-              />
-              <strong>{p.display_name}</strong>
-            </div>
-            <small>
-              @{p.username}
-              {teacher
-                ? p.is_owner
-                  ? " · Classroom owner"
-                  : " · Co-teacher"
-                : ""}
-            </small>
-          </div>
-        ))
-      ) : (
-        <p>No {teacher ? "teachers" : "students"} yet.</p>
-      )}
-    </div>
-  );
   return (
     <>
       {section === "overview" && (
@@ -196,7 +169,7 @@ export function SchoolOverviewContent({
                 <h3>Teachers</h3>
                 <SchoolSetup teachers={initial.teachers} classroom={current} />
               </div>
-              {people(current.teachers || [], true)}
+              <ClassroomPeople people={current.teachers || []} role="teacher" />
               <ClassroomGroups classId={current.id} />
               <button
                 className="df-button secondary"

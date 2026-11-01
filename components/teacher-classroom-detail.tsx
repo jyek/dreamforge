@@ -7,7 +7,7 @@ import { ClassroomSafetyReport } from "./classroom-safety-report";
 import { ClassProjectAssignments } from "./class-project-assignments";
 import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomTeachersDialog } from "./classroom-teachers-dialog";
-import { ClassroomAvatar } from "./classroom-avatar";
+import { ClassroomPeople } from "./classroom-people";
 import type { StudentProjectsData } from "./teacher-student-projects";
 export function TeacherClassroomDetail({
   classId,
@@ -56,19 +56,7 @@ export function TeacherClassroomDetail({
           <h3>Teachers</h3>
           <ClassroomTeachersDialog classId={classId} onChanged={refresh} />
         </div>
-        <div>
-          {data?.teachers?.map((t) => (
-            <div className="df-class-teacher-person" key={t.id}>
-              <ClassroomAvatar identity={t.id} role="teacher" />
-              <div>
-                <strong>{t.display_name}</strong>
-                <span className="df-muted">
-                  {t.is_owner ? "Lead teacher" : "Co-teacher"}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ClassroomPeople people={data?.teachers || []} role="teacher" />
       </section>
       <ClassProjectAssignments
         classId={classId}

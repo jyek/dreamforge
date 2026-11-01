@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
+import { ClassroomProjectFilter } from "./classroom-project-filter";
 import { StudentReviewTable } from "./student-review-table";
 import { ClassroomAvatar } from "./classroom-avatar";
 import { MAX_CLASSROOM_GROUPS } from "@/lib/classroom-group-names";
@@ -28,6 +29,7 @@ type Project = {
   name: string;
   owner: string;
   owner_id: string;
+  owner_role?: string;
   member_ids: string[];
   conversation_id: string | null;
 };
@@ -38,6 +40,7 @@ export type ClassroomGroupsData = {
   classroomProjects?: (Project & { group_name?: string | null })[];
 };
 export function ClassroomGroups({ classId }: { classId: string }) {
+  const [projectOwner, setProjectOwner] = useState("");
   const endpoint = `/api/platform/classes/${classId}/groups`;
   const [data, setData] = useState<ClassroomGroupsData | null>(null);
   const [error, setError] = useState("");
@@ -375,6 +378,24 @@ export function ClassroomGroups({ classId }: { classId: string }) {
           <div className="df-section-head">
             <h3 id="classroom-projects-title">Classroom projects</h3>
           </div>
+          <ClassroomProjectFilter
+            people={Array.from(
+              new Map(
+                (data?.classroomProjects || []).map((p) => [
+                  p.owner_id,
+                  {
+                    id: p.owner_id,
+                    name: p.owner,
+                    role: (p.owner_role === "teacher"
+                      ? "teacher"
+                      : "student") as "teacher" | "student",
+                  },
+                ]),
+              ).values(),
+            )}
+            value={projectOwner}
+            onChange={setProjectOwner}
+          />
           <StudentReviewTable
             busy={!data && !error}
             columns={4}
@@ -391,36 +412,41 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               </tr>
             </thead>
             <tbody>
-              {(data?.classroomProjects || []).map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <strong>{p.name || "Untitled project"}</strong>
-                  </td>
-                  <td>{p.owner}</td>
-                  <td>
-                    {p.group_name ? (
-                      <span className="df-guidance-tag">{p.group_name}</span>
-                    ) : (
-                      <span className="df-muted">Individual project</span>
-                    )}
-                  </td>
-                  <td>
-                    <Link
-                      className="df-button secondary small"
-                      href={`/${p.id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
-                    >
-                      View project
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {data && !data.classroomProjects?.length && (
-                <tr>
-                  <td colSpan={4}>
-                    No projects assigned to this classroom yet.
-                  </td>
-                </tr>
-              )}
+              {(data?.classroomProjects || [])
+                .filter((p) => !projectOwner || p.owner_id === projectOwner)
+                .map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <strong>{p.name || "Untitled project"}</strong>
+                    </td>
+                    <td>{p.owner}</td>
+                    <td>
+                      {p.group_name ? (
+                        <span className="df-guidance-tag">{p.group_name}</span>
+                      ) : (
+                        <span className="df-muted">Individual project</span>
+                      )}
+                    </td>
+                    <td>
+                      <Link
+                        className="df-button secondary small"
+                        href={`/${p.id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
+                      >
+                        View project
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              {data &&
+                !data.classroomProjects?.some(
+                  (p) => !projectOwner || p.owner_id === projectOwner,
+                ) && (
+                  <tr>
+                    <td colSpan={4}>
+                      No projects assigned to this classroom yet.
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </StudentReviewTable>
         </section>

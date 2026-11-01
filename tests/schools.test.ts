@@ -1,3 +1,4 @@
+import { assignClassroomProject, classroomData } from "../lib/classroom-data";
 import { addDirectoryPerson, directoryData } from "../lib/people-directory";
 import {
   changeClassroomGroups,
@@ -548,6 +549,65 @@ test("schools keep their people, classes and data separate", async () => {
       })
     ).id,
     person.admin1,
+  );
+
+  const teachingProject = "vm-schoolteaching";
+  await pool.query(
+    "insert into projects(vm_id,owner_id,metadata) values($1,$2,'{}')",
+    [teachingProject, person.teacher1],
+  );
+  const teachingUser = { id: person.teacher1, role: "teacher" } as any;
+  assert.equal(
+    await assignClassroomProject(
+      classA,
+      teachingProject,
+      teachingUser,
+      false,
+      pool,
+    ),
+    true,
+  );
+  assert.equal(
+    await assignClassroomProject(
+      newClass,
+      teachingProject,
+      teachingUser,
+      false,
+      pool,
+    ),
+    true,
+  );
+  assert.equal(
+    (
+      await pool.query("select 1 from class_projects where vm_id=$1", [
+        teachingProject,
+      ])
+    ).rowCount,
+    2,
+  );
+  const studentClass = await classroomData(
+    classA,
+    { id: person.student1, role: "child" } as any,
+    pool,
+  );
+  assert.ok(studentClass!.projects.some((p) => p.vm_id === teachingProject));
+  assert.equal(
+    await assignClassroomProject(
+      classA,
+      teachingProject,
+      teachingUser,
+      true,
+      pool,
+    ),
+    true,
+  );
+  assert.equal(
+    (
+      await pool.query("select class_id from class_projects where vm_id=$1", [
+        teachingProject,
+      ])
+    ).rows[0].class_id,
+    newClass,
   );
   // The database refuses an admin invitation that has no school.
   await assert.rejects(
