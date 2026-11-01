@@ -171,7 +171,7 @@ export function StudentClassroomDetail({
           </section>
           <section className="df-classroom-section">
             <div className="df-section-head">
-              <h3>Classroom projects</h3>
+              <h3>Projects</h3>
             </div>
             <ClassroomProjectFilter
               people={[

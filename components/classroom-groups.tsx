@@ -373,7 +373,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
           aria-labelledby="classroom-projects-title"
         >
           <div className="df-section-head">
-            <h3 id="classroom-projects-title">Classroom projects</h3>
+            <h3 id="classroom-projects-title">Projects</h3>
           </div>
           <ClassroomProjectFilter
             people={Array.from(
