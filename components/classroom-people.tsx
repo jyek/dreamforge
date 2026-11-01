@@ -19,7 +19,7 @@ export function ClassroomPeople({
           ) : (
             role === "teacher" && (
               <small className="df-muted">
-                {p.is_owner ? "Classroom owner" : "Co-teacher"}
+                {p.is_owner ? "Lead teacher" : "Co-teacher"}
               </small>
             )
           )}

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import {
@@ -97,11 +98,7 @@ export function StudentClassroomDetail({
     >
       <DashboardDetailHeader
         title={preview ? preview.name : data.classroom.name}
-        subtitle={
-          <>
-            Class code: <strong>{data.classroom.invite_code}</strong>
-          </>
-        }
+        subtitle={<ClassCode code={data.classroom.invite_code} />}
         back={
           preview ? (
             <button

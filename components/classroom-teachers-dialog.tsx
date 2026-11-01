@@ -93,7 +93,7 @@ export function ClassroomTeachersDialog({
               <ClassroomAvatar identity={t.id} role="teacher" />
               <div>
                 <strong>{t.display_name}</strong>
-                <small>{t.is_owner ? "Classroom owner" : "Co-teacher"}</small>
+                <small>{t.is_owner ? "Lead teacher" : "Co-teacher"}</small>
               </div>
               {data.canManage && !t.is_owner && (
                 <button

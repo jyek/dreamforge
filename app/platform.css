@@ -3351,3 +3351,18 @@
 .df-class-person { display:flex; flex-direction:column; align-items:center; gap:8px; width:140px; text-align:center; }
 .df-classroom-section { margin:24px 0; }
 .df-classroom-section > .df-section-head h3, .df-classroom-groups > .df-section-head h3, .df-classroom-project-list > .df-section-head h3, .df-class-teaching-team h3 { font-size:18px; font-weight:700; margin:0; }
+
+.df-detail-header { display:flex; align-items:center; gap:18px; }
+.df-detail-heading { min-width:0; }
+.df-teacher-header .df-detail-heading h1 { font-size:28px; margin:0 0 6px; }
+.df-detail-back .df-button { white-space:nowrap; margin:0; padding:8px 12px; min-height:34px; border:1px solid var(--df-divider); box-shadow:none; font-size:12px; }
+.df-teacher-header:has(.df-detail-header) { padding-bottom:16px; margin-bottom:22px; }
+.df-class-code { display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.df-class-code-copy { display:inline-flex; align-items:center; justify-content:center; border:0; background:transparent; color:#71677f; cursor:pointer; padding:6px; border-radius:6px; }
+.df-class-code-copy:hover { color:#6b3ff7; background:#f2ecff; }
+.df-class-code-copy:focus-visible { outline:2px solid #6b3ff7; }
+.df-group-create-dialog { padding:28px; gap:24px; }
+.df-group-create-dialog form { display:grid; gap:16px; }
+.df-group-create-dialog form > label { margin-bottom:-6px; }
+.df-group-create-dialog form > .df-inline { justify-content:flex-end; margin-top:8px; gap:16px; }
+@media(max-width:600px) { .df-detail-header { align-items:flex-start; gap:12px; flex-wrap:wrap; } .df-teacher-header .df-detail-heading h1 {font-size:24px;} }

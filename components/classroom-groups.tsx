@@ -365,9 +365,6 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               </article>
             );
           })}
-          {!data.groups.length && (
-            <p>Create your first groups to start assigning students.</p>
-          )}
         </div>
       )}
       {!view && (
@@ -457,7 +454,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
           if (!busy) setCreateOpen(open);
         }}
       >
-        <DialogContent>
+        <DialogContent className="df-group-create-dialog">
           <DialogHeader>
             <DialogTitle>Create groups</DialogTitle>
             <DialogDescription>

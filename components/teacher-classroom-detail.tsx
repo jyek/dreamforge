@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { PlatformDashboardLayout } from "./platform-dashboard-layout";
 import { ClassroomSafetyReport } from "./classroom-safety-report";
@@ -39,11 +40,7 @@ export function TeacherClassroomDetail({
     >
       <DashboardDetailHeader
         title={data?.classroom?.name || "Classroom"}
-        subtitle={
-          <>
-            Class code: <strong>{data?.classroom?.invite_code}</strong>
-          </>
-        }
+        subtitle={<ClassCode code={data?.classroom?.invite_code} />}
         back={
           <a className="df-button secondary small" href="/classrooms">
             ← Classrooms

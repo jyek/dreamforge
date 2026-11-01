@@ -18,9 +18,11 @@ export function DashboardDetailHeader({
   return target
     ? createPortal(
         <div className="df-detail-header">
-          {back}
-          <h1>{title}</h1>
-          {subtitle && <p className="df-muted">{subtitle}</p>}
+          {back && <div className="df-detail-back">{back}</div>}
+          <div className="df-detail-heading">
+            <h1>{title}</h1>
+            {subtitle && <p className="df-muted">{subtitle}</p>}
+          </div>
         </div>,
         target,
       )

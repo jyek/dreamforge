@@ -7,6 +7,7 @@ import {
   PlatformDashboardLayout,
   schoolSectionPath,
 } from "./platform-dashboard-layout";
+import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { SchoolTeachers } from "./school-teachers";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
@@ -151,11 +152,7 @@ export function SchoolOverviewContent({
             <>
               <DashboardDetailHeader
                 title={current.name}
-                subtitle={
-                  <>
-                    Class code: <strong>{current.invite_code}</strong>
-                  </>
-                }
+                subtitle={<ClassCode code={current.invite_code} />}
                 back={
                   <button
                     className="df-button secondary small"
@@ -171,14 +168,6 @@ export function SchoolOverviewContent({
               </div>
               <ClassroomPeople people={current.teachers || []} role="teacher" />
               <ClassroomGroups classId={current.id} />
-              <button
-                className="df-button secondary"
-                onClick={() => {
-                  onNavigate?.("alerts");
-                }}
-              >
-                View class safety alerts
-              </button>
             </>
           ) : (
             <StudentReviewTable
