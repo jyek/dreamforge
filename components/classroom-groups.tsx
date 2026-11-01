@@ -331,13 +331,13 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       ) : (
         <div className="df-group-grid">
           <article
-            className={`df-group-card ${!data.groups.length ? "df-ungrouped-roster" : ""} ${dragging ? "df-group-drop-ready" : ""}`}
+            className={`df-group-card df-ungrouped-roster ${dragging ? "df-group-drop-ready" : ""}`}
+            aria-label="Students without a group"
             {...dropArea(null)}
           >
-            <h4>{data.groups.length ? "Unassigned" : "Students"}</h4>
             <ul>{data.students.filter((s) => !s.group_id).map(studentCard)}</ul>
-            {!data.students.some((s) => !s.group_id) && (
-              <p className="df-muted">All students assigned.</p>
+            {dragging && !data.students.some((s) => !s.group_id) && (
+              <p className="df-muted">Drop students here.</p>
             )}
           </article>
           {data.groups.map((g) => {
@@ -348,13 +348,21 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                 className={`df-group-card ${dragging ? "df-group-drop-ready" : ""}`}
                 {...dropArea(g.id)}
               >
-                <div className="df-section-head">
-                  <button
-                    className="df-group-title"
-                    onClick={() => setView({ kind: "group", id: g.id })}
-                  >
-                    {g.name}
-                  </button>
+                <div className="df-group-card-header">
+                  <div className="df-group-card-heading">
+                    <button
+                      className="df-group-title"
+                      onClick={() => setView({ kind: "group", id: g.id })}
+                    >
+                      {g.name}
+                    </button>
+                    <small className="df-muted">
+                      {students.length}{" "}
+                      {students.length === 1 ? "student" : "students"} ·{" "}
+                      {data.projects.filter((p) => p.group_id === g.id).length}{" "}
+                      group projects
+                    </small>
+                  </div>
                   <details className="df-group-action-menu">
                     <summary
                       className="df-group-menu-button"
@@ -385,12 +393,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                     </div>
                   </details>
                 </div>
-                <small className="df-muted">
-                  {students.length}{" "}
-                  {students.length === 1 ? "student" : "students"} ·{" "}
-                  {data.projects.filter((p) => p.group_id === g.id).length}{" "}
-                  group projects
-                </small>
+
                 <ul>{students.map(studentCard)}</ul>
                 {!students.length && (
                   <p className="df-muted">Drop students here.</p>
