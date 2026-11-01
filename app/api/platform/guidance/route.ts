@@ -24,8 +24,8 @@ export async function GET(req: Request) {
     ? schoolStudentSafetyAccessSQL
     : teacherStudentAccessSQL;
   const studentId = params.get("studentId");
-  const scoped = `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.created_at,p.metadata->>'name' as project_name,${guidanceSQL} as guidance
-    from prompt_reviews r join projects p on p.vm_id=r.vm_id
+  const scoped = `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.hold_status,r.reviewed_at,reviewer.display_name as reviewer_name,r.created_at,p.metadata->>'name' as project_name,${guidanceSQL} as guidance
+    from prompt_reviews r left join projects p on p.vm_id=r.vm_id left join profiles reviewer on reviewer.id=r.reviewed_by
     where ${studentAccess("r.child_id")})`;
   if (!studentId) {
     const { rows } = await database().query(
@@ -34,6 +34,8 @@ export async function GET(req: Request) {
       (select count(*)::int from projects p where p.owner_id=pr.id and not p.is_example) as project_count,
       (select count(*)::int from prompts r where r.child_id=pr.id) as prompt_count,
       (select count(*)::int from prompts r where r.child_id=pr.id and cardinality(r.guidance)>0) as guidance_count,
+      (select count(*)::int from prompts r where r.child_id=pr.id and (r.decision<>'allow' or r.hold_status is not null)) as alert_count,
+      (select count(*)::int from prompts r where r.child_id=pr.id and r.hold_status='pending') as pending_count,
       coalesce((select jsonb_object_agg(category,n) from (select category,count(*)::int as n from prompts r cross join lateral unnest(r.guidance) category where r.child_id=pr.id group by category) counts),'{}'::jsonb) as categories
       from profiles pr where ${studentAccess("pr.id")} order by lower(pr.display_name),pr.id`,
       [user.id],
@@ -60,7 +62,7 @@ export async function GET(req: Request) {
     [studentId],
   );
   const { rows } = await db.query(
-    `${scoped} select * from prompts r where r.child_id=$2 and ($3='' or ($3='any' and cardinality(r.guidance)>0) or $3=any(r.guidance)) and ($4='' or r.vm_id=$4) and ($5='' or strpos(lower(r.content),lower($5))>0) order by r.created_at desc,r.id desc limit 51 offset $6`,
+    `${scoped} select * from prompts r where r.child_id=$2 and ($3='' or ($3='alerts' and (r.decision<>'allow' or r.hold_status is not null)) or ($3='any' and cardinality(r.guidance)>0) or $3=any(r.guidance)) and ($4='' or r.vm_id=$4) and ($5='' or strpos(lower(r.content),lower($5))>0) order by r.created_at desc,r.id desc limit 51 offset $6`,
     [user.id, studentId, category, project, search, offset],
   );
   return Response.json({

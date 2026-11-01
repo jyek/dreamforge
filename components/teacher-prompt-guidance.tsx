@@ -12,6 +12,8 @@ export type GuidanceStudent = {
   project_count: number;
   prompt_count: number;
   guidance_count: number;
+  alert_count?: number;
+  pending_count?: number;
   categories: Record<string, number>;
 };
 type Prompt = {
@@ -21,6 +23,9 @@ type Prompt = {
   project_name: string;
   content: string;
   decision: string;
+  hold_status?: string | null;
+  reviewed_at?: string | null;
+  reviewer_name?: string | null;
   created_at: string;
   guidance: string[];
 };
@@ -105,8 +110,18 @@ export function TeacherPromptGuidance({
         .toLowerCase()
         .includes(studentSearch.toLowerCase()) &&
       (!category ||
-        (category === "any" ? s.guidance_count > 0 : !!s.categories[category])),
+        (category === "alerts"
+          ? (s.alert_count || 0) > 0
+          : category === "any"
+            ? s.guidance_count > 0
+            : !!s.categories[category])),
   );
+  const alertCount = selected
+    ? selected.alert_count || 0
+    : students.reduce((n, s) => n + (s.alert_count || 0), 0);
+  const pendingCount = selected
+    ? selected.pending_count || 0
+    : students.reduce((n, s) => n + (s.pending_count || 0), 0);
   const hasFilters = selected
     ? Boolean(
         search ||
@@ -140,6 +155,25 @@ export function TeacherPromptGuidance({
         See where students may need guidance. Categories are text-based
         suggestions, not a judgement of the student. Images are not assessed.
       </p>
+      {alertCount > 0 && (
+        <div className="df-school-safety-summary" role="status">
+          {alertCount} safety {alertCount === 1 ? "alert" : "alerts"} recorded
+          {pendingCount > 0
+            ? ` · ${pendingCount} awaiting classroom teacher approval`
+            : ""}
+          . Review the flagged prompts in the table below.{" "}
+          <button
+            type="button"
+            className="df-class-text-link"
+            onClick={() => {
+              setCategory("alerts");
+              setOffset(0);
+            }}
+          >
+            Show alerts
+          </button>
+        </div>
+      )}
       {selected && (
         <div className="df-inline df-guidance-summary">
           <span>{selected.project_count} projects</span>
@@ -174,6 +208,7 @@ export function TeacherPromptGuidance({
           >
             <option value="">All areas</option>
             <option value="any">Needs guidance</option>
+            <option value="alerts">Safety alerts</option>
             {Object.entries(guidanceCategories).map(([key, value]) => (
               <option key={key} value={key}>
                 {value.label}
@@ -238,6 +273,7 @@ export function TeacherPromptGuidance({
                     "Prompts",
                     "Needs guidance",
                     "Guidance areas",
+                    "Safety alerts",
                     "",
                   ]
               ).map((h) => (
@@ -285,11 +321,26 @@ export function TeacherPromptGuidance({
                         : "Encourage the student to keep experimenting."}
                     </td>
                     <td>
-                      {p.decision === "allow"
-                        ? "Allowed"
-                        : p.decision === "block"
-                          ? "Blocked"
-                          : "Safety review"}
+                      {p.hold_status === "approved"
+                        ? "Approved by teacher"
+                        : p.hold_status === "denied"
+                          ? "Declined by teacher"
+                          : p.hold_status === "pending"
+                            ? "Awaiting teacher approval"
+                            : p.decision === "allow"
+                              ? "Allowed"
+                              : p.decision === "block"
+                                ? "Blocked"
+                                : "Flagged"}
+                      {p.reviewed_at && (
+                        <small
+                          className="df-muted"
+                          style={{ display: "block" }}
+                        >
+                          Reviewed by {p.reviewer_name || "a teacher"} ·{" "}
+                          {new Date(p.reviewed_at).toLocaleString()}
+                        </small>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -320,6 +371,28 @@ export function TeacherPromptGuidance({
                       )}
                     </td>
                     <td>
+                      {s.alert_count ? (
+                        <button
+                          className="df-class-text-link"
+                          onClick={() => {
+                            open(s);
+                            setCategory("alerts");
+                          }}
+                        >
+                          {s.alert_count}{" "}
+                          {s.alert_count === 1 ? "alert" : "alerts"}
+                          {(s.pending_count || 0) > 0 && (
+                            <small>
+                              {" "}
+                              · {s.pending_count} awaiting approval
+                            </small>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="df-muted">—</span>
+                      )}
+                    </td>
+                    <td>
                       <div className="df-inline">
                         {overviewTitle === "Students" && (
                           <Link
@@ -342,7 +415,7 @@ export function TeacherPromptGuidance({
                 ))}
             {!loading && !(selected ? prompts.length : shown.length) && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={selected ? 6 : 7}>
                   <TableEmptyState
                     illustration={
                       hasFilters ? "search" : selected ? "prompts" : "students"
