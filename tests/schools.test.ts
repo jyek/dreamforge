@@ -10,7 +10,10 @@ import {
   changeClassroomGroups,
   shareGroupProject,
 } from "../lib/classroom-groups";
-import { schoolStudentSafetyAccessSQL } from "../lib/classroom-permissions";
+import {
+  schoolStudentSafetyAccessSQL,
+  schoolProjectReadAccessSQL,
+} from "../lib/classroom-permissions";
 import { setupSchool } from "../lib/school-setup";
 import { platformDirectory } from "../lib/platform-directory";
 // @suite database
@@ -204,6 +207,32 @@ test("schools keep their people, classes and data separate", async () => {
     await pool.query(
       "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity,hold_status,reviewed_by,reviewed_at) values($1,$2,'00000000-0000-4000-8000-000000000099','sample request','review','{}','medium','approved',$3,now()),($1,$2,'00000000-0000-4000-8000-000000000099','blocked request','block','{}','high',null,null,null)",
       [vm, child, vm.endsWith("a") ? person.teacher1 : person.teacher2],
+    );
+  }
+
+  await pool.query(
+    "insert into projects(vm_id,owner_id,metadata) values('vm-schoolteacherproject',$1,'{}')",
+    [person.teacher1],
+  );
+  const projectOverview = await schoolOverview(pool, a.school.id);
+  assert.deepEqual(projectOverview!.projects.map((p: any) => p.vm_id).sort(), [
+    "vm-schoolalerta",
+    "vm-schoolteacherproject",
+  ]);
+  for (const [actor, owner, expected] of [
+    [person.admin1, person.teacher1, 1],
+    [person.admin1, person.student1, 1],
+    [person.admin2, person.teacher1, 0],
+    [person.teacher1, person.student1, 0],
+  ] as const) {
+    assert.equal(
+      (
+        await pool.query(`select 1 where ${schoolProjectReadAccessSQL("$2")}`, [
+          actor,
+          owner,
+        ])
+      ).rowCount,
+      expected,
     );
   }
   const safetyA = (await schoolOverview(pool, a.school.id))!.alerts;

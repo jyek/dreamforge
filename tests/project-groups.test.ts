@@ -95,6 +95,11 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
   assert.equal((await pass(p.bea, p.cal)).ok, false); // Cal is neither the editor nor the owner
   assert.equal((await pass(p.bea, p.owner)).ok, true);
   assert.equal((await groupView(pool, vm, p.bea))!.editorId, p.bea);
+  // The leader retains assignment authority after handing control away.
+  assert.equal((await groupView(pool, vm, p.owner))!.canPass, true);
+  assert.equal((await pass(p.cal, p.owner)).ok, true);
+  assert.equal((await pass(p.bea, p.owner)).ok, true);
+
   assert.equal((await pass(p.cal, p.bea)).ok, true);
   assert.equal((await pass(p.outsider, p.cal)).ok, false); // not in the group
   assert.equal((await pass(p.owner, p.cal)).ok, true); // back to the owner (stored as null)

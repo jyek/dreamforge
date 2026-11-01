@@ -86,6 +86,12 @@ export const SCHOOL_ADMIN_SECTIONS = [
     description: "Enroll students and manage classroom membership.",
   },
   {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    description: "Inspect student and teacher projects across your school.",
+  },
+  {
     id: "alerts",
     label: "Safety",
     icon: ShieldCheck,

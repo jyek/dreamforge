@@ -4,6 +4,8 @@ import type { UIMessage } from "ai";
 import {
   BLOCKED_PLACEHOLDER,
   flagBlockedPrompt,
+  flagHeldPrompt,
+  isHeldPrompt,
   isBlockedPrompt,
   maskBlockedPrompts,
 } from "../lib/blocked-prompts";
@@ -37,5 +39,19 @@ test("blocked wording never reaches the model or the safety check", () => {
   assert.equal(
     flagged.parts[0].type === "text" && flagged.parts[0].text,
     "something inappropriate",
+  );
+});
+
+test("held prompts keep visible text through persistence while staying out of model history", () => {
+  const held = JSON.parse(JSON.stringify(flagHeldPrompt(typed)));
+  assert.ok(isHeldPrompt(held));
+  assert.ok(!isBlockedPrompt(held));
+  assert.deepEqual(held.parts, [
+    { type: "text", text: "something inappropriate" },
+  ]);
+  assert.ok(!moderationConversation([held]).includes("inappropriate"));
+  assert.equal(
+    maskBlockedPrompts([held])[0].parts[0].text,
+    BLOCKED_PLACEHOLDER,
   );
 });

@@ -17,3 +17,7 @@ export const schoolStudentSafetyAccessSQL = (childId: string, actorId = "$1") =>
 /** Read-only visibility into a student's work for classroom teachers and their school admins. */
 export const studentReadAccessSQL = (childId: string, actorId = "$1") =>
   `(${teacherStudentAccessSQL(childId, actorId)} or ${schoolStudentSafetyAccessSQL(childId, actorId)})`;
+
+/** School administrators can inspect all work owned by their school's accounts. */
+export const schoolProjectReadAccessSQL = (ownerId: string, actorId = "$1") =>
+  `exists(select 1 from profiles _owner join school_admins _admin on _admin.school_id=_owner.school_id where _owner.id=${ownerId} and _admin.profile_id=${actorId})`;

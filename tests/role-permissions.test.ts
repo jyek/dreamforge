@@ -138,7 +138,17 @@ test("school roles manage only their scope; only classroom teachers approve; stu
         editorId: owner,
       })
     ).ok,
-    false,
+    true,
+  );
+  assert.equal(
+    (
+      await setEditor(db, {
+        vmId: "vm-rolepermissions",
+        actorId: owner,
+        editorId: peer,
+      })
+    ).ok,
+    true,
   );
   assert.equal(
     (
@@ -156,7 +166,7 @@ test("school roles manage only their scope; only classroom teachers approve; stu
         "select revision from project_execution where project_id='vm-rolepermissions'",
       )
     ).rows[0].revision,
-    "2",
+    "4",
   );
   const reviews = (
     await db.query(

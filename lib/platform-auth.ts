@@ -2,6 +2,7 @@ import { safetyEnabled } from "./safety-mode";
 import { isMissingGroupSchema, projectAccessLevel } from "./project-group";
 import {
   classroomTeacherSQL,
+  schoolProjectReadAccessSQL,
   sharedTeachingProjectSQL,
   studentReadAccessSQL,
 } from "./classroom-permissions";
@@ -85,6 +86,13 @@ export async function platformProjectAccess(
     userId: profile.id,
   });
   if (level === "edit" || (readOnly && level === "view")) return row.metadata;
+  if (readOnly && profile.role === "teacher") {
+    const { rowCount } = await database().query(
+      `select 1 where ${schoolProjectReadAccessSQL("$2")}`,
+      [profile.id, row.owner_id],
+    );
+    if (rowCount) return row.metadata;
+  }
   if (readOnly && profile.role === "child") {
     const { rowCount } = await database().query(
       `select 1 from class_projects pc join classes c on c.id=pc.class_id join class_members m on m.class_id=c.id where pc.vm_id=$1 and m.child_id=$2 and ${classroomTeacherSQL("c.id", "$3")}`,

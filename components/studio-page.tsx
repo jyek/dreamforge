@@ -16,9 +16,14 @@ export async function StudioPage({ section }: { section: string }) {
   const schoolId = await administeredSchool(database(), user.id);
   if (schoolId && section !== "profile") {
     if (
-      !["home", "classrooms", "teachers", "students", "safety"].includes(
-        section,
-      )
+      ![
+        "home",
+        "classrooms",
+        "teachers",
+        "students",
+        "projects",
+        "safety",
+      ].includes(section)
     )
       redirect("/home");
     const data = await schoolOverview(database(), schoolId);

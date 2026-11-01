@@ -1,5 +1,6 @@
 "use client";
 
+import { flagBlockedPrompt, flagHeldPrompt } from "@/lib/blocked-prompts";
 import { HELD_PROMPT_MESSAGE } from "@/lib/prompt-hold";
 import { AssistantRuntimeProvider, useAuiState } from "@assistant-ui/react";
 import {
@@ -63,6 +64,10 @@ export const Assistant = ({
     revisionRef.current = { project, revision };
   }, []);
   const [progress, setProgress] = useState("");
+  const [promptSafety, setPromptSafety] = useState<{
+    messageId: string;
+    status: "blocked" | "held";
+  } | null>(null);
   const { choice: modelChoice, ready: modelReady } = useModelSettings();
   const modelChoiceRef = useRef(modelChoice);
   modelChoiceRef.current = modelChoice;
@@ -362,6 +367,14 @@ export const Assistant = ({
     onData: (part) => {
       if (part.type === "data-progress")
         setProgress((part.data as { message: string }).message);
+      if (part.type === "data-prompt-safety") {
+        const value = part.data as { messageId?: unknown; status?: unknown };
+        if (
+          typeof value.messageId === "string" &&
+          (value.status === "blocked" || value.status === "held")
+        )
+          setPromptSafety({ messageId: value.messageId, status: value.status });
+      }
     },
     onError: () => setProgress(""),
     transport: new AssistantChatTransport({
@@ -419,6 +432,19 @@ export const Assistant = ({
     messages: seedMessages,
     onFinish: handleChatFinish,
   });
+
+  useEffect(() => {
+    if (!promptSafety) return;
+    chat.setMessages((messages) =>
+      messages.map((message) =>
+        message.id === promptSafety.messageId && message.role === "user"
+          ? promptSafety.status === "held"
+            ? flagHeldPrompt(message)
+            : flagBlockedPrompt(message)
+          : message,
+      ),
+    );
+  }, [promptSafety, chat.setMessages]);
 
   // A questionable prompt waits for the teacher. While the chat is open, pick up
   // their decision: approved prompts continue on their own.

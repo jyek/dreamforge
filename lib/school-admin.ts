@@ -122,5 +122,20 @@ export async function schoolOverview(db: Db, schoolId: string) {
       [schoolId],
     )
   ).rows;
-  return { school, teachers, classes, alerts, studentList, ...counts };
+  const { rows: projects } = await db.query(
+    `select p.vm_id,p.metadata->>'name' as name,p.metadata->'conversations'->0->>'id' as conversation_id,
+      owner.id as owner_id,owner.display_name as owner_name,owner.role as owner_role,p.updated_at
+      from projects p join profiles owner on owner.id=p.owner_id
+      where owner.school_id=$1 and not p.is_example order by p.updated_at desc,p.vm_id`,
+    [schoolId],
+  );
+  return {
+    school,
+    teachers,
+    classes,
+    alerts,
+    studentList,
+    projects,
+    ...counts,
+  };
 }

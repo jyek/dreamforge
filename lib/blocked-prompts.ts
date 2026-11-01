@@ -10,6 +10,20 @@ export const isBlockedPrompt = (message: Message) =>
   message.role === "user" &&
   (message.metadata as { custom?: { blocked?: boolean } } | undefined)?.custom
     ?.blocked === true;
+export const isHeldPrompt = (message: Message) =>
+  message.role === "user" &&
+  (message.metadata as { custom?: { held?: boolean } } | undefined)?.custom
+    ?.held === true;
+export function flagHeldPrompt(message: UIMessage): UIMessage {
+  return {
+    ...message,
+    parts: message.parts.filter((part) => part.type === "text"),
+    metadata: {
+      ...(message.metadata as object | undefined),
+      custom: { held: true },
+    },
+  };
+}
 /** Keeps what the student typed so they can see it, flagged as blocked. Images
  * from a blocked request are dropped rather than stored. */
 export function flagBlockedPrompt(message: UIMessage): UIMessage {
@@ -26,7 +40,7 @@ export function flagBlockedPrompt(message: UIMessage): UIMessage {
  * the safety check, so one blocked prompt cannot block every later message. */
 export function maskBlockedPrompts<T extends Message>(messages: T[]): T[] {
   return messages.map((message) =>
-    isBlockedPrompt(message)
+    isBlockedPrompt(message) || isHeldPrompt(message)
       ? { ...message, parts: [{ type: "text", text: BLOCKED_PLACEHOLDER }] }
       : message,
   );

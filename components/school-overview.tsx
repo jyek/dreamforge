@@ -1,6 +1,7 @@
 "use client";
 import { StudentReviewTable } from "./student-review-table";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -53,6 +54,13 @@ type Overview = {
   classes: Classroom[];
   students: number;
   studentList?: SchoolStudent[];
+  projects?: {
+    vm_id: string;
+    name: string | null;
+    conversation_id: string | null;
+    owner_name: string;
+    owner_role: string;
+  }[];
   flagged_30d: number;
   alerts?: Alert[];
 };
@@ -133,6 +141,9 @@ export function SchoolOverviewContent({
           </div>
           <TeacherActionSummary />
         </>
+      )}
+      {section === "projects" && (
+        <SchoolProjects projects={initial.projects || []} />
       )}
       {section === "students" && (
         <SchoolStudents
@@ -256,5 +267,69 @@ export function SchoolOverviewContent({
       )}
       {section === "alerts" && <TeacherPromptGuidance scope="school" />}
     </>
+  );
+}
+
+function SchoolProjects({
+  projects,
+}: {
+  projects: NonNullable<Overview["projects"]>;
+}) {
+  const [search, setSearch] = useState("");
+  const shown = projects.filter((p) =>
+    `${p.name || "Untitled project"} ${p.owner_name}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+  return (
+    <section>
+      <ClassroomSectionHeader title="Projects" />
+      <p className="df-muted">
+        Student and teacher projects in your school. Projects open for viewing.
+      </p>
+      <label>
+        Search projects
+        <input
+          className="df-input"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Project or creator…"
+        />
+      </label>
+      <StudentReviewTable columns={4} empty={!shown.length}>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Created by</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((p) => (
+            <tr key={p.vm_id}>
+              <td>{p.name || "Untitled project"}</td>
+              <td>{p.owner_name}</td>
+              <td>{p.owner_role === "child" ? "Student" : "Teacher"}</td>
+              <td>
+                <Link
+                  className="df-purple"
+                  href={`/${p.vm_id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
+                >
+                  View project ↗
+                </Link>
+              </td>
+            </tr>
+          ))}
+          {!shown.length && (
+            <tr>
+              <td colSpan={4}>
+                {search ? "No matching projects." : "No projects yet."}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </StudentReviewTable>
+    </section>
   );
 }

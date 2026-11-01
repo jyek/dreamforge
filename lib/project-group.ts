@@ -147,7 +147,7 @@ export async function groupView(db: Db, vmId: string, actorId: string) {
     ...group,
     canManage: manage,
     // Whoever holds the pen, or whoever manages the group, can pass it on.
-    canPass: manage || actorId === group.editorId,
+    canPass: manage || actorId === group.ownerId || actorId === group.editorId,
     isMember: member,
     candidates: manage
       ? await classmatesFor(db, group.ownerId, vmId, actorId)
@@ -258,12 +258,13 @@ export async function setEditor(
     const group = await loadGroup(db, input.vmId);
     if (!group) return fail(404, "Project not found.");
     const allowed =
+      input.actorId === group.ownerId ||
       input.actorId === group.editorId ||
       (await canManage(db, input.vmId, input.actorId, group.ownerId));
     if (!allowed)
       return fail(
         403,
-        "Only the current editor, a classroom teacher or a school admin can do this.",
+        "Only the project leader, current editor, a classroom teacher or a school admin can do this.",
       );
     const inGroup =
       input.editorId === group.ownerId ||
@@ -305,3 +306,7 @@ export async function groupNames(db: Db, vmIds: string[]) {
   }
   return names;
 }
+
+/** Current, school-scoped group membership; retained rows alone do not grant access. */
+export const projectGroupMemberSQL = (project = "p", actor = "$1") =>
+  `exists(select 1 from project_members _gm join profiles _member on _member.id=_gm.child_id join profiles _owner on _owner.id=${project}.owner_id join class_members _cm on _cm.class_id=${project}.group_class_id and _cm.child_id=_gm.child_id where _gm.vm_id=${project}.vm_id and _gm.child_id=${actor} and _member.school_id is not distinct from _owner.school_id and (${project}.classroom_group_id is null or exists(select 1 from classroom_group_members _ng join class_members _own on _own.class_id=_ng.class_id and _own.child_id=${project}.owner_id where _ng.group_id=${project}.classroom_group_id and _ng.child_id=_gm.child_id)))`;
