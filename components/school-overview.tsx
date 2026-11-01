@@ -133,6 +133,7 @@ export function SchoolOverviewContent({
             {[
               ["classes", "Classrooms", initial.classes.length],
               ["teachers", "Teachers", initial.teachers.length],
+              ["students", "Students", initial.students],
               [
                 "alerts",
                 "Awaiting teacher approval",

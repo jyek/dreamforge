@@ -68,6 +68,12 @@ export const SCHOOL_ADMIN_SECTIONS = [
     description: "Your school, classrooms and safety activity.",
   },
   {
+    id: "classes",
+    label: "Classrooms",
+    icon: School,
+    description: "Teaching teams and students in each classroom.",
+  },
+  {
     id: "teachers",
     label: "Teachers",
     icon: Presentation,
@@ -78,12 +84,6 @@ export const SCHOOL_ADMIN_SECTIONS = [
     label: "Students",
     icon: UsersRound,
     description: "Enroll students and manage classroom membership.",
-  },
-  {
-    id: "classes",
-    label: "Classrooms",
-    icon: School,
-    description: "Teaching teams and students in each classroom.",
   },
   {
     id: "alerts",
