@@ -50,16 +50,6 @@ type Overview = {
   flagged_30d: number;
   alerts?: Alert[];
 };
-const status = (a: Alert) =>
-  a.hold_status === "approved"
-    ? "Approved by teacher"
-    : a.hold_status === "denied"
-      ? "Declined by teacher"
-      : a.hold_status === "pending"
-        ? "Awaiting approval"
-        : a.decision === "block"
-          ? "Blocked"
-          : "Flagged";
 export function SchoolOverview({
   initial,
   name,
@@ -162,19 +152,6 @@ export function SchoolOverviewContent({
             ))}
           </div>
           <TeacherActionSummary />
-          <h3>Recent safety activity</h3>
-          {alerts.slice(0, 5).map((a) => (
-            <div className="df-school-row" key={a.id}>
-              <strong>
-                {a.child_name} · {status(a)}
-              </strong>
-              <small>
-                {a.project_name || "Project"} ·{" "}
-                {new Date(a.created_at).toLocaleString()}
-              </small>
-            </div>
-          ))}
-          {!alerts.length && <p>No safety alerts recorded.</p>}
         </>
       )}
       {section === "students" && (
