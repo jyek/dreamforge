@@ -8,7 +8,10 @@ import {
   tokenHash,
 } from "@/lib/platform-auth";
 import { groupManagerSQL } from "@/lib/project-group";
-import { addDirectoryPerson } from "@/lib/people-directory";
+import {
+  searchDirectoryPeople,
+  addDirectoryPerson,
+} from "@/lib/people-directory";
 export async function POST(req: Request) {
   const user = platformEnabled() ? await getProfile() : null;
   if (user?.role !== "teacher" || !checkOrigin(req))
@@ -18,7 +21,7 @@ export async function POST(req: Request) {
     !["teacher", "student"].includes(b.role) ||
     (b.classId && !/^[a-f0-9-]{36}$/i.test(b.classId)) ||
     (b.role === "teacher" && !b.classId) ||
-    !["lookup", "add", "invite", "remove"].includes(b.action)
+    !["lookup", "search", "add", "invite", "remove"].includes(b.action)
   )
     return Response.json(
       { error: "Choose a classroom and action." },
@@ -53,6 +56,10 @@ export async function POST(req: Request) {
       b.identifier.length > 254
     )
       throw Error("Enter a username or email.");
+    if (b.action === "search")
+      return Response.json({
+        people: await searchDirectoryPeople(database(), user.id, b),
+      });
     return Response.json({
       person: await addDirectoryPerson(database(), user.id, b),
     });

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -36,6 +36,56 @@ export function PeopleToolbar({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const resultsId = useId();
+  const [matches, setMatches] = useState<
+    { id: string; display_name: string; username: string }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  useEffect(() => {
+    setMatches([]);
+    setSearched(false);
+    setSearchError("");
+    if (!open || mode !== "account" || person || identifier.trim().length < 2) {
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const timer = setTimeout(() => {
+      fetch("/api/platform/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          action: "search",
+          role,
+          classId: classId || undefined,
+          identifier,
+        }),
+      })
+        .then(async (r) => {
+          const d = await r.json();
+          if (!r.ok) throw Error(d.error || "Could not search accounts.");
+          if (!controller.signal.aborted) {
+            setMatches(d.people || []);
+            setSearched(true);
+          }
+        })
+        .catch((e) => {
+          if (e.name !== "AbortError" && !controller.signal.aborted)
+            setSearchError(e.message);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setSearching(false);
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, mode, person, identifier, role, classId]);
   async function submit(action: string) {
     setBusy(true);
     setError("");
@@ -190,7 +240,22 @@ export function PeopleToolbar({
                 Username or email
                 <input
                   className="df-input"
-                  placeholder="Find people"
+                  placeholder="Start typing a username, name, or email"
+                  id={`${resultsId}-input`}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={matches.length > 0}
+                  aria-controls={resultsId}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown" && matches.length) {
+                      e.preventDefault();
+                      document
+                        .getElementById(resultsId)
+                        ?.querySelector<HTMLButtonElement>("button")
+                        ?.focus();
+                    }
+                    if (e.key === "Escape") setMatches([]);
+                  }}
                   value={identifier}
                   onChange={(e) => {
                     setIdentifier(e.target.value);
@@ -200,6 +265,69 @@ export function PeopleToolbar({
                   disabled={busy}
                 />
               </label>
+            )}
+            {mode === "account" && !person && (
+              <>
+                {searching && (
+                  <p className="df-people-search-status" role="status">
+                    Searching…
+                  </p>
+                )}
+                {searchError && <p role="alert">{searchError}</p>}
+                {matches.length > 0 && (
+                  <div
+                    id={resultsId}
+                    role="listbox"
+                    aria-label="Matching accounts"
+                    className="df-people-search-results"
+                  >
+                    {matches.map((match, index) => (
+                      <button
+                        type="button"
+                        key={match.id}
+                        role="option"
+                        aria-selected={false}
+                        onClick={() => {
+                          setPerson(match);
+                          setIdentifier(match.username);
+                          document
+                            .getElementById(`${resultsId}-input`)
+                            ?.focus();
+                          setMatches([]);
+                          setError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                            e.preventDefault();
+                            const options =
+                              e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                                "button",
+                              );
+                            options?.[
+                              (index +
+                                (e.key === "ArrowDown" ? 1 : -1) +
+                                matches.length) %
+                                matches.length
+                            ]?.focus();
+                          }
+                          if (e.key === "Escape") {
+                            setMatches([]);
+                          }
+                        }}
+                      >
+                        <strong>{match.display_name}</strong>
+                        <small>@{match.username}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searched && !searching && !matches.length && !searchError && (
+                  <p role="status" className="df-people-search-status">
+                    No matching accounts. Try the full username or email, or use
+                    an invite link.
+                  </p>
+                )}
+              </>
             )}
             {mode === "account" && person && (
               <div className="df-notice">

@@ -1,3 +1,4 @@
+import { searchDirectoryPeople } from "../lib/people-directory";
 import { studentProjectData } from "../lib/student-project-data";
 import {
   createStudentSchoolInvite,
@@ -675,6 +676,44 @@ test("schools keep their people, classes and data separate", async () => {
   assert.equal(
     await studentProjectData(person.admin2, { studentId: person.student1 }),
     null,
+  );
+
+  const results = await searchDirectoryPeople(pool, person.teacher1, {
+    role: "student",
+    classId: classA,
+    identifier: "student",
+  });
+  assert.ok(results.some((p) => p.id === person.student1));
+  assert.ok(!results.some((p) => p.id === person.student2));
+  assert.equal(
+    (
+      await searchDirectoryPeople(pool, person.admin1, {
+        role: "student",
+        identifier: "student1@tests.invalid",
+      })
+    )[0].id,
+    person.student1,
+  );
+  assert.deepEqual(
+    await searchDirectoryPeople(pool, person.admin1, {
+      role: "student",
+      identifier: "s",
+    }),
+    [],
+  );
+  assert.deepEqual(
+    await searchDirectoryPeople(pool, person.admin1, {
+      role: "teacher",
+      identifier: "student1@tests.invalid",
+    }),
+    [],
+  );
+  await assert.rejects(
+    searchDirectoryPeople(pool, person.teacher2, {
+      role: "student",
+      classId: classA,
+      identifier: "student",
+    }),
   );
   // The database refuses an admin invitation that has no school.
   await assert.rejects(

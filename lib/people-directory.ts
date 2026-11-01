@@ -105,3 +105,38 @@ export async function addDirectoryPerson(
     tx.release();
   }
 }
+
+export async function searchDirectoryPeople(
+  db: Pool,
+  actorId: string,
+  input: Record<string, unknown>,
+) {
+  const query = String(input.identifier || "")
+    .trim()
+    .replace(/^@/, "");
+  if (query.length < 2 || query.length > 254) return [];
+  const scope = input.classId
+    ? (
+        await db.query(
+          `select o.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
+          [input.classId, actorId],
+        )
+      ).rows[0]
+    : (
+        await db.query(
+          "select school_id from profiles where id=$1 and role='teacher'",
+          [actorId],
+        )
+      ).rows[0];
+  if (!scope) throw Error("Choose a classroom you manage.");
+  const role = input.role === "teacher" ? "teacher" : "child";
+  return (
+    await db.query(
+      `select p.id,p.display_name,p.username from profiles p where p.role=$1 and (
+  (p.school_id is not distinct from $2 and ($2::uuid is not null or exists(select 1 from classes c where ${groupManagerSQL("c.id", "$4")} and (c.teacher_id=p.id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.id) or exists(select 1 from class_members cm where cm.class_id=c.id and cm.child_id=p.id)))) and (strpos(lower(p.username),lower($3))>0 or strpos(lower(p.display_name),lower($3))>0 or lower(p.auth_email)=lower($3)))
+  or (p.school_id is null and (lower(p.username)=lower($3) or lower(p.auth_email)=lower($3)))
+ ) order by (lower(p.username)=lower($3)) desc,lower(p.display_name),p.id limit 8`,
+      [role, scope.school_id, query, actorId],
+    )
+  ).rows;
+}
