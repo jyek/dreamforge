@@ -226,5 +226,5 @@ export const setProductionDomain = (projectId: string, domain: string) =>
     productionDomain: domain,
   }));
 
-export const renameProject = (projectId: string, name: string) =>
-  updateProjectMetadata(projectId, (current) => ({ ...current, name }));
+export const renameProject = (projectId: string, name: string, description?: string) =>
+  updateProjectMetadata(projectId, (current) => ({ ...current, name, ...(description !== undefined ? { description } : {}) }));

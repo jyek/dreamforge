@@ -46,7 +46,11 @@ import {
 } from "./platform-dashboard-layout";
 type Project = {
   vm_id: string;
-  metadata: { name: string; conversations: { id: string }[] };
+  metadata: {
+    name: string;
+    description?: string;
+    conversations: { id: string }[];
+  };
   child_name: string;
   assigned_classrooms?: { id: string; name: string }[];
   is_group_project?: boolean;
@@ -423,6 +427,7 @@ export function PlatformDashboard({
                           <StudentProjectActions
                             projectId={p.vm_id}
                             name={p.metadata.name}
+                            description={p.metadata.description}
                             canMakeGroup={p.can_make_group}
                             onChanged={load}
                           />
@@ -435,20 +440,16 @@ export function PlatformDashboard({
                             : "Individual project"}
                         </span>
                         <div className="df-project-classroom-tags">
-                          {p.assigned_classrooms?.length ? (
-                            p.assigned_classrooms.map((c) => (
-                              <span
-                                key={c.id}
-                                className="df-project-classroom-tag"
-                              >
-                                {c.name}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="df-muted">
-                              Not assigned to a classroom
-                            </span>
-                          )}
+                          {p.assigned_classrooms?.length
+                            ? p.assigned_classrooms.map((c) => (
+                                <span
+                                  key={c.id}
+                                  className="df-project-classroom-tag"
+                                >
+                                  {c.name}
+                                </span>
+                              ))
+                            : null}
                         </div>
                       </div>
                       <Link
@@ -456,9 +457,10 @@ export function PlatformDashboard({
                         href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
                       >
                         <p className="df-muted">
-                          {teacher
-                            ? "Your teaching project"
-                            : "Built with your imagination"}
+                          {p.metadata.description ||
+                            (teacher
+                              ? "Your teaching project"
+                              : "Built with your imagination")}
                         </p>
                         <footer>
                           {teacher ? "Open project" : "Keep building ↗"}

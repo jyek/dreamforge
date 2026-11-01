@@ -70,7 +70,7 @@ export function ProjectClassroomSharing({
     >
       <DialogTrigger asChild>
         <button className="df-button secondary small">
-          {student ? "Assign to classrooms" : "Share with classrooms"}
+          {student ? "Assign to classroom" : "Share with classrooms"}
         </button>
       </DialogTrigger>
       <DialogContent className="df-card">

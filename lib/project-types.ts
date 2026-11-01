@@ -26,6 +26,7 @@ export type ProjectMetadata = {
   /** Explicit opt-in for disposable E2E projects. */
   e2eRunId?: string;
   name: string;
+  description?: string;
   createdAt: string;
   /**
    * The project's other VM: built and served, never edited by the agent.

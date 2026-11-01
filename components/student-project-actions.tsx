@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { EllipsisVertical } from "lucide-react";
 import {
   Dialog,
@@ -7,20 +7,40 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
+import { ProjectRename } from "./assistant-ui/project-rename";
 import { ProjectClassroomSharing } from "./project-classroom-sharing";
 type Classroom = { id: string; name: string; attached: boolean };
 type Group = { id: string; name: string; class_id: string };
 export function StudentProjectActions({
   projectId,
   name,
+  description,
   canMakeGroup = false,
   onChanged,
 }: {
   projectId: string;
   name: string;
+  description?: string;
   canMakeGroup?: boolean;
   onChanged?: () => Promise<void>;
 }) {
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    function dismiss(event: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node))
+        menuRef.current.open = false;
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape" && menuRef.current)
+        menuRef.current.open = false;
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
   const [open, setOpen] = useState(false),
     [classes, setClasses] = useState<Classroom[]>([]),
     [groups, setGroups] = useState<Group[]>([]),
@@ -73,11 +93,19 @@ export function StudentProjectActions({
   }
   return (
     <>
-      <details className="df-student-project-actions">
+      <details ref={menuRef} className="df-student-project-actions">
         <summary aria-label={`Actions for ${name}`}>
           <EllipsisVertical size={20} />
         </summary>
         <div className="df-student-project-menu">
+          <ProjectRename
+            projectId={projectId}
+            name={name}
+            description={description}
+            editDescription
+            onRenamed={() => void onChanged?.()}
+            className="df-button secondary small"
+          />
           <ProjectClassroomSharing
             projectId={projectId}
             name={name}
