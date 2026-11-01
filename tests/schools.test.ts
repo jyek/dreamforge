@@ -5,7 +5,11 @@ import {
   createStudentSchoolInvite,
   lockStudentSchoolInvite,
 } from "../lib/student-invites";
-import { assignClassroomProject, classroomData } from "../lib/classroom-data";
+import {
+  classroomAccess,
+  assignClassroomProject,
+  classroomData,
+} from "../lib/classroom-data";
 import { addDirectoryPerson, directoryData } from "../lib/people-directory";
 import {
   changeClassroomGroups,
@@ -125,6 +129,21 @@ test("schools keep their people, classes and data separate", async () => {
   await pool.query(
     "insert into class_members(class_id,child_id) values($1,$2)",
     [classA, person.student1],
+  );
+  const schoolAdminProfile = {
+    id: person.admin1,
+    role: "teacher" as const,
+    display_name: "School Admin",
+    username: "sch_admin1",
+  };
+  assert.ok(await classroomAccess(classA, schoolAdminProfile, pool));
+  assert.equal(
+    await classroomAccess(
+      classA,
+      { ...schoolAdminProfile, id: person.admin2 },
+      pool,
+    ),
+    null,
   );
   const overviewA = (await schoolOverview(pool, a.school.id))!;
   assert.deepEqual(overviewA.teachers.map((t: any) => t.username).sort(), [

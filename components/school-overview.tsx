@@ -7,17 +7,11 @@ import {
   PlatformDashboardLayout,
   schoolSectionPath,
 } from "./platform-dashboard-layout";
-import { ClassroomSectionHeader } from "./classroom-section-header";
-import { ClassCode } from "./class-code";
-import { DashboardDetailHeader } from "./dashboard-detail-header";
-import { AddPersonDialog } from "./people-toolbar";
 import { SchoolTeachers } from "./school-teachers";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
 import { TeacherActionSummary } from "./teacher-action-summary";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { SchoolSetup } from "./school-setup";
-import { ClassroomGroups } from "./classroom-groups";
-import { ClassroomPeople } from "./classroom-people";
 type Person = {
   id: string;
   display_name: string;
@@ -99,9 +93,8 @@ export function SchoolOverviewContent({
   section?: string;
   onNavigate?: (s: string) => void;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const alerts = initial.alerts || [],
-    current = initial.classes.find((c) => c.id === selected);
+  const router = useRouter();
+  const alerts = initial.alerts || [];
   return (
     <>
       {section === "overview" && (
@@ -143,100 +136,75 @@ export function SchoolOverviewContent({
       )}
       {section === "classes" && (
         <>
-          {!current && (
-            <div
-              className="df-inline"
-              style={{ marginTop: 24, justifyContent: "flex-end" }}
-            >
-              <SchoolSetup teachers={initial.teachers} />
-            </div>
-          )}
-          {current ? (
-            <>
-              <DashboardDetailHeader
-                title={current.name}
-                subtitle={<ClassCode code={current.invite_code} />}
-                back={
-                  <button
-                    className="df-button secondary small"
-                    onClick={() => setSelected(null)}
-                  >
-                    ← All classrooms
-                  </button>
-                }
-              />
-              <ClassroomSectionHeader
-                title="Teachers"
-                action={<AddPersonDialog role="teacher" classroom={current} />}
-              />
-              <ClassroomPeople people={current.teachers || []} role="teacher" />
-              <ClassroomGroups classId={current.id} />
-            </>
-          ) : (
-            <StudentReviewTable
-              columns={5}
-              compact={false}
-              className="df-school-classroom-directory"
-            >
-              <thead>
-                <tr>
-                  <th scope="col">Classroom</th>
-                  <th scope="col">Lead Teacher</th>
-                  <th scope="col">Co-Teachers</th>
-                  <th scope="col">Students</th>
-                  <th scope="col">Projects</th>
+          <div
+            className="df-inline"
+            style={{ marginTop: 24, justifyContent: "flex-end" }}
+          >
+            <SchoolSetup teachers={initial.teachers} />
+          </div>
+          <StudentReviewTable
+            columns={5}
+            compact={false}
+            className="df-school-classroom-directory"
+          >
+            <thead>
+              <tr>
+                <th scope="col">Classroom</th>
+                <th scope="col">Lead Teacher</th>
+                <th scope="col">Co-Teachers</th>
+                <th scope="col">Students</th>
+                <th scope="col">Projects</th>
+              </tr>
+            </thead>
+            <tbody>
+              {initial.classes.map((c) => (
+                <tr
+                  key={c.id}
+                  className="df-clickable-row"
+                  tabIndex={0}
+                  aria-label={`Enter classroom ${c.name}`}
+                  onClick={() => router.push(`/classrooms/${c.id}`)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.target === e.currentTarget &&
+                      (e.key === "Enter" || e.key === " ")
+                    ) {
+                      e.preventDefault();
+                      router.push(`/classrooms/${c.id}`);
+                    }
+                  }}
+                >
+                  <td>
+                    <strong>{c.name}</strong>
+                  </td>
+                  <td>
+                    {c.teachers?.find((t) => t.is_owner)?.display_name ||
+                      c.teacher_name}
+                  </td>
+                  <td>
+                    <div className="df-directory-classes">
+                      {c.teachers?.some((t) => !t.is_owner)
+                        ? c.teachers
+                            .filter((t) => !t.is_owner)
+                            .map((t) => (
+                              <span key={t.id}>{t.display_name}</span>
+                            ))
+                        : "—"}
+                    </div>
+                  </td>
+                  <td>{c.students}</td>
+                  <td>{c.projects ?? 0}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {initial.classes.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="df-clickable-row"
-                    tabIndex={0}
-                    aria-label={`Enter classroom ${c.name}`}
-                    onClick={() => setSelected(c.id)}
-                    onKeyDown={(e) => {
-                      if (
-                        e.target === e.currentTarget &&
-                        (e.key === "Enter" || e.key === " ")
-                      ) {
-                        e.preventDefault();
-                        setSelected(c.id);
-                      }
-                    }}
-                  >
-                    <td>
-                      <strong>{c.name}</strong>
-                    </td>
-                    <td>
-                      {c.teachers?.find((t) => t.is_owner)?.display_name ||
-                        c.teacher_name}
-                    </td>
-                    <td>
-                      <div className="df-directory-classes">
-                        {c.teachers?.some((t) => !t.is_owner)
-                          ? c.teachers
-                              .filter((t) => !t.is_owner)
-                              .map((t) => (
-                                <span key={t.id}>{t.display_name}</span>
-                              ))
-                          : "—"}
-                      </div>
-                    </td>
-                    <td>{c.students}</td>
-                    <td>{c.projects ?? 0}</td>
-                  </tr>
-                ))}
-                {!initial.classes.length && (
-                  <tr>
-                    <td colSpan={5} className="df-directory-empty">
-                      No classrooms yet. Create a classroom to get started.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </StudentReviewTable>
-          )}
+              ))}
+              {!initial.classes.length && (
+                <tr>
+                  <td colSpan={5} className="df-directory-empty">
+                    No classrooms yet. Create a classroom to get started.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </StudentReviewTable>
         </>
       )}
       {section === "teachers" && (

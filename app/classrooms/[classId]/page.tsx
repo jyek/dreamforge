@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
+import { database } from "@/lib/database";
+import { administeredSchool } from "@/lib/schools";
 import { classroomData } from "@/lib/classroom-data";
 import { TeacherClassroomDetail } from "@/components/teacher-classroom-detail";
 import { StudentClassroomDetail } from "@/components/student-classroom-detail";
@@ -18,6 +20,8 @@ export default async function Page({
     <TeacherClassroomDetail
       classId={classId}
       teacherName={user.display_name}
+      schoolMode={!!(await administeredSchool(database(), user.id))}
+      schoolName={user.school_name}
       initialData={data}
     />
   ) : (

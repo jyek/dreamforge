@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { ClassroomSectionHeader } from "./classroom-section-header";
 import { ClassCode } from "./class-code";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
-import { PlatformDashboardLayout } from "./platform-dashboard-layout";
+import {
+  schoolSectionPath,
+  PlatformDashboardLayout,
+} from "./platform-dashboard-layout";
 import { ClassroomSafetyReport } from "./classroom-safety-report";
 import { ClassProjectAssignments } from "./class-project-assignments";
 import { ClassroomGroups } from "./classroom-groups";
@@ -15,10 +18,14 @@ export function TeacherClassroomDetail({
   classId,
   teacherName,
   initialData,
+  schoolMode = false,
+  schoolName,
 }: {
   classId: string;
   teacherName: string;
   initialData?: StudentProjectsData;
+  schoolMode?: boolean;
+  schoolName?: string | null;
 }) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
@@ -35,9 +42,13 @@ export function TeacherClassroomDetail({
   return (
     <PlatformDashboardLayout
       teacher
+      schoolMode={schoolMode}
+      schoolName={schoolName}
       name={teacherName}
-      section="classrooms"
-      onSectionChange={(s) => router.push(`/${s}`)}
+      section={schoolMode ? "classes" : "classrooms"}
+      onSectionChange={(s) =>
+        router.push(schoolMode ? schoolSectionPath(s) : `/${s}`)
+      }
     >
       <DashboardDetailHeader
         title={data?.classroom?.name || "Classroom"}
