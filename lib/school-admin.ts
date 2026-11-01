@@ -109,7 +109,16 @@ export async function schoolOverview(db: Db, schoolId: string) {
   ).rows;
   const studentList = (
     await db.query(
-      "select id,display_name,username from profiles where school_id=$1 and role='child' order by display_name",
+      `select p.id,p.display_name,p.username,
+        (select count(*)::int from projects project where not project.is_example and
+          (project.owner_id=p.id or exists(select 1 from project_members pm
+            join class_members cm on cm.child_id=pm.child_id and cm.class_id=project.group_class_id
+            join profiles owner on owner.id=project.owner_id
+            where pm.vm_id=project.vm_id and pm.child_id=p.id and owner.school_id=$1))) as project_count,
+        coalesce((select json_agg(json_build_object('id',c.id,'name',c.name) order by lower(c.name))
+          from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id
+          where m.child_id=p.id and owner.school_id=$1),'[]'::json) as classrooms
+      from profiles p where p.school_id=$1 and p.role='child' order by lower(p.display_name),p.id`,
       [schoolId],
     )
   ).rows;

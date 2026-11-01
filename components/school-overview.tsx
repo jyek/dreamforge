@@ -5,6 +5,7 @@ import {
   PlatformDashboardLayout,
   schoolSectionPath,
 } from "./platform-dashboard-layout";
+import { SchoolStudents, type SchoolStudent } from "./school-students";
 import { SchoolSetup } from "./school-setup";
 import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomAvatar } from "./classroom-avatar";
@@ -42,7 +43,7 @@ type Overview = {
   teachers: (Person & { is_admin: boolean; classes: number })[];
   classes: Classroom[];
   students: number;
-  studentList?: Person[];
+  studentList?: SchoolStudent[];
   flagged_30d: number;
   alerts?: Alert[];
 };
@@ -197,10 +198,15 @@ export function SchoolOverviewContent({
           {!alerts.length && <p>No safety alerts recorded.</p>}
         </>
       )}
-      {(section === "classes" || section === "students") && (
+      {section === "classes" && (
         <SchoolSetup initial={initial} section={section} />
       )}
-      {section === "students" && people(initial.studentList || [], false)}
+      {section === "students" && (
+        <SchoolStudents
+          students={initial.studentList || []}
+          classrooms={initial.classes}
+        />
+      )}
       {section === "classes" && (
         <>
           {current ? (

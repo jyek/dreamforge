@@ -3011,6 +3011,7 @@
   border-bottom: 0;
 }
 .df-guidance-filters select.df-input,
+.df-student-membership-form select.df-input,
 .df-staff-invite-form select.df-input {
   appearance: none;
   padding-right: 40px;
@@ -3262,3 +3263,8 @@
 .df-staff-invite-form select { width: min(100%, 320px); }
 .df-staff-invite-form p { margin: 0; font-size: 14px; }
 .df-staff-invite-form button { justify-self: start; margin-top: 4px; }
+
+.df-school-student-directory { margin-top: 24px; }
+.df-school-student-directory td { vertical-align: top; }
+.df-student-membership-form { display: grid; gap: 12px; min-width: 220px; }
+.df-student-membership-form label { display: grid; gap: 8px; }

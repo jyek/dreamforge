@@ -271,6 +271,62 @@ test("schools keep their people, classes and data separate", async () => {
     }),
     true,
   );
+  const enrolled = (await schoolOverview(pool, a.school.id))!.studentList.find(
+    (s: any) => s.id === person.student1,
+  );
+  assert.equal(enrolled.project_count, 1);
+  assert.deepEqual(
+    new Set(enrolled.classrooms.map((c: any) => c.id)),
+    new Set([classA, newClass]),
+  );
+  for (const actor of [person.teacher1, person.admin2, person.student1]) {
+    assert.equal(
+      await setup(actor, {
+        action: "removeStudent",
+        classId: newClass,
+        personId: person.student1,
+      }),
+      false,
+    );
+  }
+  const classB = (
+    await pool.query("select id from classes where name='B class'")
+  ).rows[0].id;
+  await pool.query(
+    "insert into class_members(class_id,child_id) values($1,$2)",
+    [classB, person.student2],
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "removeStudent",
+      classId: classB,
+      personId: person.student2,
+    }),
+    false,
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "removeStudent",
+      classId: newClass,
+      personId: person.student1,
+    }),
+    true,
+  );
+  const removed = (await schoolOverview(pool, a.school.id))!.studentList.find(
+    (s: any) => s.id === person.student1,
+  );
+  assert.deepEqual(
+    removed.classrooms.map((c: any) => c.id),
+    [classA],
+  );
+  assert.equal(
+    await setup(person.admin1, {
+      action: "enrollStudent",
+      classId: newClass,
+      personId: person.student1,
+    }),
+    true,
+  );
   // The school admin is not automatically made a classroom teacher when setting it up.
   assert.equal(
     (await pool.query("select teacher_id from classes where id=$1", [newClass]))

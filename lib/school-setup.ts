@@ -51,5 +51,19 @@ export async function setupSchool(
     );
     return !!result.rowCount;
   }
+  if (
+    input.action === "removeStudent" &&
+    uuid(input.classId) &&
+    uuid(input.personId)
+  ) {
+    const result = await db.query(
+      `delete from class_members m using classes c, profiles owner, profiles p
+       where m.class_id=c.id and owner.id=c.teacher_id and p.id=m.child_id
+       and c.id=$3 and p.id=$4 and owner.school_id=$1 and p.school_id=$1
+       and p.role='child' and ${authorized} returning m.class_id`,
+      [schoolId, actorId, input.classId, input.personId],
+    );
+    return !!result.rowCount;
+  }
   return false;
 }
