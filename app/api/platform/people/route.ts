@@ -20,7 +20,6 @@ export async function POST(req: Request) {
   if (
     !["teacher", "student"].includes(b.role) ||
     (b.classId && !/^[a-f0-9-]{36}$/i.test(b.classId)) ||
-    (b.role === "teacher" && !b.classId) ||
     !["lookup", "search", "add", "invite", "remove"].includes(b.action)
   )
     return Response.json(
@@ -32,6 +31,23 @@ export async function POST(req: Request) {
       const token = await createStudentSchoolInvite(database(), user.id);
       const origin = process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin;
       return Response.json({ link: `${origin}/signup?studentInvite=${token}` });
+    }
+    if (b.action === "invite" && b.role === "teacher" && !b.classId) {
+      const db = database();
+      const actor = (
+        await db.query(
+          "select school_id from profiles where id=$1 and role='teacher'",
+          [user.id],
+        )
+      ).rows[0];
+      const token = inviteToken();
+      await db.query(
+        "insert into teacher_invites(token_hash,created_by,school_id) values($1,$2,$3)",
+        [tokenHash(token), user.id, actor?.school_id || null],
+      );
+      return Response.json({
+        link: `${process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin}/signup?teacherInvite=${token}`,
+      });
     }
     if (b.action === "invite") {
       const db = database();

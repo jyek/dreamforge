@@ -3432,3 +3432,10 @@
 .df-people-search-results small, .df-people-search-status {color:#71677f; font-size:13px;}
 
 .df-invite-link-row .df-copy-wrap { white-space:nowrap; }
+
+.df-active-invitations { margin-top:12px; }
+.df-active-invitations h3 { font-size:14px; font-weight:700; margin-bottom:12px; }
+.df-active-invitations .df-guidance-table .df-table { min-width:0; font-size:12px; }
+.df-active-invitations .df-guidance-table .df-table th, .df-active-invitations .df-guidance-table .df-table td { padding:10px; }
+.df-account-other-school { display:block; max-width:240px; margin-top:4px; color:#8b5b16; white-space:normal; }
+.df-people-search-results button:disabled { cursor:default; background:#faf9fc; }

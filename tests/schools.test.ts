@@ -1,3 +1,4 @@
+import { listInvitations, revokeInvitation } from "../lib/invitations";
 import { searchDirectoryPeople } from "../lib/people-directory";
 import { studentProjectData } from "../lib/student-project-data";
 import {
@@ -715,6 +716,89 @@ test("schools keep their people, classes and data separate", async () => {
       identifier: "student",
     }),
   );
+
+  const schoolTeacherToken = await createSchoolTeacherInvite(pool, {
+    schoolId: a.school.id,
+    createdBy: person.admin1,
+    makeAdmin: false,
+  });
+  const activeTeachers = await listInvitations(pool, person.admin1, "teacher");
+  assert.ok(
+    activeTeachers.some(
+      (i) => i.id === hash(schoolTeacherToken) && i.classroom_name === null,
+    ),
+  );
+  assert.equal(
+    await revokeInvitation(
+      pool,
+      person.admin2,
+      "teacher",
+      hash(schoolTeacherToken),
+    ),
+    false,
+  );
+  assert.equal(
+    await revokeInvitation(
+      pool,
+      person.admin1,
+      "teacher",
+      hash(schoolTeacherToken),
+    ),
+    true,
+  );
+  assert.ok(
+    !(await listInvitations(pool, person.admin1, "teacher")).some(
+      (i) => i.id === hash(schoolTeacherToken),
+    ),
+  );
+  const schoolStudentToken = await createStudentSchoolInvite(
+    pool,
+    person.teacher1,
+  );
+  assert.ok(
+    (await listInvitations(pool, person.admin1, "student")).some(
+      (i) => i.id === hash(schoolStudentToken),
+    ),
+  );
+  assert.equal(
+    await revokeInvitation(
+      pool,
+      person.admin2,
+      "student",
+      hash(schoolStudentToken),
+    ),
+    false,
+  );
+  assert.equal(
+    await revokeInvitation(
+      pool,
+      person.admin1,
+      "student",
+      hash(schoolStudentToken),
+    ),
+    true,
+  );
+  assert.equal(await lockStudentSchoolInvite(pool, schoolStudentToken), null);
+  const otherSchoolTeacher = await searchDirectoryPeople(pool, person.admin1, {
+    role: "teacher",
+    identifier: "sch_teacher2",
+  });
+  assert.equal(otherSchoolTeacher[0].eligible, false);
+  assert.equal(otherSchoolTeacher[0].school_name, "School B");
+  await assert.rejects(
+    addDirectoryPerson(pool, person.admin1, {
+      action: "add",
+      role: "teacher",
+      identifier: "sch_teacher2",
+    }),
+    /School B/,
+  );
+  await addDirectoryPerson(pool, person.admin1, {
+    action: "add",
+    role: "teacher",
+    identifier: "sch_independent",
+  });
+  assert.equal(await schoolOf(pool, person.independent), a.school.id);
   // The database refuses an admin invitation that has no school.
   await assert.rejects(
     pool.query(

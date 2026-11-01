@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
+import { ActiveInvitations } from "./active-invitations";
 import { CopyButton } from "./copy-button";
 export function PeopleToolbar({
   role,
@@ -36,9 +37,16 @@ export function PeopleToolbar({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [inviteRefresh, setInviteRefresh] = useState(0);
   const resultsId = useId();
   const [matches, setMatches] = useState<
-    { id: string; display_name: string; username: string }[]
+    {
+      id: string;
+      display_name: string;
+      username: string;
+      eligible?: boolean;
+      school_name?: string;
+    }[]
   >([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -106,7 +114,10 @@ export function PeopleToolbar({
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       if (action === "lookup") setPerson(d.person);
-      if (action === "invite") setLink(d.link);
+      if (action === "invite") {
+        setLink(d.link);
+        setInviteRefresh((n) => n + 1);
+      }
       if (action === "add") {
         setOpen(false);
         setNotice(
@@ -143,14 +154,9 @@ export function PeopleToolbar({
         )}
         <button
           className={buttonOnly ? "df-button small" : "df-button"}
-          disabled={role === "teacher" && !classrooms.length}
           onClick={() => {
             setOpen(true);
-            setClassId(
-              buttonOnly
-                ? classrooms[0]?.id || ""
-                : filter || (role === "student" ? "" : classrooms[0]?.id || ""),
-            );
+            setClassId(buttonOnly ? classrooms[0]?.id || "" : filter || "");
             setPerson(null);
             setLink("");
             setIdentifier("");
@@ -214,7 +220,7 @@ export function PeopleToolbar({
           >
             {!buttonOnly && !(role === "student" && mode === "invite") && (
               <label>
-                Classroom{role === "student" ? " (optional)" : ""}
+                Classroom (optional)
                 <select
                   className="df-input"
                   disabled={busy}
@@ -224,9 +230,8 @@ export function PeopleToolbar({
                     setPerson(null);
                     setLink("");
                   }}
-                  required={role === "teacher"}
                 >
-                  {role === "student" && <option value="">School only</option>}
+                  <option value="">School only</option>
                   {classrooms.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -287,6 +292,8 @@ export function PeopleToolbar({
                         key={match.id}
                         role="option"
                         aria-selected={false}
+                        disabled={match.eligible === false}
+                        aria-disabled={match.eligible === false}
                         onClick={() => {
                           setPerson(match);
                           setIdentifier(match.username);
@@ -316,7 +323,15 @@ export function PeopleToolbar({
                         }}
                       >
                         <strong>{match.display_name}</strong>
-                        <small>@{match.username}</small>
+                        <small>
+                          @{match.username}
+                          {match.eligible === false && (
+                            <span className="df-account-other-school">
+                              Belongs to {match.school_name}. This teacher is in
+                              a different school.
+                            </span>
+                          )}
+                        </small>
                       </button>
                     ))}
                   </div>
@@ -346,6 +361,9 @@ export function PeopleToolbar({
                 <CopyButton value={link}>Copy link</CopyButton>
               </div>
             )}
+            {mode === "invite" && (
+              <ActiveInvitations role={role} refreshKey={inviteRefresh} />
+            )}
             {error && (
               <p role="alert" className="df-error">
                 {error}
@@ -360,10 +378,7 @@ export function PeopleToolbar({
               >
                 Cancel
               </button>
-              <button
-                className="df-button"
-                disabled={busy || (role === "teacher" && !classId)}
-              >
+              <button className="df-button" disabled={busy}>
                 {busy
                   ? "Loading…"
                   : mode === "invite"
