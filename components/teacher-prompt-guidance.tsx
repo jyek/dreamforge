@@ -32,10 +32,12 @@ async function get(url: string, signal: AbortSignal) {
 }
 export function TeacherPromptGuidance({
   overviewTitle = "Safety overview",
+  scope = "teacher",
   initialStudent,
   initialProjectId = "",
 }: {
   overviewTitle?: string;
+  scope?: "teacher" | "school";
   initialStudent?: GuidanceStudent;
   initialProjectId?: string;
 } = {}) {
@@ -60,6 +62,7 @@ export function TeacherPromptGuidance({
     const timer = setTimeout(
       () => {
         const params = new URLSearchParams({
+          scope,
           category,
           projectId: project,
           search,
@@ -87,7 +90,7 @@ export function TeacherPromptGuidance({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [selected, category, project, search, offset]);
+  }, [selected, category, project, search, offset, scope]);
   function open(student: GuidanceStudent) {
     setPrompts([]);
     setSelected(student);
@@ -248,12 +251,16 @@ export function TeacherPromptGuidance({
                   <tr key={p.id}>
                     <td>{new Date(p.created_at).toLocaleString()}</td>
                     <td>
-                      <Link
-                        className="df-purple"
-                        href={`/${p.vm_id}/${p.conversation_id}`}
-                      >
-                        {p.project_name} ↗
-                      </Link>
+                      {scope === "school" ? (
+                        p.project_name
+                      ) : (
+                        <Link
+                          className="df-purple"
+                          href={`/${p.vm_id}/${p.conversation_id}`}
+                        >
+                          {p.project_name} ↗
+                        </Link>
+                      )}
                     </td>
                     <td className="df-guidance-content">{p.content}</td>
                     <td>

@@ -1,4 +1,8 @@
-import { teacherStudentAccessSQL } from "@/lib/classroom-permissions";
+import {
+  teacherStudentAccessSQL,
+  schoolStudentSafetyAccessSQL,
+} from "@/lib/classroom-permissions";
+import { administeredSchool } from "@/lib/schools";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
 import { guidanceSQL } from "@/lib/prompt-guidance";
@@ -10,10 +14,19 @@ export async function GET(req: Request) {
       { status: 403 },
     );
   const params = new URL(req.url).searchParams;
+  const schoolScope = params.get("scope") === "school";
+  if (schoolScope && !(await administeredSchool(database(), user.id)))
+    return Response.json(
+      { error: "School Admin access required." },
+      { status: 403 },
+    );
+  const studentAccess = schoolScope
+    ? schoolStudentSafetyAccessSQL
+    : teacherStudentAccessSQL;
   const studentId = params.get("studentId");
   const scoped = `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.created_at,p.metadata->>'name' as project_name,${guidanceSQL} as guidance
     from prompt_reviews r join projects p on p.vm_id=r.vm_id
-    where ${teacherStudentAccessSQL("r.child_id")})`;
+    where ${studentAccess("r.child_id")})`;
   if (!studentId) {
     const { rows } = await database().query(
       `${scoped}
@@ -22,7 +35,7 @@ export async function GET(req: Request) {
       (select count(*)::int from prompts r where r.child_id=pr.id) as prompt_count,
       (select count(*)::int from prompts r where r.child_id=pr.id and cardinality(r.guidance)>0) as guidance_count,
       coalesce((select jsonb_object_agg(category,n) from (select category,count(*)::int as n from prompts r cross join lateral unnest(r.guidance) category where r.child_id=pr.id group by category) counts),'{}'::jsonb) as categories
-      from profiles pr where ${teacherStudentAccessSQL("pr.id")} order by lower(pr.display_name),pr.id`,
+      from profiles pr where ${studentAccess("pr.id")} order by lower(pr.display_name),pr.id`,
       [user.id],
     );
     return Response.json({ students: rows });
@@ -37,7 +50,7 @@ export async function GET(req: Request) {
     return Response.json({ error: "Invalid page." }, { status: 400 });
   const db = database();
   const { rows: students } = await db.query(
-    `select pr.id,pr.display_name from profiles pr where pr.id=$2 and ${teacherStudentAccessSQL("pr.id")}`,
+    `select pr.id,pr.display_name from profiles pr where pr.id=$2 and ${studentAccess("pr.id")}`,
     [user.id, studentId],
   );
   if (!students.length)

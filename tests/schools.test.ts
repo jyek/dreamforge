@@ -1,3 +1,4 @@
+import { schoolStudentSafetyAccessSQL } from "../lib/classroom-permissions";
 import { setupSchool } from "../lib/school-setup";
 import { platformDirectory } from "../lib/platform-directory";
 // @suite database
@@ -81,6 +82,21 @@ test("schools keep their people, classes and data separate", async () => {
   assert.equal(await administeredSchool(pool, person.admin1), a.school.id);
   assert.equal(await administeredSchool(pool, person.teacher1), null);
   assert.equal(await schoolOf(pool, person.independent), null);
+  for (const [actor, expected] of [
+    [person.admin1, [person.student1]],
+    [person.admin2, [person.student2]],
+    [person.teacher1, []],
+    [person.student1, []],
+  ]) {
+    const visible = await pool.query(
+      `select pr.id from profiles pr where ${schoolStudentSafetyAccessSQL("pr.id")} order by pr.id`,
+      [actor],
+    );
+    assert.deepEqual(
+      visible.rows.map((p) => p.id),
+      expected,
+    );
+  }
 
   // Each school's overview contains only its own people and classes.
   const classA = (

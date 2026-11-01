@@ -80,10 +80,10 @@ export const SCHOOL_ADMIN_SECTIONS = [
   },
   {
     id: "alerts",
-    label: "Safety alerts",
+    label: "Safety",
     icon: ShieldCheck,
     description:
-      "Pending, approved, declined and blocked requests across your school.",
+      "Review student safety, prompting guidance and alerts across your school.",
   },
 ] as const;
 export const BUILDER_SECTIONS = [

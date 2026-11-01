@@ -6,6 +6,7 @@ import {
   schoolSectionPath,
 } from "./platform-dashboard-layout";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
+import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { SchoolSetup } from "./school-setup";
 import { ClassroomGroups } from "./classroom-groups";
 import { ClassroomAvatar } from "./classroom-avatar";
@@ -385,91 +386,102 @@ export function SchoolOverviewContent({
       )}
       {section === "alerts" && (
         <>
-          <p>
-            School-wide visibility. Prompt decisions are made by the student's
-            classroom teachers in their classroom action queue.
-          </p>
-          <div className="df-inline">
-            <label>
-              Status{" "}
-              <select
-                className="df-input"
-                value={filter}
-                onChange={(e) => {
-                  setFilter(e.target.value);
-                  setLimit(50);
-                }}
-              >
-                <option value="all">All safety alerts</option>
-                <option value="pending">Awaiting approval</option>
-                <option value="approved">Approved by teacher</option>
-                <option value="denied">Declined by teacher</option>
-                <option value="blocked">Blocked</option>
-              </select>
-            </label>
-            <label>
-              Classroom{" "}
-              <select
-                className="df-input"
-                value={classFilter}
-                onChange={(e) => {
-                  setClassFilter(e.target.value);
-                  setLimit(50);
-                }}
-              >
-                <option value="all">All classrooms</option>
-                {initial.classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span>{visible.length} alerts</span>
+          <div className="df-school-safety-summary" role="status">
+            {alerts.length
+              ? `${alerts.filter((a) => a.hold_status === "pending").length} awaiting teacher approval · ${alerts.filter((a) => a.decision === "block").length} blocked · ${alerts.length} safety alerts recorded`
+              : "No safety alerts recorded."}
           </div>
-          <p className="df-muted">
-            Classroom labels reflect current enrollment. They do not identify
-            where an older request originated.
-          </p>
-          {visible.slice(0, limit).map((a) => (
-            <article
-              className={
-                "df-safety-item" +
-                (a.hold_status === "pending" ? " df-safety-pending" : "")
-              }
-              key={a.id}
-            >
-              <header>
-                <strong>{a.child_name}</strong>
-                <span className="df-pill">{status(a)}</span>
-                <small>
-                  {new Date(a.created_at).toLocaleString()} ·{" "}
-                  {a.project_name || "Project"}
-                </small>
-              </header>
-              <p className="df-safety-prompt">“{a.content}”</p>
-              <small>
-                {a.categories.join(", ")} ·{" "}
-                {a.classrooms.map((c) => c.name).join(", ") ||
-                  "No current classroom"}
-              </small>
-              {a.reviewed_at && (
-                <p>
-                  Reviewed by {a.reviewer_name || "a teacher"} ·{" "}
-                  {new Date(a.reviewed_at).toLocaleString()}
-                </p>
+          {alerts.length > 0 && (
+            <details className="df-school-safety-alerts">
+              <summary>View safety alerts and teacher decisions</summary>
+              <p>
+                School-wide visibility. Prompt decisions are made by the
+                student's classroom teachers in their classroom action queue.
+              </p>
+              <div className="df-inline">
+                <label>
+                  Status{" "}
+                  <select
+                    className="df-input"
+                    value={filter}
+                    onChange={(e) => {
+                      setFilter(e.target.value);
+                      setLimit(50);
+                    }}
+                  >
+                    <option value="all">All safety alerts</option>
+                    <option value="pending">Awaiting approval</option>
+                    <option value="approved">Approved by teacher</option>
+                    <option value="denied">Declined by teacher</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </label>
+                <label>
+                  Classroom{" "}
+                  <select
+                    className="df-input"
+                    value={classFilter}
+                    onChange={(e) => {
+                      setClassFilter(e.target.value);
+                      setLimit(50);
+                    }}
+                  >
+                    <option value="all">All classrooms</option>
+                    {initial.classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span>{visible.length} alerts</span>
+              </div>
+              <p className="df-muted">
+                Classroom labels reflect current enrollment. They do not
+                identify where an older request originated.
+              </p>
+              {visible.slice(0, limit).map((a) => (
+                <article
+                  className={
+                    "df-safety-item" +
+                    (a.hold_status === "pending" ? " df-safety-pending" : "")
+                  }
+                  key={a.id}
+                >
+                  <header>
+                    <strong>{a.child_name}</strong>
+                    <span className="df-pill">{status(a)}</span>
+                    <small>
+                      {new Date(a.created_at).toLocaleString()} ·{" "}
+                      {a.project_name || "Project"}
+                    </small>
+                  </header>
+                  <p className="df-safety-prompt">“{a.content}”</p>
+                  <small>
+                    {a.categories.join(", ")} ·{" "}
+                    {a.classrooms.map((c) => c.name).join(", ") ||
+                      "No current classroom"}
+                  </small>
+                  {a.reviewed_at && (
+                    <p>
+                      Reviewed by {a.reviewer_name || "a teacher"} ·{" "}
+                      {new Date(a.reviewed_at).toLocaleString()}
+                    </p>
+                  )}
+                </article>
+              ))}
+              {!visible.length && <p>No safety alerts match these filters.</p>}
+              {visible.length > limit && (
+                <button
+                  className="df-button secondary"
+                  onClick={() => setLimit(limit + 50)}
+                >
+                  Show more alerts
+                </button>
               )}
-            </article>
-          ))}
-          {!visible.length && <p>No safety alerts match these filters.</p>}
-          {visible.length > limit && (
-            <button
-              className="df-button secondary"
-              onClick={() => setLimit(limit + 50)}
-            >
-              Show more alerts
-            </button>
+            </details>
           )}
+          <TeacherPromptGuidance scope="school" />
         </>
       )}
     </>
