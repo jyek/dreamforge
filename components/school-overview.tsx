@@ -74,10 +74,6 @@ export function SchoolOverview({
     setSection(s);
     router.push(schoolSectionPath(s));
   }
-  const sectionCount =
-    section === "classes"
-      ? `${initial.classes.length} ${initial.classes.length === 1 ? "classroom" : "classrooms"}`
-      : null;
   return (
     <PlatformDashboardLayout
       teacher
@@ -86,16 +82,6 @@ export function SchoolOverview({
       schoolName={initial.school.name}
       section={section}
       onSectionChange={navigate}
-      headerAction={
-        sectionCount ? (
-          <div className="df-inline">
-            <span className="df-pill">{sectionCount}</span>
-            {section === "classes" && (
-              <SchoolSetup teachers={initial.teachers} />
-            )}
-          </div>
-        ) : undefined
-      }
     >
       <SchoolOverviewContent
         initial={initial}
@@ -197,6 +183,11 @@ export function SchoolOverviewContent({
       )}
       {section === "classes" && (
         <>
+          {!current && (
+            <div className="df-inline" style={{ marginTop: 24 }}>
+              <SchoolSetup teachers={initial.teachers} />
+            </div>
+          )}
           {current ? (
             <>
               <button
