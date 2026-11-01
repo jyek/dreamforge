@@ -52,6 +52,10 @@ export function TeacherPromptGuidance({
     ),
     [prompts, setPrompts] = useState<Prompt[]>([]),
     [projects, setProjects] = useState<{ vm_id: string; name: string }[]>([]);
+  const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>(
+    [],
+  );
+  const [classId, setClassId] = useState("");
   const [category, setCategory] = useState(""),
     [project, setProject] = useState(initialProjectId),
     [search, setSearch] = useState(""),
@@ -68,6 +72,7 @@ export function TeacherPromptGuidance({
       () => {
         const params = new URLSearchParams({
           scope,
+          classId,
           category,
           projectId: project,
           search,
@@ -76,6 +81,7 @@ export function TeacherPromptGuidance({
         if (selected) params.set("studentId", selected.id);
         get(`/api/platform/guidance?${params}`, controller.signal)
           .then((data) => {
+            setClassrooms(data.classrooms || []);
             if (selected) {
               setPrompts(data.prompts);
               setProjects(data.projects);
@@ -95,7 +101,7 @@ export function TeacherPromptGuidance({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [selected, category, project, search, offset, scope]);
+  }, [selected, category, project, search, offset, scope, classId]);
   function open(student: GuidanceStudent) {
     setPrompts([]);
     setSelected(student);
@@ -126,10 +132,11 @@ export function TeacherPromptGuidance({
     ? Boolean(
         search ||
         category ||
+        classId ||
         offset > 0 ||
         (project && project !== initialProjectId),
       )
-    : Boolean(studentSearch || category);
+    : Boolean(studentSearch || category || classId);
   return (
     <section className="df-guidance">
       {selected && !initialStudent ? (
@@ -186,6 +193,26 @@ export function TeacherPromptGuidance({
         </div>
       )}
       <div className="df-guidance-filters">
+        <label>
+          Classroom
+          <select
+            className="df-input"
+            value={classId}
+            onChange={(e) => {
+              setClassId(e.target.value);
+              setOffset(0);
+              setProject("");
+              if (!initialStudent) setSelected(null);
+            }}
+          >
+            <option value="">All classrooms</option>
+            {classrooms.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           {selected ? "Search prompts" : "Find a student"}
           <input
@@ -439,6 +466,7 @@ export function TeacherPromptGuidance({
                           onClick={() => {
                             setSearch("");
                             setStudentSearch("");
+                            setClassId("");
                             setCategory("");
                             setProject("");
                             setOffset(0);
