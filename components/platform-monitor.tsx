@@ -1,4 +1,6 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
+
 import { useState, type ReactNode } from "react";
 import {
   Building2,
@@ -161,39 +163,39 @@ export function PlatformMonitor({
                   and student who currently has editing control.
                 </p>
               )}
-              <div style={{ overflowX: "auto" }}>
-                <table className="df-table">
-                  <thead>
-                    <tr>
+              <StudentReviewTable
+                columns={columns[section].length}
+                compact={false}
+              >
+                <thead>
+                  <tr>
+                    {columns[section].map((c) => (
+                      <th key={c} scope="col">
+                        {c === "school_admin"
+                          ? "School Admin"
+                          : c.charAt(0).toUpperCase() + c.slice(1)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(0, limit).map((r) => (
+                    <tr key={r.id}>
                       {columns[section].map((c) => (
-                        <th key={c} scope="col">
+                        <td key={c}>
                           {c === "school_admin"
-                            ? "School Admin"
-                            : c.charAt(0).toUpperCase() + c.slice(1)}
-                        </th>
+                            ? r[c]
+                              ? "Yes"
+                              : "No"
+                            : String(
+                                r[c] || (c === "school" ? "Independent" : "—"),
+                              )}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {rows.slice(0, limit).map((r) => (
-                      <tr key={r.id}>
-                        {columns[section].map((c) => (
-                          <td key={c}>
-                            {c === "school_admin"
-                              ? r[c]
-                                ? "Yes"
-                                : "No"
-                              : String(
-                                  r[c] ||
-                                    (c === "school" ? "Independent" : "—"),
-                                )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </StudentReviewTable>
               {!rows.length && <p>No matching records.</p>}
               {rows.length > limit && (
                 <button

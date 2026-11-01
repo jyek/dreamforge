@@ -2981,7 +2981,7 @@
   margin-top: 2px;
   margin-bottom: 2px;
 }
-.df-student-overview-table .df-button {
+.df-guidance-table .df-button {
   padding: 6px 10px;
   min-height: 32px;
   font-size: 12px;
@@ -3335,3 +3335,12 @@
 #dashboard-detail-header > .df-detail-header:not(:last-child) { display:none; }
 
 .df-classroom-project-list { margin-top:28px; }
+
+/* One table surface across all dashboard directories and reports. */
+.df-guidance-table { border:1px solid var(--df-divider); border-radius:18px; background:#fff; padding:0; overflow:hidden; box-shadow:none; }
+.df-guidance-table .df-table-scroll { overflow-x:auto; }
+.df-guidance-table .df-table { margin:0; width:100%; }
+.df-guidance-table .df-table th { padding:10px 16px; }
+.df-guidance-table .df-table td { padding:12px 16px; vertical-align:middle; }
+.df-guidance-table .df-table th:first-child, .df-guidance-table .df-table td:first-child { padding-left:22px; }
+.df-guidance-table .df-table tr:last-child > td { border-bottom:0; }

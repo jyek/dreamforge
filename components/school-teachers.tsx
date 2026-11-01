@@ -1,4 +1,6 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
+
 import { useState } from "react";
 import { PeopleToolbar } from "./people-toolbar";
 export type DirectoryTeacher = {
@@ -27,56 +29,58 @@ export function SchoolTeachers({
         filter={filter}
         onFilter={setFilter}
       />
-      <div className="df-guidance-table df-people-directory">
-        <table className="df-table">
-          <thead>
-            <tr>
-              <th>Teacher</th>
-              <th>Role</th>
-              <th>Classrooms</th>
+      <StudentReviewTable
+        columns={3}
+        compact={false}
+        className="df-people-directory"
+      >
+        <thead>
+          <tr>
+            <th>Teacher</th>
+            <th>Role</th>
+            <th>Classrooms</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((t) => (
+            <tr key={t.id}>
+              <td>
+                <strong>{t.display_name}</strong>
+                <small className="df-person-username">@{t.username}</small>
+              </td>
+              <td>
+                <span className="df-guidance-tag">
+                  {t.is_admin ? "School Admin" : "Teacher"}
+                </span>
+              </td>
+              <td>
+                <div className="df-directory-classes">
+                  {t.classrooms.length ? (
+                    t.classrooms.map((c) => (
+                      <a
+                        className="df-class-text-link"
+                        href={`/classrooms/${c.id}`}
+                        key={c.id}
+                      >
+                        {c.name}
+                      </a>
+                    ))
+                  ) : (
+                    <span className="df-muted">No classrooms assigned</span>
+                  )}
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {shown.map((t) => (
-              <tr key={t.id}>
-                <td>
-                  <strong>{t.display_name}</strong>
-                  <small className="df-person-username">@{t.username}</small>
-                </td>
-                <td>
-                  <span className="df-guidance-tag">
-                    {t.is_admin ? "School Admin" : "Teacher"}
-                  </span>
-                </td>
-                <td>
-                  <div className="df-directory-classes">
-                    {t.classrooms.length ? (
-                      t.classrooms.map((c) => (
-                        <a
-                          className="df-class-text-link"
-                          href={`/classrooms/${c.id}`}
-                          key={c.id}
-                        >
-                          {c.name}
-                        </a>
-                      ))
-                    ) : (
-                      <span className="df-muted">No classrooms assigned</span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!shown.length && (
-              <tr>
-                <td colSpan={3}>
-                  No teachers{filter ? " in this classroom" : ""}.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!shown.length && (
+            <tr>
+              <td colSpan={3}>
+                No teachers{filter ? " in this classroom" : ""}.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </StudentReviewTable>
     </>
   );
 }

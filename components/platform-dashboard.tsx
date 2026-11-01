@@ -1,4 +1,6 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
+
 import {
   availableCreditMicros,
   formatCredit,
@@ -491,68 +493,62 @@ export function PlatformDashboard({
                       <summary>
                         <span>{project.project_name}</span>
                       </summary>
-                      <div className="df-table-scroll">
-                        <table className="df-table">
-                          <caption className="sr-only">
-                            Model spending for {project.project_name}
-                          </caption>
-                          <thead>
-                            <tr>
-                              <th>Model</th>
-                              <th>Input tokens</th>
-                              <th>Output tokens</th>
-                              <th>Total tokens</th>
-                              <th>Charged (SGD)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(project.models || []).map((model) => (
-                              <tr key={model.model}>
-                                <td>{modelLabel(model.model)}</td>
-                                <td>
-                                  {Number(model.input_tokens).toLocaleString()}
-                                </td>
-                                <td>
-                                  {Number(model.output_tokens).toLocaleString()}
-                                </td>
-                                <td>
-                                  {Number(model.used_tokens).toLocaleString()}
-                                </td>
-                                <td>
-                                  {formatCreditBalance(
-                                    Number(model.credit_cost_micros || 0) +
-                                      Number(
-                                        model.estimated_credit_micros || 0,
-                                      ),
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr>
-                              <th scope="row">Project total</th>
+                      <StudentReviewTable columns={5} compact={false}>
+                        <caption className="sr-only">
+                          Model spending for {project.project_name}
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th>Model</th>
+                            <th>Input tokens</th>
+                            <th>Output tokens</th>
+                            <th>Total tokens</th>
+                            <th>Charged (SGD)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(project.models || []).map((model) => (
+                            <tr key={model.model}>
+                              <td>{modelLabel(model.model)}</td>
                               <td>
-                                {Number(project.input_tokens).toLocaleString()}
+                                {Number(model.input_tokens).toLocaleString()}
                               </td>
                               <td>
-                                {Number(project.output_tokens).toLocaleString()}
+                                {Number(model.output_tokens).toLocaleString()}
                               </td>
                               <td>
-                                {Number(project.used_tokens).toLocaleString()}
+                                {Number(model.used_tokens).toLocaleString()}
                               </td>
                               <td>
                                 {formatCreditBalance(
-                                  Number(project.credit_cost_micros || 0) +
-                                    Number(
-                                      project.estimated_credit_micros || 0,
-                                    ),
+                                  Number(model.credit_cost_micros || 0) +
+                                    Number(model.estimated_credit_micros || 0),
                                 )}
                               </td>
                             </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <th scope="row">Project total</th>
+                            <td>
+                              {Number(project.input_tokens).toLocaleString()}
+                            </td>
+                            <td>
+                              {Number(project.output_tokens).toLocaleString()}
+                            </td>
+                            <td>
+                              {Number(project.used_tokens).toLocaleString()}
+                            </td>
+                            <td>
+                              {formatCreditBalance(
+                                Number(project.credit_cost_micros || 0) +
+                                  Number(project.estimated_credit_micros || 0),
+                              )}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </StudentReviewTable>
                       {!project.models?.length && (
                         <p className="df-muted">
                           No confirmed model usage yet.

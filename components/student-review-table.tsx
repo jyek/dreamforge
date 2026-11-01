@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-/** Shared table shell for student rosters, projects and prompt reviews. */
+/** Shared dashboard table appearance and loading state. */
 export function StudentReviewTable({
   children,
   empty = false,
@@ -8,6 +8,7 @@ export function StudentReviewTable({
   className = "",
   columns = 1,
   loadingLabel = "Loading…",
+  tableClassName = "",
 }: {
   children: ReactNode;
   empty?: boolean;
@@ -16,6 +17,7 @@ export function StudentReviewTable({
   className?: string;
   columns?: number;
   loadingLabel?: string;
+  tableClassName?: string;
 }) {
   return (
     <div
@@ -48,7 +50,7 @@ export function StudentReviewTable({
         </div>
       ) : (
         <div className="df-table-scroll">
-          <table className="df-table">{children}</table>
+          <table className={`df-table ${tableClassName}`}>{children}</table>
         </div>
       )}
     </div>

@@ -145,7 +145,7 @@ export function TeacherStudentProjects({
         <StudentReviewTable
           busy
           columns={5}
-          loadingLabel="Loading projects…"
+          loadingLabel="Loading…"
           className="df-student-project-table"
         >
           <thead>

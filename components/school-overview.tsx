@@ -1,4 +1,6 @@
 "use client";
+import { StudentReviewTable } from "./student-review-table";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -205,76 +207,78 @@ export function SchoolOverviewContent({
               </button>
             </>
           ) : (
-            <div className="df-guidance-table df-school-classroom-directory">
-              <table className="df-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Classroom</th>
-                    <th scope="col">Teaching team</th>
-                    <th scope="col">Students</th>
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {initial.classes.map((c) => (
-                    <tr key={c.id}>
-                      <td>
+            <StudentReviewTable
+              columns={4}
+              compact={false}
+              className="df-school-classroom-directory"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">Classroom</th>
+                  <th scope="col">Teaching team</th>
+                  <th scope="col">Students</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {initial.classes.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <button
+                        className="df-class-text-link"
+                        type="button"
+                        onClick={() => setSelected(c.id)}
+                      >
+                        {c.name}
+                      </button>
+                    </td>
+                    <td>
+                      <div className="df-directory-classes">
+                        {c.teachers?.length
+                          ? c.teachers.map((t) => (
+                              <span key={t.id}>
+                                {t.display_name}
+                                {t.is_owner && (
+                                  <small className="df-muted">
+                                    {" "}
+                                    · Lead teacher
+                                  </small>
+                                )}
+                              </span>
+                            ))
+                          : c.teacher_name}
+                      </div>
+                      <small className="df-muted">
+                        {c.teachers?.length || 1}{" "}
+                        {(c.teachers?.length || 1) === 1
+                          ? "teacher"
+                          : "teachers"}
+                      </small>
+                    </td>
+                    <td>{c.students}</td>
+                    <td>
+                      <div className="df-inline">
                         <button
-                          className="df-class-text-link"
                           type="button"
+                          className="df-button secondary small"
                           onClick={() => setSelected(c.id)}
+                          aria-label={`View ${c.name}`}
                         >
-                          {c.name}
+                          Enter classroom
                         </button>
-                      </td>
-                      <td>
-                        <div className="df-directory-classes">
-                          {c.teachers?.length
-                            ? c.teachers.map((t) => (
-                                <span key={t.id}>
-                                  {t.display_name}
-                                  {t.is_owner && (
-                                    <small className="df-muted">
-                                      {" "}
-                                      · Lead teacher
-                                    </small>
-                                  )}
-                                </span>
-                              ))
-                            : c.teacher_name}
-                        </div>
-                        <small className="df-muted">
-                          {c.teachers?.length || 1}{" "}
-                          {(c.teachers?.length || 1) === 1
-                            ? "teacher"
-                            : "teachers"}
-                        </small>
-                      </td>
-                      <td>{c.students}</td>
-                      <td>
-                        <div className="df-inline">
-                          <button
-                            type="button"
-                            className="df-button secondary small"
-                            onClick={() => setSelected(c.id)}
-                            aria-label={`View ${c.name}`}
-                          >
-                            Enter classroom
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!initial.classes.length && (
-                    <tr>
-                      <td colSpan={4} className="df-directory-empty">
-                        No classrooms yet. Create a classroom to get started.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!initial.classes.length && (
+                  <tr>
+                    <td colSpan={4} className="df-directory-empty">
+                      No classrooms yet. Create a classroom to get started.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </StudentReviewTable>
           )}
         </>
       )}
