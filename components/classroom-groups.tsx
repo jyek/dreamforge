@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { StatusToast } from "./status-toast";
 import { MoreVertical } from "lucide-react";
 import {
   Dialog,
@@ -57,6 +58,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
   } | null>(null);
   const [dragging, setDragging] = useState("");
   const [notice, setNotice] = useState("");
+  const dismissNotice = useCallback(() => setNotice(""), []);
   const load = useCallback(
     async (signal?: AbortSignal) => {
       const r = await fetch(endpoint, { cache: "no-store", signal });
@@ -233,7 +235,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
         }
       />
 
-      {notice && <p role="status">{notice}</p>}
+      <StatusToast message={notice} onDismiss={dismissNotice} />
       {error && !createOpen && !manage && (
         <p role="alert" className="df-error">
           {error}{" "}
@@ -345,7 +347,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                     {g.name}
                   </button>
                   <button
-                    className="df-button secondary small"
+                    className="df-group-menu-button"
                     aria-label={`Manage ${g.name}`}
                     onClick={() => {
                       setManage(g);
