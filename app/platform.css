@@ -3379,10 +3379,10 @@
 .df-guidance-table .df-table tbody tr.df-clickable-row:hover { background:#faf8fe; }
 .df-clickable-row:focus-visible { outline:2px solid #6b3ff7; outline-offset:-2px; background:#faf8fe; }
 
-.df-invite-link-row { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; width:100%; align-items:center; }
+.df-invite-link-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; width:100%; align-items:center; }
 .df-invite-link-row .df-input { width:100%; min-width:0; }
 .df-classroom-section-header > .df-inline > .df-button, .df-classroom-section-header > .df-button { min-height:36px; padding:8px 14px; font-size:13px; }
-@media(max-width:500px) { .df-invite-link-row {grid-template-columns:minmax(0,1fr);} .df-invite-link-row .df-copy-wrap {justify-self:end;} }
+
 
 .df-invite-link-row .df-copy-wrap { justify-self:end; }
 
@@ -3430,3 +3430,5 @@
 .df-people-search-results button + button {border-top:1px solid var(--df-divider);}
 .df-people-search-results button:hover, .df-people-search-results button:focus-visible {background:#f6f1ff;outline:none;}
 .df-people-search-results small, .df-people-search-status {color:#71677f; font-size:13px;}
+
+.df-invite-link-row .df-copy-wrap { white-space:nowrap; }
