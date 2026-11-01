@@ -377,10 +377,9 @@ export function PlatformDashboard({
               id={!teacher ? "builder-projects" : undefined}
               className={!teacher ? "df-home-project-section" : undefined}
             >
-              <div className="df-section-head">
-                <h2>{"Your projects"}</h2>
-                <div className="df-inline">
-                  {teacher && <CreateProjectDialog />}
+              {view !== "projects" && (
+                <div className="df-section-head">
+                  <h2>Your projects</h2>
                   {data.projects.length > 0 && (
                     <span className="df-project-count">
                       {data.projects.length}{" "}
@@ -388,7 +387,15 @@ export function PlatformDashboard({
                     </span>
                   )}
                 </div>
-              </div>
+              )}
+              {teacher && (
+                <div
+                  className="df-inline"
+                  style={{ justifyContent: "flex-end", marginBottom: 24 }}
+                >
+                  <CreateProjectDialog />
+                </div>
+              )}
               {data.projects.length ? (
                 <div className="df-projects">
                   {data.projects.map((p, index) => (
