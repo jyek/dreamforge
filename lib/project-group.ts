@@ -80,7 +80,7 @@ export async function loadGroup(db: Db, vmId: string) {
 }
 /** Explicit classroom teachers and that school's administrators may manage groups. */
 export const groupManagerSQL = (classId: string, actorId: string) =>
-  `(${classroomTeacherSQL(classId, actorId)} or exists(select 1 from classes gc join profiles gt on gt.id=gc.teacher_id join school_admins ga on ga.school_id=gt.school_id where gc.id=${classId} and ga.profile_id=${actorId}))`;
+  `(${classroomTeacherSQL(classId, actorId)} or exists(select 1 from classes gc join school_admins ga on ga.school_id=gc.school_id where gc.id=${classId} and ga.profile_id=${actorId}))`;
 async function canManage(
   db: Db,
   vmId: string,
@@ -91,7 +91,7 @@ async function canManage(
     `select 1 from projects p join class_members m on m.child_id=p.owner_id
     join classes c on c.id=m.class_id join profiles owner on owner.id=p.owner_id join profiles teacher on teacher.id=c.teacher_id
     where p.vm_id=$1 and p.owner_id=$2 and p.classroom_group_id is null and coalesce(p.metadata->>'classroomGroupProject','false')<>'true' and (p.group_class_id is null or p.group_class_id=c.id)
-    and owner.school_id is not distinct from teacher.school_id and ${groupManagerSQL("c.id", "$3")}`,
+    and owner.school_id is not distinct from c.school_id and ${groupManagerSQL("c.id", "$3")}`,
     [vmId, ownerId, actorId],
   );
   return !!rowCount;
@@ -122,7 +122,7 @@ export async function classmatesFor(
     join classes c on c.id=mine.class_id join profiles teacher on teacher.id=c.teacher_id
     join projects p on p.vm_id=$2 join profiles owner on owner.id=p.owner_id
     where mine.child_id=$1 and pr.id<>$1 and pr.role='child'
-    and pr.school_id is not distinct from owner.school_id and owner.school_id is not distinct from teacher.school_id
+    and pr.school_id is not distinct from owner.school_id and owner.school_id is not distinct from c.school_id
     and (p.group_class_id is null or p.group_class_id=c.id) and ${groupManagerSQL("c.id", "$3")}
     and not exists(select 1 from project_members m where m.vm_id=$2 and m.child_id=pr.id)
     order by pr.display_name`,

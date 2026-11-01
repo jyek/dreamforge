@@ -109,7 +109,7 @@ await mkdir(dir + "/app/classroom", { recursive: true });
 await mkdir(dir + "/app/teacher-classroom", { recursive: true });
 await writeFile(
   dir + "/app/teacher-classroom/page.tsx",
-  `import {ClassroomGroups} from '${root}/components/classroom-groups';export default function Page(){return <ClassroomGroups classId="${classId}"/>}`,
+  `import {ClassroomGroups} from '${root}/components/classroom-groups';import {AddPersonDialog} from '${root}/components/people-toolbar';export default function Page(){return <><AddPersonDialog role="teacher" classroom={{id:"${classId}",name:"Creative classroom"}}/><ClassroomGroups classId="${classId}"/></>}`,
 );
 await writeFile(
   dir + "/app/classroom/page.tsx",
@@ -251,6 +251,21 @@ try {
       await route.fulfill({ json: { ok: true } });
     },
   );
+  const sharedTeacher = { id: "shared-teacher", username: "stacey_teacher", display_name: "Stacey Lee" };
+  let teacherAdded = false;
+  await context.route("**/api/platform/people", async (route) => {
+    const body = route.request().postDataJSON();
+    assert.equal(body.role, "teacher");
+    assert.equal(body.classId, classId);
+    if (body.action === "search") {
+      assert.equal(body.identifier, "stacey");
+      return route.fulfill({ json: { people: [sharedTeacher] } });
+    }
+    assert.equal(body.action, "add");
+    assert.equal(body.identifier, "stacey_teacher");
+    teacherAdded = true;
+    return route.fulfill({ json: { person: sharedTeacher } });
+  });
   await page.goto(origin);
   await page.getByRole("heading", { name: "Projects", exact: true }).waitFor();
   assert.equal(
@@ -449,6 +464,16 @@ try {
   await page.getByRole("button", { name: "Rename Group", exact: true }).first().waitFor();
   await page.getByRole("heading", { name: "Projects", exact: true }).waitFor();
   console.log("PASS classroom group and student clicks are inert while teacher drag-and-drop and group menus remain available");
+  await page.getByRole("button", { name: "Add teacher", exact: true }).click();
+  await page.getByRole("combobox", { name: "Username or email", exact: true }).fill("stacey");
+  const teacherMatch = page.getByRole("option", { name: /Stacey Lee.*stacey_teacher/ });
+  await teacherMatch.waitFor();
+  assert.equal(await teacherMatch.isEnabled(), true);
+  await teacherMatch.click();
+  await page.getByRole("button", { name: "Add to classroom", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(teacherAdded, true);
+  console.log("PASS teacher lookup offers a teacher from another school and allows classroom assignment");
   await page.goto(classroomUrl);
   const keyboardRow = page.getByRole("row", { name: "Open Classroom game", exact: true });
   await keyboardRow.focus();

@@ -2,7 +2,6 @@ import { groupManagerSQL } from "./project-group";
 import { database } from "./database";
 import { createHash } from "node:crypto";
 import type { Profile } from "./platform-auth";
-import { sameSchool } from "./schools";
 export async function acceptClassroomTeacherInvite(
   token: string,
   user: Profile,
@@ -14,11 +13,11 @@ export async function acceptClassroomTeacherInvite(
     await db.query("begin");
     const hash = createHash("sha256").update(token).digest("hex");
     const { rows } = await db.query(
-      `select i.classroom_id,i.created_by,i.used_by,c.teacher_id,o.school_id as owner_school,(select school_id from profiles where id=$2) as teacher_school from teacher_invites i join classes c on c.id=i.classroom_id join profiles o on o.id=c.teacher_id where i.token_hash=$1 and i.expires_at>now() for update of i`,
-      [hash, user.id],
+      `select i.classroom_id,i.created_by,i.used_by,c.teacher_id,c.school_id from teacher_invites i join classes c on c.id=i.classroom_id where i.token_hash=$1 and i.expires_at>now() for update of i`,
+      [hash],
     );
     const invite = rows[0];
-    // Co-teachers must belong to the classroom owner's school (or both be independent).
+    // Only an authorized, unexpired invitation may grant classroom access.
     if (
       !invite ||
       !(
@@ -26,8 +25,7 @@ export async function acceptClassroomTeacherInvite(
           `select 1 from classes c where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
           [invite.classroom_id, invite.created_by],
         )
-      ).rowCount ||
-      !sameSchool(invite.owner_school, invite.teacher_school)
+      ).rowCount
     ) {
       await db.query("rollback");
       return null;
@@ -41,6 +39,16 @@ export async function acceptClassroomTeacherInvite(
       return invite.used_by === user.id && rowCount
         ? invite.classroom_id
         : null;
+    }
+    if (invite.school_id) {
+      await db.query(
+        "insert into school_teachers(school_id,teacher_id,added_by) values($1,$2,$3) on conflict do nothing",
+        [invite.school_id, user.id, invite.created_by],
+      );
+      await db.query(
+        "update profiles set school_id=$2 where id=$1 and school_id is null",
+        [user.id, invite.school_id],
+      );
     }
     if (invite.teacher_id !== user.id)
       await db.query(

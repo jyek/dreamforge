@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   const code =
     typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
   const { rows } = await database().query(
-    "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1",
+    "select c.id,c.school_id from classes c where c.invite_code=$1",
     [code],
   );
   if (!rows[0])

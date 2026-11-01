@@ -90,6 +90,26 @@ contents and permissions, restore the maintenance configuration from the private
 manifest, and arrange a controlled connection switch. Never overwrite a live
 database with a backup while new student activity is being recorded.
 
+## Teacher school memberships
+
+`school_teachers` stores a teacher's memberships in multiple schools. The
+profile's `school_id` remains the default school for new classrooms and school-only
+invitations. Adding a teacher to another school preserves that default and all
+existing classroom assignments. Teacher lookup searches teacher usernames and names
+across schools; student lookup stays scoped to the requesting school.
+
+`classes.school_id` records each classroom's school independently of its lead
+teacher's default. School admins may choose any member teacher as lead teacher.
+Existing classrooms and teacher memberships are backfilled by
+`202611020000_teacher_school_memberships.sql`; legacy classroom creation defaults
+to the lead teacher's default school. School membership grants neither classroom
+access nor school administration. Classroom teacher assignments and `school_admins`
+remain separate, explicitly scoped grants.
+
+Apply the migration before deploying the code that uses these fields. The migration
+adds server-only membership storage, keeps browser access revoked, and does not
+move accounts, classrooms, students, or grant new administrator roles.
+
 ## Tests
 
 `npm run test:database` builds a temporary Postgres cluster from the fresh baseline

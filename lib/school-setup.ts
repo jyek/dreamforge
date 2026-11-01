@@ -20,8 +20,8 @@ export async function setupSchool(
     name.length <= 80
   ) {
     const result = await db.query(
-      `insert into classes(teacher_id,name,invite_code)
-      select p.id,$4,$5 from profiles p where p.id=$3 and p.school_id=$1 and p.role='teacher' and ${authorized} returning id`,
+      `insert into classes(teacher_id,name,invite_code,school_id)
+      select p.id,$4,$5,$1 from profiles p where p.id=$3 and exists(select 1 from school_teachers st where st.teacher_id=p.id and st.school_id=$1) and p.role='teacher' and ${authorized} returning id`,
       [
         schoolId,
         actorId,
@@ -41,7 +41,7 @@ export async function setupSchool(
     const result = await db.query(
       `insert into ${student ? "class_members(class_id,child_id)" : "class_teachers(class_id,teacher_id,added_by)"}
       select c.id,p.id${student ? "" : ",$2::uuid"} from classes c join profiles owner on owner.id=c.teacher_id
-      join profiles p on p.id=$4 where c.id=$3 and owner.school_id=$1 and p.school_id=$1
+      join profiles p on p.id=$4 where c.id=$3 and c.school_id=$1 and ${student ? "p.school_id=$1" : "exists(select 1 from school_teachers st where st.school_id=$1 and st.teacher_id=p.id)"}
       and p.role='${student ? "child" : "teacher"}' and ${authorized} on conflict do nothing returning class_id`,
       [schoolId, actorId, input.classId, input.personId],
     );
@@ -54,7 +54,7 @@ export async function setupSchool(
   ) {
     const { rows } = await db.query(
       `select p.username from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id join profiles p on p.id=m.child_id
-      where c.id=$3 and p.id=$4 and owner.school_id=$1 and p.school_id=$1 and p.role='child' and ${authorized}`,
+      where c.id=$3 and p.id=$4 and c.school_id=$1 and p.school_id=$1 and p.role='child' and ${authorized}`,
       [schoolId, actorId, input.classId, input.personId],
     );
     if (!rows[0]) return false;

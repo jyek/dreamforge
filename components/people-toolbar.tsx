@@ -44,8 +44,6 @@ export function PeopleToolbar({
       id: string;
       display_name: string;
       username: string;
-      eligible?: boolean;
-      school_name?: string;
     }[]
   >([]);
   const [searching, setSearching] = useState(false);
@@ -292,8 +290,6 @@ export function PeopleToolbar({
                         key={match.id}
                         role="option"
                         aria-selected={false}
-                        disabled={match.eligible === false}
-                        aria-disabled={match.eligible === false}
                         onClick={() => {
                           setPerson(match);
                           setIdentifier(match.username);
@@ -323,15 +319,7 @@ export function PeopleToolbar({
                         }}
                       >
                         <strong>{match.display_name}</strong>
-                        <small>
-                          @{match.username}
-                          {match.eligible === false && (
-                            <span className="df-account-other-school">
-                              Belongs to {match.school_name}. This teacher is in
-                              a different school.
-                            </span>
-                          )}
-                        </small>
+                        <small>@{match.username}</small>
                       </button>
                     ))}
                   </div>

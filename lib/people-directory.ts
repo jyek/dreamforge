@@ -37,7 +37,7 @@ export async function addDirectoryPerson(
     const c = input.classId
       ? (
           await tx.query(
-            `select c.id,c.teacher_id,c.invite_code,o.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")} for update of c`,
+            `select c.id,c.teacher_id,c.invite_code,c.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")} for update of c`,
             [input.classId, actorId],
           )
         ).rows[0]
@@ -54,7 +54,7 @@ export async function addDirectoryPerson(
     const role = input.role === "teacher" ? "teacher" : "child";
     const person = (
       await tx.query(
-        `select id,display_name,username from profiles where role=$1 and (school_id is not distinct from $2 or school_id is null) and (lower(username)=lower($3) or lower(auth_email)=lower($3)) for update`,
+        `select id,display_name,username from profiles where role=$1 and ($1='teacher' or school_id is not distinct from $2 or school_id is null) and (lower(username)=lower($3) or lower(auth_email)=lower($3)) for update`,
         [
           role,
           c.school_id,
@@ -64,22 +64,6 @@ export async function addDirectoryPerson(
         ],
       )
     ).rows[0];
-    if (!person && role === "teacher") {
-      const other = (
-        await tx.query(
-          "select s.name from profiles p join schools s on s.id=p.school_id where p.role='teacher' and (lower(p.username)=lower($1) or lower(p.auth_email)=lower($1))",
-          [
-            String(input.identifier || "")
-              .trim()
-              .replace(/^@/, ""),
-          ],
-        )
-      ).rows[0];
-      if (other)
-        throw Error(
-          `This teacher belongs to ${other.name}. Teachers must belong to your school before joining its classrooms.`,
-        );
-    }
     if (!person)
       throw Error(
         "No matching account in your school. Check the username or email, or share an invitation link.",
@@ -94,13 +78,10 @@ export async function addDirectoryPerson(
     }
     if (input.action === "add") {
       if (role === "teacher") {
-        const conflicts = await tx.query(
-          "select 1 from classes c join profiles owner on owner.id=c.teacher_id where (c.teacher_id=$1 or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=$1)) and owner.school_id is distinct from $2 limit 1",
-          [person.id, c.school_id],
-        );
-        if (conflicts.rowCount)
-          throw Error(
-            "This teacher already manages classrooms outside your school. Ask the school admin to arrange membership.",
+        if (c.school_id)
+          await tx.query(
+            "insert into school_teachers(school_id,teacher_id,added_by) values($1,$2,$3) on conflict do nothing",
+            [c.school_id, person.id, actorId],
           );
         await tx.query(
           "update profiles set school_id=$2 where id=$1 and school_id is null",
@@ -109,7 +90,7 @@ export async function addDirectoryPerson(
       }
       if (role === "child") {
         const conflict = await tx.query(
-          "select 1 from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id where m.child_id=$1 and owner.school_id is distinct from $2 limit 1",
+          "select 1 from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id where m.child_id=$1 and c.school_id is distinct from $2 limit 1",
           [person.id, c.school_id],
         );
         if (conflict.rowCount)
@@ -152,7 +133,7 @@ export async function searchDirectoryPeople(
   const scope = input.classId
     ? (
         await db.query(
-          `select o.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
+          `select c.school_id from classes c where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
           [input.classId, actorId],
         )
       ).rows[0]
@@ -164,6 +145,16 @@ export async function searchDirectoryPeople(
       ).rows[0];
   if (!scope) throw Error("Choose a classroom you manage.");
   const role = input.role === "teacher" ? "teacher" : "child";
+  if (role === "teacher") {
+    return (
+      await db.query(
+        `select p.id,p.display_name,p.username from profiles p where p.role='teacher'
+       and (strpos(lower(p.username),lower($1))>0 or strpos(lower(p.display_name),lower($1))>0 or lower(p.auth_email)=lower($1))
+       order by (lower(p.username)=lower($1)) desc,lower(p.display_name),p.id limit 8`,
+        [query],
+      )
+    ).rows;
+  }
   const results = (
     await db.query(
       `select p.id,p.display_name,p.username from profiles p where p.role=$1 and (
@@ -173,12 +164,5 @@ export async function searchDirectoryPeople(
       [role, scope.school_id, query, actorId],
     )
   ).rows;
-  if (role === "teacher" && !results.length) {
-    const other = await db.query(
-      "select p.id,p.display_name,p.username,s.name as school_name,false as eligible from profiles p join schools s on s.id=p.school_id where p.role='teacher' and p.school_id is distinct from $1 and (lower(p.username)=lower($2) or lower(p.auth_email)=lower($2)) limit 1",
-      [scope.school_id, query],
-    );
-    return other.rows;
-  }
   return results;
 }

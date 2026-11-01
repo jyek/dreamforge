@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     return Response.json({ error: "Invalid classroom." }, { status: 400 });
   const classrooms = (
     await database().query(
-      `select c.id,c.name from classes c join profiles owner on owner.id=c.teacher_id where ${schoolScope ? "exists(select 1 from school_admins a where a.school_id=owner.school_id and a.profile_id=$1)" : classroomTeacherSQL("c.id")} order by lower(c.name)`,
+      `select c.id,c.name from classes c join profiles owner on owner.id=c.teacher_id where ${schoolScope ? "exists(select 1 from school_admins a where a.school_id=c.school_id and a.profile_id=$1)" : classroomTeacherSQL("c.id")} order by lower(c.name)`,
       [user.id],
     )
   ).rows;

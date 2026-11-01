@@ -33,7 +33,12 @@ type Project = {
 };
 export type StudentProjectsData = {
   teachers?: { id: string; display_name: string; is_owner: boolean }[];
-  classroom?: { name: string; teacher_name?: string; invite_code?: string };
+  classroom?: {
+    name: string;
+    teacher_name?: string;
+    invite_code?: string;
+    school_name?: string | null;
+  };
   availableProjects?: AssignableProject[];
   students: GuidanceStudent[];
   projects: Project[];

@@ -11,7 +11,7 @@ export async function classroomAccess(
   db: Queryable = database(),
 ) {
   const { rows } = await db.query(
-    `select c.id,c.name,c.invite_code,c.teacher_id,pr.display_name as teacher_name from classes c join profiles pr on pr.id=c.teacher_id where c.id=$1 and (${groupManagerSQL("c.id", "$2")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$2))`,
+    `select c.id,c.name,c.invite_code,c.teacher_id,c.school_id,s.name as school_name,pr.display_name as teacher_name from classes c join profiles pr on pr.id=c.teacher_id left join schools s on s.id=c.school_id where c.id=$1 and (${groupManagerSQL("c.id", "$2")} or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=$2))`,
     [classId, user.id],
   );
   return rows[0] || null;
