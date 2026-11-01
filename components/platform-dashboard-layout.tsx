@@ -10,6 +10,7 @@ import {
   Building2,
   Menu,
   X,
+  Plus,
 } from "lucide-react";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { StudioSidebar } from "./studio-sidebar";
@@ -208,15 +209,23 @@ export function PlatformDashboardLayout({
                 <span>{s.label}</span>
               </button>
             ))}
+            {!teacher && (
+              <CreateProjectDialog
+                trigger={
+                  <button
+                    type="button"
+                    aria-label="Create a project"
+                    title="Create a project"
+                  >
+                    <Plus size={20} aria-hidden="true" />
+                    <span>Create a project</span>
+                  </button>
+                }
+              />
+            )}
           </nav>
         }
-      >
-        {!teacher && section !== "classrooms" && (
-          <div className="df-sidebar-create">
-            <CreateProjectDialog />
-          </div>
-        )}
-      </StudioSidebar>
+      />
       <main
         className={`df-page df-teacher-content ${!teacher && section === "home" ? "df-builder-home" : ""}`}
       >
