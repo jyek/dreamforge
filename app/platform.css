@@ -3450,7 +3450,7 @@
 .df-group-menu-button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #81758f; box-shadow: none; cursor: pointer; }
 .df-group-menu-button:hover { background: #f3effb; color: #6b3ff7; }
 .df-group-menu-button:focus-visible { outline: 2px solid #6b3ff7; outline-offset: 2px; }
-.df-status-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); padding: 14px 18px; border: 1px solid #e0dfea; border-radius: 12px; background: white; color: #24183b; box-shadow: 0 8px 28px #21163d26; font-size: 14px; }
+.df-status-toast { position: fixed; top: 24px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); padding: 14px 18px; border: 1px solid #e0dfea; border-radius: 12px; background: white; color: #24183b; box-shadow: 0 8px 28px #21163d26; font-size: 14px; }
 .df-status-toast > svg { color: #6b3ff7; flex-shrink: 0; }
 .df-status-toast > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #81758f; box-shadow: none; cursor: pointer; }
 .df-status-toast > button:hover { background: #f3effb; }
