@@ -403,6 +403,7 @@ export function PlatformDashboard({
                     <article key={p.vm_id} className="df-card df-project">
                       <Link
                         className="df-project-main"
+                        aria-label={`Open ${p.metadata.name}`}
                         href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
                       >
                         <DreamForgeProjectArt variant={index} />
