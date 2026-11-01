@@ -406,7 +406,25 @@ export function PlatformDashboard({
                         href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
                       >
                         <DreamForgeProjectArt variant={index} />
-                        <h3>{p.metadata.name}</h3>
+                      </Link>
+                      <div className="df-project-card-heading">
+                        <Link
+                          className="df-project-main"
+                          href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
+                        >
+                          <h3>{p.metadata.name}</h3>
+                        </Link>
+                        {!teacher && (
+                          <StudentProjectActions
+                            projectId={p.vm_id}
+                            name={p.metadata.name}
+                          />
+                        )}
+                      </div>
+                      <Link
+                        className="df-project-main"
+                        href={`/${p.vm_id}/${p.metadata.conversations[0]?.id || ""}`}
+                      >
                         <p className="df-muted">
                           {teacher
                             ? "Your teaching project"
@@ -416,12 +434,6 @@ export function PlatformDashboard({
                           {teacher ? "Open project" : "Keep building ↗"}
                         </footer>
                       </Link>
-                      {!teacher && (
-                        <StudentProjectActions
-                          projectId={p.vm_id}
-                          name={p.metadata.name}
-                        />
-                      )}
                       {teacher && (
                         <ProjectClassroomSharing
                           projectId={p.vm_id}
