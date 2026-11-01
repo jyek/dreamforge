@@ -17,6 +17,7 @@ import { SimpleLoading } from "./dream-loading";
 type Project = {
   vm_id: string;
   group_name?: string;
+  is_group_project?: boolean;
   classroom_group_id?: string;
   owner_id: string;
   owner_name: string;
@@ -128,7 +129,12 @@ export function StudentClassroomDetail({
             .map((p) => (
               <div className="df-school-row" key={p.vm_id}>
                 <strong>{p.name}</strong>
-                <span>{p.group_name || "Individual project"}</span>
+                <span>
+                  {p.group_name ||
+                    (p.is_group_project
+                      ? "Group project · Unassigned"
+                      : "Individual project")}
+                </span>
                 <label>
                   Group
                   <select
@@ -208,7 +214,11 @@ export function StudentClassroomDetail({
                       {p.group_name ? (
                         <span className="df-guidance-tag">{p.group_name}</span>
                       ) : (
-                        <span className="df-muted">Individual project</span>
+                        <span className="df-muted">
+                          {p.is_group_project
+                            ? "Group project · Unassigned"
+                            : "Individual project"}
+                        </span>
                       )}
                     </td>
                     <td>

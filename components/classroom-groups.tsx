@@ -22,6 +22,7 @@ type Student = {
   display_name: string;
   username: string;
   group_id: string | null;
+  is_group_project?: boolean;
   alert_count: number;
   pending_count: number;
 };
@@ -29,6 +30,7 @@ type Group = { id: string; name: string; category: string };
 type Project = {
   id: string;
   group_id: string | null;
+  is_group_project?: boolean;
   name: string;
   owner: string;
   owner_id: string;
@@ -453,7 +455,11 @@ export function ClassroomGroups({ classId }: { classId: string }) {
                       {p.group_name ? (
                         <span className="df-guidance-tag">{p.group_name}</span>
                       ) : (
-                        <span className="df-muted">Individual project</span>
+                        <span className="df-muted">
+                          {p.is_group_project
+                            ? "Group project · Unassigned"
+                            : "Individual project"}
+                        </span>
                       )}
                     </td>
                     <td>
@@ -597,7 +603,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
             <DialogDescription>
               {manageAction === "rename"
                 ? "Choose a new name for this group."
-                : `Remove ${manage?.name}? Students will return to Unassigned. Group projects become individual projects and remain in the classroom.`}
+                : `Remove ${manage?.name}? Students will return to Unassigned. Group projects stay in the classroom. Only the student owner can access them until shared with a group again.`}
             </DialogDescription>
           </DialogHeader>
           <form

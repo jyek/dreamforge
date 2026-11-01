@@ -144,7 +144,7 @@ export async function changeClassroomGroups(
             p.vm_id,
           ]);
           await tx.query(
-            "update projects set classroom_group_id=null,group_class_id=null,editor_id=null where vm_id=$1",
+            "update projects set classroom_group_id=null,editor_id=null,metadata=jsonb_set(metadata,'{classroomGroupProject}','true'::jsonb) where vm_id=$1",
             [p.vm_id],
           );
           await tx.query(
@@ -199,7 +199,7 @@ async function syncProjects(tx: import("pg").PoolClient, classId: string) {
       );
     await tx.query("delete from project_members where vm_id=$1", [p.vm_id]);
     await tx.query(
-      "insert into project_members(vm_id,child_id,added_by) select $1,m.child_id,$2 from classroom_group_members m join class_members owner on owner.class_id=m.class_id and owner.child_id=$2 where m.group_id=$3 and m.child_id<>$2",
+      "insert into project_members(vm_id,child_id,added_by) select $1,m.child_id,$2 from classroom_group_members m join classroom_group_members owner on owner.group_id=m.group_id and owner.child_id=$2 where m.group_id=$3 and m.child_id<>$2",
       [p.vm_id, p.owner_id, p.classroom_group_id],
     );
     await tx.query(
@@ -232,10 +232,10 @@ export async function shareGroupProject(
         403,
         "Choose your own classroom project and a group you belong to.",
       );
-    await tx.query("update projects set classroom_group_id=$2 where vm_id=$1", [
-      projectId,
-      groupId,
-    ]);
+    await tx.query(
+      "update projects set classroom_group_id=$2,metadata=jsonb_set(metadata,'{classroomGroupProject}','true'::jsonb) where vm_id=$1",
+      [projectId, groupId],
+    );
     await syncProjects(tx, classId);
     await tx.query("commit");
   } catch (e) {

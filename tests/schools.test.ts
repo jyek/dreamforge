@@ -489,7 +489,15 @@ test("schools keep their people, classes and data separate", async () => {
     )
   ).rows[0];
   assert.equal(preserved.classroom_group_id, null);
-  assert.equal(preserved.group_class_id, null);
+  assert.equal(preserved.group_class_id, classA);
+  assert.equal(
+    (
+      await pool.query(
+        "select 1 from project_members where vm_id='vm-schoolalerta'",
+      )
+    ).rowCount,
+    0,
+  );
   await changeClassroomGroups(pool, classA, person.teacher1, {
     action: "create",
     count: 1,
