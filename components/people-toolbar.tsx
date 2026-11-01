@@ -43,7 +43,15 @@ export function PeopleToolbar({
       const r = await fetch("/api/platform/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, role, classId, identifier }),
+        body: JSON.stringify({
+          action,
+          role,
+          classId:
+            role === "student" && action === "invite"
+              ? undefined
+              : classId || undefined,
+          identifier,
+        }),
       });
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
@@ -51,7 +59,9 @@ export function PeopleToolbar({
       if (action === "invite") setLink(d.link);
       if (action === "add") {
         setOpen(false);
-        setNotice(`${d.person.display_name} added to classroom.`);
+        setNotice(
+          `${d.person.display_name} added to ${classId ? "classroom" : "school"}.`,
+        );
         if (onChanged) await onChanged();
         router.refresh();
       }
@@ -82,11 +92,15 @@ export function PeopleToolbar({
           </label>
         )}
         <button
-          className="df-button"
-          disabled={!classrooms.length}
+          className={buttonOnly ? "df-button small" : "df-button"}
+          disabled={role === "teacher" && !classrooms.length}
           onClick={() => {
             setOpen(true);
-            setClassId(filter || classrooms[0]?.id || "");
+            setClassId(
+              buttonOnly
+                ? classrooms[0]?.id || ""
+                : filter || (role === "student" ? "" : classrooms[0]?.id || ""),
+            );
             setPerson(null);
             setLink("");
             setIdentifier("");
@@ -113,7 +127,9 @@ export function PeopleToolbar({
         >
           <DialogTitle>Add {role}</DialogTitle>
           <DialogDescription>
-            Add an existing account to a classroom, or share a signup link.
+            {role === "student"
+              ? "Add a student to your school or a classroom, or share a school invitation link."
+              : "Add an existing teacher account or share an invitation link."}
           </DialogDescription>
           <div className="df-inline" role="group" aria-label="Add method">
             <button
@@ -146,26 +162,29 @@ export function PeopleToolbar({
               );
             }}
           >
-            <label>
-              Classroom
-              <select
-                className="df-input"
-                disabled={busy}
-                value={classId}
-                onChange={(e) => {
-                  setClassId(e.target.value);
-                  setPerson(null);
-                  setLink("");
-                }}
-                required
-              >
-                {classrooms.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!buttonOnly && !(role === "student" && mode === "invite") && (
+              <label>
+                Classroom{role === "student" ? " (optional)" : ""}
+                <select
+                  className="df-input"
+                  disabled={busy}
+                  value={classId}
+                  onChange={(e) => {
+                    setClassId(e.target.value);
+                    setPerson(null);
+                    setLink("");
+                  }}
+                  required={role === "teacher"}
+                >
+                  {role === "student" && <option value="">School only</option>}
+                  {classrooms.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {mode === "account" && (
               <label>
                 Username or email
@@ -189,7 +208,7 @@ export function PeopleToolbar({
               </div>
             )}
             {mode === "invite" && link && (
-              <div className="df-inline">
+              <div className="df-invite-link-row">
                 <input
                   className="df-input"
                   aria-label={`${role} invitation link`}
@@ -213,13 +232,18 @@ export function PeopleToolbar({
               >
                 Cancel
               </button>
-              <button className="df-button" disabled={busy || !classId}>
+              <button
+                className="df-button"
+                disabled={busy || (role === "teacher" && !classId)}
+              >
                 {busy
                   ? "Loading…"
                   : mode === "invite"
                     ? "Create invite link"
                     : person
-                      ? "Add to classroom"
+                      ? classId
+                        ? "Add to classroom"
+                        : "Add to school"
                       : "Find account"}
               </button>
             </div>

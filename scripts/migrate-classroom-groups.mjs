@@ -15,7 +15,16 @@ const db = new pg.Client({
     ca: fs.readFileSync("config/supabase-ca.crt", "utf8"),
   },
 });
-const version = "202611010001_classroom_groups";
+const version =
+  process.argv.find((a) => a.startsWith("--migration="))?.slice(12) ||
+  "202611010001_classroom_groups";
+if (
+  ![
+    "202611010001_classroom_groups",
+    "202611010002_school_student_invites",
+  ].includes(version)
+)
+  throw Error("Unsupported migration.");
 const sql = fs.readFileSync(`supabase/migrations/${version}.sql`, "utf8");
 const checksum = createHash("sha256").update(sql).digest("hex");
 try {
@@ -33,9 +42,7 @@ try {
     console.log("Migration already applied.");
     await db.query("rollback");
   } else if (!process.argv.includes("--apply")) {
-    console.log(
-      "Ready: additive classroom group tables and project association.",
-    );
+    console.log(`Ready: ${version}.`);
     await db.query("rollback");
   } else {
     await db.query(sql.replace(/^begin;/, "").replace(/commit;\s*$/, ""));
@@ -44,7 +51,7 @@ try {
       [version, checksum],
     );
     await db.query("commit");
-    console.log("Classroom group migration applied.");
+    console.log(`${version} migration applied.`);
   }
 } catch (e) {
   await db.query("rollback").catch(() => {});

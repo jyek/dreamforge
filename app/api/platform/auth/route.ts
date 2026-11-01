@@ -1,3 +1,4 @@
+import { lockStudentSchoolInvite } from "@/lib/student-invites";
 import { childPolicy } from "@/lib/child-policy";
 import { database } from "@/lib/database";
 import {
@@ -81,6 +82,10 @@ export async function POST(req: Request) {
       typeof body.teacherInvite === "string" && body.teacherInvite.length > 0;
     if (teacher && !suppliedEmail)
       return fail("Teachers need an email address.");
+    const studentInvite =
+      typeof body.studentInvite === "string" ? body.studentInvite : "";
+    if (studentInvite && (teacher || body.classCode))
+      return fail("Use one invitation at a time.");
     const code =
       typeof body.classCode === "string"
         ? body.classCode.trim().toUpperCase()
@@ -95,13 +100,19 @@ export async function POST(req: Request) {
             "select token_hash,classroom_id,created_by,school_id,make_admin from teacher_invites where token_hash=$1 and used_at is null and expires_at>now() for update",
             [tokenHash(body.teacherInvite)],
           )
-        : code
-          ? await db.query(
-              "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1 for share of c",
-              [code],
-            )
-          : { rows: [] };
-      if ((teacher || code) && !invitation.rows[0]) {
+        : studentInvite
+          ? {
+              rows: [await lockStudentSchoolInvite(db, studentInvite)].filter(
+                Boolean,
+              ),
+            }
+          : code
+            ? await db.query(
+                "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1 for share of c",
+                [code],
+              )
+            : { rows: [] };
+      if ((teacher || code || studentInvite) && !invitation.rows[0]) {
         await db.query("rollback");
         return fail("This invitation code is invalid or expired.");
       }
@@ -161,6 +172,11 @@ export async function POST(req: Request) {
           [tokenHash(body.teacherInvite), authId],
         );
       } else {
+        if (studentInvite)
+          await db.query(
+            "update student_invites set used_by=$2,used_at=now() where token_hash=$1",
+            [tokenHash(studentInvite), authId],
+          );
         if (code)
           await db.query(
             "insert into class_members(class_id,child_id) values($1,$2)",

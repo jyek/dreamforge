@@ -33,17 +33,27 @@ export async function addDirectoryPerson(
   const tx = await db.connect();
   try {
     await tx.query("begin");
-    const c = (
-      await tx.query(
-        `select c.id,c.teacher_id,c.invite_code,o.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")} for update of c`,
-        [input.classId, actorId],
-      )
-    ).rows[0];
-    if (!c) throw Error("Choose a classroom you manage.");
+    const c = input.classId
+      ? (
+          await tx.query(
+            `select c.id,c.teacher_id,c.invite_code,o.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")} for update of c`,
+            [input.classId, actorId],
+          )
+        ).rows[0]
+      : (
+          await tx.query(
+            "select school_id from profiles where id=$1 and role='teacher' and school_id is not null",
+            [actorId],
+          )
+        ).rows[0];
+    if (!c || (!input.classId && input.role !== "student"))
+      throw Error(
+        "Choose a classroom you manage or invite a student to your school.",
+      );
     const role = input.role === "teacher" ? "teacher" : "child";
     const person = (
       await tx.query(
-        `select id,display_name,username from profiles where role=$1 and school_id is not distinct from $2 and (lower(username)=lower($3) or lower(auth_email)=lower($3)) for update`,
+        `select id,display_name,username from profiles where role=$1 and (school_id is not distinct from $2 or (role='child' and school_id is null)) and (lower(username)=lower($3) or lower(auth_email)=lower($3)) for update`,
         [
           role,
           c.school_id,
@@ -63,12 +73,24 @@ export async function addDirectoryPerson(
         [c.id, person.id],
       );
     if (input.action === "add") {
-      if (role === "child")
+      if (role === "child") {
+        const conflict = await tx.query(
+          "select 1 from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id where m.child_id=$1 and owner.school_id is distinct from $2 limit 1",
+          [person.id, c.school_id],
+        );
+        if (conflict.rowCount)
+          throw Error("This student belongs to another school.");
+        await tx.query(
+          "update profiles set school_id=$2 where id=$1 and school_id is null",
+          [person.id, c.school_id],
+        );
+      }
+      if (role === "child" && c.id)
         await tx.query(
           "insert into class_members(class_id,child_id) values($1,$2) on conflict do nothing",
           [c.id, person.id],
         );
-      else if (person.id !== c.teacher_id)
+      else if (role === "teacher" && person.id !== c.teacher_id)
         await tx.query(
           "insert into class_teachers(class_id,teacher_id,added_by) values($1,$2,$3) on conflict do nothing",
           [c.id, person.id, actorId],

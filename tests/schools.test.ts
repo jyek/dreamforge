@@ -1,3 +1,7 @@
+import {
+  createStudentSchoolInvite,
+  lockStudentSchoolInvite,
+} from "../lib/student-invites";
 import { assignClassroomProject, classroomData } from "../lib/classroom-data";
 import { addDirectoryPerson, directoryData } from "../lib/people-directory";
 import {
@@ -608,6 +612,61 @@ test("schools keep their people, classes and data separate", async () => {
       ])
     ).rows[0].class_id,
     newClass,
+  );
+
+  const studentToken = await createStudentSchoolInvite(pool, person.teacher1);
+  const pendingInvite = await lockStudentSchoolInvite(pool, studentToken);
+  assert.equal(pendingInvite.school_id, a.school.id);
+  await pool.query(
+    "update student_invites set expires_at=now()-interval '1 second' where token_hash=$1",
+    [hash(studentToken)],
+  );
+  assert.equal(await lockStudentSchoolInvite(pool, studentToken), null);
+  const validToken = await createStudentSchoolInvite(pool, person.admin1);
+  await pool.query(
+    "update student_invites set used_at=now(),used_by=$2 where token_hash=$1",
+    [hash(validToken), person.student1],
+  );
+  assert.equal(await lockStudentSchoolInvite(pool, validToken), null);
+  await assert.rejects(createStudentSchoolInvite(pool, person.independent));
+  const newcomer = id(90);
+  await pool.query("insert into auth.users(id) values($1)", [newcomer]);
+  await pool.query(
+    "insert into profiles(id,username,display_name,auth_email,role) values($1,'school_new_student','New student','new@tests.invalid','child')",
+    [newcomer],
+  );
+  await addDirectoryPerson(pool, person.admin1, {
+    action: "add",
+    role: "student",
+    identifier: "school_new_student",
+  });
+  assert.equal(
+    (await pool.query("select school_id from profiles where id=$1", [newcomer]))
+      .rows[0].school_id,
+    a.school.id,
+  );
+  assert.equal(
+    (
+      await pool.query("select 1 from class_members where child_id=$1", [
+        newcomer,
+      ])
+    ).rowCount,
+    0,
+  );
+  await addDirectoryPerson(pool, person.teacher1, {
+    action: "add",
+    role: "student",
+    identifier: "school_new_student",
+    classId: classA,
+  });
+  assert.equal(
+    (
+      await pool.query(
+        "select 1 from class_members where child_id=$1 and class_id=$2",
+        [newcomer, classA],
+      )
+    ).rowCount,
+    1,
   );
   // The database refuses an admin invitation that has no school.
   await assert.rejects(

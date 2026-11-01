@@ -1,3 +1,4 @@
+import { createStudentSchoolInvite } from "@/lib/student-invites";
 import { database } from "@/lib/database";
 import {
   checkOrigin,
@@ -15,7 +16,8 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}));
   if (
     !["teacher", "student"].includes(b.role) ||
-    !/^[a-f0-9-]{36}$/i.test(b.classId) ||
+    (b.classId && !/^[a-f0-9-]{36}$/i.test(b.classId)) ||
+    (b.role === "teacher" && !b.classId) ||
     !["lookup", "add", "invite", "remove"].includes(b.action)
   )
     return Response.json(
@@ -23,6 +25,11 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   try {
+    if (b.action === "invite" && b.role === "student") {
+      const token = await createStudentSchoolInvite(database(), user.id);
+      const origin = process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin;
+      return Response.json({ link: `${origin}/signup?studentInvite=${token}` });
+    }
     if (b.action === "invite") {
       const db = database();
       const c = (
@@ -33,10 +40,6 @@ export async function POST(req: Request) {
       ).rows[0];
       if (!c) throw Error("Choose a classroom you manage.");
       const origin = process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin;
-      if (b.role === "student")
-        return Response.json({
-          link: `${origin}/signup?classCode=${encodeURIComponent(c.invite_code)}`,
-        });
       const token = inviteToken();
       await db.query(
         "insert into teacher_invites(token_hash,created_by,classroom_id,school_id) values($1,$2,$3,$4)",

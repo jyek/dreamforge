@@ -208,7 +208,7 @@ export function SchoolStudents({
                           onClick={() => open(student.id, "enrollStudent")}
                           aria-label={`Assign ${student.display_name} to a classroom`}
                         >
-                          Assign
+                          Add to classroom
                         </button>
                         <button
                           type="button"

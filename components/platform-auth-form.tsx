@@ -8,12 +8,14 @@ export function PlatformAuthForm({
   classCode = "",
   admin = false,
   teacherInvite = "",
+  studentInvite = "",
   returnTo = "",
 }: {
   signup?: boolean;
   classCode?: string;
   admin?: boolean;
   teacherInvite?: string;
+  studentInvite?: string;
   returnTo?: string;
 }) {
   const [error, setError] = useState(""),
@@ -33,6 +35,7 @@ export function PlatformAuthForm({
           ...Object.fromEntries(form),
           action: signup ? "signup" : "login",
           teacherInvite,
+          studentInvite,
         }),
       });
       const data = await response.json();
@@ -151,7 +154,7 @@ export function PlatformAuthForm({
                     }
                   />
                 </label>
-                {!teacherInvite && (
+                {!teacherInvite && !studentInvite && (
                   <label>
                     Class Number (optional)
                     <input

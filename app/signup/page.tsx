@@ -4,6 +4,7 @@ export default async function Signup({
 }: {
   searchParams: Promise<{
     teacherInvite?: string;
+    studentInvite?: string;
     next?: string;
     classCode?: string;
   }>;
@@ -12,6 +13,7 @@ export default async function Signup({
   return (
     <PlatformAuthForm
       signup
+      studentInvite={query.studentInvite || ""}
       classCode={query.classCode || ""}
       teacherInvite={query.teacherInvite || ""}
       returnTo={query.next || ""}
