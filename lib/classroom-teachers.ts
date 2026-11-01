@@ -1,3 +1,4 @@
+import { groupManagerSQL } from "./project-group";
 import { database } from "./database";
 import { createHash } from "node:crypto";
 import type { Profile } from "./platform-auth";
@@ -20,7 +21,12 @@ export async function acceptClassroomTeacherInvite(
     // Co-teachers must belong to the classroom owner's school (or both be independent).
     if (
       !invite ||
-      invite.created_by !== invite.teacher_id ||
+      !(
+        await db.query(
+          `select 1 from classes c where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
+          [invite.classroom_id, invite.created_by],
+        )
+      ).rowCount ||
       !sameSchool(invite.owner_school, invite.teacher_school)
     ) {
       await db.query("rollback");

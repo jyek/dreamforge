@@ -5,11 +5,13 @@ import Link from "next/link";
 import { DreamForgeBrand, DreamForgeArt } from "./dreamforge-brand";
 export function PlatformAuthForm({
   signup = false,
+  classCode = "",
   admin = false,
   teacherInvite = "",
   returnTo = "",
 }: {
   signup?: boolean;
+  classCode?: string;
   admin?: boolean;
   teacherInvite?: string;
   returnTo?: string;
@@ -155,6 +157,7 @@ export function PlatformAuthForm({
                     <input
                       className="df-input"
                       name="classCode"
+                      defaultValue={classCode}
                       maxLength={30}
                       autoComplete="off"
                       placeholder="Enter a Class Number, or join later"

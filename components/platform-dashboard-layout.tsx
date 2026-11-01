@@ -27,6 +27,12 @@ export const TEACHER_SECTIONS = [
     description: "Manage your students and classrooms.",
   },
   {
+    id: "teachers",
+    label: "Teachers",
+    icon: Presentation,
+    description: "Your classroom teaching teams.",
+  },
+  {
     id: "students",
     label: "Students",
     icon: UsersRound,

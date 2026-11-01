@@ -1,3 +1,4 @@
+import { addDirectoryPerson, directoryData } from "../lib/people-directory";
 import {
   changeClassroomGroups,
   shareGroupProject,
@@ -487,6 +488,59 @@ test("schools keep their people, classes and data separate", async () => {
       )
     ).rowCount,
     0,
+  );
+
+  const people = await directoryData(pool, person.teacher1);
+  assert.ok(people.students.some((p) => p.id === person.student1));
+  assert.ok(!people.students.some((p) => p.id === person.student2));
+  assert.equal(
+    (
+      await addDirectoryPerson(pool, person.teacher1, {
+        action: "lookup",
+        classId: classA,
+        role: "student",
+        identifier: "sch_student1",
+      })
+    ).id,
+    person.student1,
+  );
+  assert.equal(
+    (
+      await addDirectoryPerson(pool, person.admin1, {
+        action: "add",
+        classId: classA,
+        role: "student",
+        identifier: "student1@tests.invalid",
+      })
+    ).id,
+    person.student1,
+  );
+  await assert.rejects(
+    addDirectoryPerson(pool, person.teacher2, {
+      action: "add",
+      classId: classA,
+      role: "student",
+      identifier: "sch_student1",
+    }),
+  );
+  await assert.rejects(
+    addDirectoryPerson(pool, person.teacher1, {
+      action: "add",
+      classId: classA,
+      role: "student",
+      identifier: "student2@tests.invalid",
+    }),
+  );
+  assert.equal(
+    (
+      await addDirectoryPerson(pool, person.admin1, {
+        action: "add",
+        classId: classA,
+        role: "teacher",
+        identifier: "sch_admin1",
+      })
+    ).id,
+    person.admin1,
   );
   // The database refuses an admin invitation that has no school.
   await assert.rejects(

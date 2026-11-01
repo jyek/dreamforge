@@ -1,3 +1,5 @@
+import { TeacherPeopleDirectory } from "./teacher-people-directory";
+import { directoryData } from "@/lib/people-directory";
 import { database } from "@/lib/database";
 import { administeredSchool } from "@/lib/schools";
 import { schoolOverview } from "@/lib/school-admin";
@@ -37,6 +39,18 @@ export async function StudioPage({ section }: { section: string }) {
         />
       );
   }
+  if (
+    user.role === "teacher" &&
+    (section === "students" || section === "teachers")
+  )
+    return (
+      <TeacherPeopleDirectory
+        section={section}
+        name={user.display_name}
+        schoolName={user.school_name}
+        data={await directoryData(database(), user.id)}
+      />
+    );
   const allowed =
     user.role === "teacher"
       ? ["home", "projects", "classrooms", "students", "safety", "profile"]

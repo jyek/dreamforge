@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ClassroomAvatar } from "./classroom-avatar";
+import { PeopleToolbar } from "./people-toolbar";
 type Classroom = { id: string; name: string };
 export type SchoolStudent = {
   id: string;
@@ -18,6 +18,7 @@ export function SchoolStudents({
   classrooms: Classroom[];
 }) {
   const router = useRouter();
+  const [classFilter, setClassFilter] = useState("");
   const [rows, setRows] = useState(students);
   const [editing, setEditing] = useState<{
     studentId: string;
@@ -40,11 +41,13 @@ export function SchoolStudents({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("/api/platform/school", {
-        method: "PATCH",
+      const response = await fetch("/api/platform/people", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: editing.action,
+          action: editing.action === "enrollStudent" ? "add" : "remove",
+          role: "student",
+          identifier: rows.find((s) => s.id === editing.studentId)?.username,
           personId: editing.studentId,
           classId,
         }),
@@ -85,7 +88,13 @@ export function SchoolStudents({
   }
   return (
     <>
-      <div className="df-guidance-table df-school-student-directory">
+      <PeopleToolbar
+        role="student"
+        classrooms={classrooms}
+        filter={classFilter}
+        onFilter={setClassFilter}
+      />
+      <div className="df-guidance-table df-school-student-directory df-people-directory">
         <table className="df-table">
           <thead>
             <tr>
@@ -96,122 +105,134 @@ export function SchoolStudents({
             </tr>
           </thead>
           <tbody>
-            {rows.map((student) => {
-              const available = classrooms.filter(
-                (c) => !student.classrooms.some((member) => member.id === c.id),
-              );
-              const active = editing?.studentId === student.id;
-              const options =
-                editing?.action === "removeStudent"
-                  ? student.classrooms
-                  : available;
-              return (
-                <tr key={student.id}>
-                  <td>
-                    <div className="df-directory-person">
-                      <ClassroomAvatar identity={student.id} role="student" />
-                      <div>
-                        <strong>{student.display_name}</strong>
-                        <small>@{student.username}</small>
+            {rows
+              .filter(
+                (s) =>
+                  !classFilter ||
+                  s.classrooms.some((c) => c.id === classFilter),
+              )
+              .map((student) => {
+                const available = classrooms.filter(
+                  (c) =>
+                    !student.classrooms.some((member) => member.id === c.id),
+                );
+                const active = editing?.studentId === student.id;
+                const options =
+                  editing?.action === "removeStudent"
+                    ? student.classrooms
+                    : available;
+                return (
+                  <tr key={student.id}>
+                    <td>
+                      <div className="df-directory-person">
+                        <div>
+                          <strong>{student.display_name}</strong>
+                          <small>@{student.username}</small>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>{student.project_count}</td>
-                  <td>
-                    <div className="df-directory-classes">
-                      {student.classrooms.length ? (
-                        student.classrooms.map((c) => (
-                          <span key={c.id} className="df-guidance-tag">
-                            {c.name}
+                    </td>
+                    <td>{student.project_count}</td>
+                    <td>
+                      <div className="df-directory-classes">
+                        {student.classrooms.length ? (
+                          student.classrooms.map((c) => (
+                            <span key={c.id} className="df-guidance-tag">
+                              {c.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="df-muted">
+                            No classrooms assigned
                           </span>
-                        ))
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      {active ? (
+                        <form
+                          className="df-student-membership-form"
+                          onSubmit={save}
+                        >
+                          <label>
+                            {editing.action === "removeStudent"
+                              ? "Remove from classroom"
+                              : "Assign to classroom"}
+                            <select
+                              className="df-input"
+                              value={classId}
+                              onChange={(e) => setClassId(e.target.value)}
+                              required
+                              disabled={busy}
+                              aria-label={`${editing.action === "removeStudent" ? "Remove" : "Assign"} ${student.display_name} classroom`}
+                            >
+                              <option value="">Choose a classroom</option>
+                              {options.map((c) => (
+                                <option value={c.id} key={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <div className="df-inline">
+                            <button
+                              className="df-button small"
+                              disabled={busy || !classId}
+                            >
+                              {busy
+                                ? "Saving…"
+                                : editing.action === "removeStudent"
+                                  ? "Remove"
+                                  : "Assign"}
+                            </button>
+                            <button
+                              type="button"
+                              className="df-button secondary small"
+                              disabled={busy}
+                              onClick={() => {
+                                setEditing(null);
+                                setError("");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {error && <p role="alert">{error}</p>}
+                        </form>
                       ) : (
-                        <span className="df-muted">No classrooms assigned</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    {active ? (
-                      <form
-                        className="df-student-membership-form"
-                        onSubmit={save}
-                      >
-                        <label>
-                          {editing.action === "removeStudent"
-                            ? "Remove from classroom"
-                            : "Assign to classroom"}
-                          <select
-                            className="df-input"
-                            value={classId}
-                            onChange={(e) => setClassId(e.target.value)}
-                            required
-                            disabled={busy}
-                            aria-label={`${editing.action === "removeStudent" ? "Remove" : "Assign"} ${student.display_name} classroom`}
-                          >
-                            <option value="">Choose a classroom</option>
-                            {options.map((c) => (
-                              <option value={c.id} key={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
                         <div className="df-inline">
                           <button
-                            className="df-button small"
-                            disabled={busy || !classId}
+                            type="button"
+                            className="df-button secondary small"
+                            disabled={busy || !available.length}
+                            onClick={() => open(student.id, "enrollStudent")}
+                            aria-label={`Assign ${student.display_name} to a classroom`}
                           >
-                            {busy
-                              ? "Saving…"
-                              : editing.action === "removeStudent"
-                                ? "Remove"
-                                : "Assign"}
+                            Assign
                           </button>
                           <button
                             type="button"
                             className="df-button secondary small"
-                            disabled={busy}
-                            onClick={() => {
-                              setEditing(null);
-                              setError("");
-                            }}
+                            disabled={busy || !student.classrooms.length}
+                            onClick={() => open(student.id, "removeStudent")}
+                            aria-label={`Remove ${student.display_name} from a classroom`}
                           >
-                            Cancel
+                            Remove
                           </button>
                         </div>
-                        {error && <p role="alert">{error}</p>}
-                      </form>
-                    ) : (
-                      <div className="df-inline">
-                        <button
-                          type="button"
-                          className="df-button secondary small"
-                          disabled={busy || !available.length}
-                          onClick={() => open(student.id, "enrollStudent")}
-                          aria-label={`Assign ${student.display_name} to a classroom`}
-                        >
-                          Assign
-                        </button>
-                        <button
-                          type="button"
-                          className="df-button secondary small"
-                          disabled={busy || !student.classrooms.length}
-                          onClick={() => open(student.id, "removeStudent")}
-                          aria-label={`Remove ${student.display_name} from a classroom`}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {!rows.length && (
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            {!rows.filter(
+              (s) =>
+                !classFilter || s.classrooms.some((c) => c.id === classFilter),
+            ).length && (
               <tr>
                 <td colSpan={4} className="df-directory-empty">
-                  No students yet. Share a classroom’s signup code to invite
-                  students.
+                  {classFilter
+                    ? "No students in this classroom."
+                    : "No students yet. Use Add student to get started."}
                 </td>
               </tr>
             )}
@@ -219,10 +240,6 @@ export function SchoolStudents({
         </table>
       </div>
       {message && <p role="status">{message}</p>}
-      <p className="df-muted">
-        Projects include personal and active group projects. New students can
-        join using the signup code in their classroom’s details.
-      </p>
     </>
   );
 }

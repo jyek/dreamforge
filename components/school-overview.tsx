@@ -5,6 +5,7 @@ import {
   PlatformDashboardLayout,
   schoolSectionPath,
 } from "./platform-dashboard-layout";
+import { SchoolTeachers } from "./school-teachers";
 import { SchoolStudents, type SchoolStudent } from "./school-students";
 import { TeacherPromptGuidance } from "./teacher-prompt-guidance";
 import { SchoolSetup } from "./school-setup";
@@ -300,67 +301,15 @@ export function SchoolOverviewContent({
         </>
       )}
       {section === "teachers" && (
-        <div className="df-guidance-table df-school-teacher-directory">
-          <table className="df-table">
-            <thead>
-              <tr>
-                <th scope="col">Teacher</th>
-                <th scope="col">Role</th>
-                <th scope="col">Classrooms</th>
-              </tr>
-            </thead>
-            <tbody>
-              {initial.teachers.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    <div className="df-directory-person">
-                      <ClassroomAvatar identity={t.id} role="teacher" />
-                      <div>
-                        <strong>{t.display_name}</strong>
-                        <small>@{t.username}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="df-guidance-tag">
-                      {t.is_admin ? "School Admin" : "Teacher"}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="df-directory-classes">
-                      {initial.classes
-                        .filter((c) => c.teachers?.some((p) => p.id === t.id))
-                        .map((c) => (
-                          <button
-                            type="button"
-                            className="df-class-text-link"
-                            key={c.id}
-                            onClick={() => {
-                              setSelected(c.id);
-                              onNavigate?.("classes");
-                            }}
-                          >
-                            {c.name} <span aria-hidden="true">→</span>
-                          </button>
-                        ))}
-                      {t.classes === 0 && (
-                        <span className="df-muted">No classrooms assigned</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {initial.teachers.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="df-directory-empty">
-                    No teachers yet. Create an invitation from your profile to
-                    add someone.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SchoolTeachers
+          teachers={initial.teachers.map((t) => ({
+            ...t,
+            classrooms: initial.classes
+              .filter((c) => c.teachers?.some((p) => p.id === t.id))
+              .map((c) => ({ id: c.id, name: c.name })),
+          }))}
+          classrooms={initial.classes}
+        />
       )}
       {section === "alerts" && <TeacherPromptGuidance scope="school" />}
     </>
