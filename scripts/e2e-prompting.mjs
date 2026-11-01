@@ -359,7 +359,7 @@ try {
     if (page) {
       await page.goto(origin + "/projects");
       await page
-        .getByText("E2E Prompting Playground", { exact: true })
+        .getByRole("link", { name: "Open E2E Prompting Playground", exact: true })
         .first()
         .click();
       await page.waitForURL(`**/${project.id}/**`);

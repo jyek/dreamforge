@@ -16,6 +16,7 @@ export async function GET(req: Request) {
   const { rows } = await database().query(
     `select id,hold_status as status,content from prompt_reviews
      where child_id=$1 and conversation_id=$2 and vm_id=$3 and held_prompt_used_at is null
+       and exists(select 1 from class_members current_class where current_class.child_id=$1)
        and (hold_status in ('pending','approved') or (hold_status='denied' and reviewed_at>now()-interval '10 minutes'))
      order by created_at`,
     [user.id, conversationId, projectId],

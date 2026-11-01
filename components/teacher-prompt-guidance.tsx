@@ -1,4 +1,5 @@
 "use client";
+import { PromptApprovalActions } from "./prompt-approval-actions";
 import { DashboardDetailHeader } from "./dashboard-detail-header";
 import { StudentReviewTable } from "./student-review-table";
 import { TableEmptyState } from "./table-empty-state";
@@ -24,6 +25,7 @@ type Prompt = {
   content: string;
   decision: string;
   hold_status?: string | null;
+  approval_classrooms?: { id: string; name: string }[];
   reviewed_at?: string | null;
   reviewer_name?: string | null;
   created_at: string;
@@ -56,6 +58,13 @@ export function TeacherPromptGuidance({
     [],
   );
   const [classId, setClassId] = useState("");
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get(
+      "classId",
+    );
+    if (requested && /^[a-f0-9-]{36}$/i.test(requested)) setClassId(requested);
+  }, []);
   const [category, setCategory] = useState(""),
     [project, setProject] = useState(initialProjectId),
     [search, setSearch] = useState(""),
@@ -101,7 +110,16 @@ export function TeacherPromptGuidance({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [selected, category, project, search, offset, scope, classId]);
+  }, [
+    selected,
+    category,
+    project,
+    search,
+    offset,
+    scope,
+    classId,
+    refreshVersion,
+  ]);
   function open(student: GuidanceStudent) {
     setPrompts([]);
     setSelected(student);
@@ -276,6 +294,7 @@ export function TeacherPromptGuidance({
       ) : (
         <StudentReviewTable
           compact={!selected}
+          tableClassName={selected ? "df-approval-history" : ""}
           busy={loading}
           columns={selected ? 6 : 7}
           loadingLabel="Loading…"
@@ -357,6 +376,27 @@ export function TeacherPromptGuidance({
                               : p.decision === "block"
                                 ? "Blocked"
                                 : "Flagged"}
+                      {p.hold_status === "pending" &&
+                        p.decision === "review" && (
+                          <PromptApprovalActions
+                            reviewId={p.id}
+                            classrooms={p.approval_classrooms || []}
+                            onDecided={() => {
+                              setSelected((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      pending_count: Math.max(
+                                        0,
+                                        (current.pending_count || 0) - 1,
+                                      ),
+                                    }
+                                  : current,
+                              );
+                              setRefreshVersion((v) => v + 1);
+                            }}
+                          />
+                        )}
                       {p.reviewed_at && (
                         <small
                           className="df-muted"

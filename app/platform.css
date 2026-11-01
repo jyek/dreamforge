@@ -3499,3 +3499,15 @@
 .df-project-card-controls { position: relative; z-index: 2; }
 .df-project-card-heading > h3 { min-width: 0; }
 .df-project > p.df-muted { margin-bottom: 0; }
+
+.df-prompt-approval-actions { display: grid; gap: 10px; margin-top: 12px; }
+.df-prompt-approval-actions > label { display: grid; gap: 8px; font-size: 12px; }
+.df-prompt-approval-actions .df-inline { gap: 8px; flex-wrap:wrap; }
+.df-guidance-table .df-approval-history { table-layout:fixed; min-width:1100px; }
+.df-table-scroll .df-approval-history td:not(:first-child) { white-space:normal; overflow-wrap:anywhere; }
+.df-approval-history th:nth-child(1), .df-approval-history th:nth-child(2) { width:12%; }
+.df-approval-history th:nth-child(3) { width:24%; }
+.df-approval-history th:nth-child(4) { width:14%; }
+.df-approval-history th:nth-child(5) { width:20%; }
+.df-approval-history th:nth-child(6) { width:18%; }
+.df-approval-history .df-guidance-content, .df-approval-history .df-guidance-tip { min-width:0; max-width:none; white-space:normal; }

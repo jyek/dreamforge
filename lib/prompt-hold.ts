@@ -71,6 +71,7 @@ export async function consumeApprovedHold(
       `update prompt_reviews set held_prompt_used_at=now()
      where id=(select id from prompt_reviews where child_id=$1 and conversation_id=$2
        and content=$3 and vm_id=$4 and decision='review' and hold_status='approved' and held_prompt_used_at is null
+       and exists(select 1 from class_members current_class where current_class.child_id=prompt_reviews.child_id and ${classroomTeacherSQL("current_class.class_id", "prompt_reviews.reviewed_by")})
        order by created_at desc limit 1)
      and held_prompt_used_at is null`,
       [input.childId, input.conversationId, input.content, input.projectId],
@@ -78,6 +79,17 @@ export async function consumeApprovedHold(
     return !!rowCount;
   });
 }
+/** Current classrooms in which this actor may decide a student's held prompt. */
+export const approvalClassroomsSQL = (
+  childId: string,
+  actorId = "$1",
+  classId = "null",
+) =>
+  `coalesce((select json_agg(json_build_object('id',c.id,'name',c.name) order by lower(c.name))
+    from classes c join class_members m on m.class_id=c.id
+    where m.child_id=${childId} and ${classroomTeacherSQL("c.id", actorId)}
+    and (${classId}::uuid is null or c.id=${classId}::uuid)),'[]'::json)`;
+
 /** A teacher approves or declines a held prompt. Only a prompt held for review
  * can be approved (blocked prompts never are), and only by a teacher of that
  * student. Returns false when nothing was changed. */

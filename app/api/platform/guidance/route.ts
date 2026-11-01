@@ -6,6 +6,7 @@ import {
 import { administeredSchool } from "@/lib/schools";
 import { database } from "@/lib/database";
 import { getProfile, platformEnabled } from "@/lib/platform-auth";
+import { approvalClassroomsSQL } from "@/lib/prompt-hold";
 import { guidanceSQL } from "@/lib/prompt-guidance";
 export async function GET(req: Request) {
   const user = platformEnabled() ? await getProfile() : null;
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
   const studentId = params.get("studentId");
   const scoped = (
     classParam: string,
-  ) => `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.hold_status,r.reviewed_at,reviewer.display_name as reviewer_name,r.created_at,p.metadata->>'name' as project_name,${guidanceSQL} as guidance
+  ) => `with prompts as (select r.id,r.child_id,r.vm_id,r.conversation_id,r.content,r.decision,r.hold_status,r.reviewed_at,reviewer.display_name as reviewer_name,r.created_at,p.metadata->>'name' as project_name,${approvalClassroomsSQL("r.child_id", "$1", classParam)} as approval_classrooms,${guidanceSQL} as guidance
     from prompt_reviews r left join projects p on p.vm_id=r.vm_id left join profiles reviewer on reviewer.id=r.reviewed_by
     where ${studentAccess("r.child_id")} and ${inClass("r.child_id", classParam)})`;
   if (!studentId) {

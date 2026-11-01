@@ -53,9 +53,7 @@ export function TeacherActionSummary() {
             <CircleAlert size={20} aria-hidden="true" />
             <span>
               Could not refresh actions.{" "}
-              <Link href="/classrooms">
-                Open a classroom to check its queue.
-              </Link>
+              <Link href="/safety">Open Safety to check the action list.</Link>
             </span>
           </p>
         ) : !rows ? (
@@ -93,7 +91,7 @@ export function TeacherActionSummary() {
             ].map((action) => (
               <Link
                 key={action.key}
-                href={`/classrooms/${c.id}#safety-report-title`}
+                href={`/safety?classId=${c.id}`}
                 className="df-action-row df-action-link"
               >
                 <ShieldCheck size={20} aria-hidden="true" />

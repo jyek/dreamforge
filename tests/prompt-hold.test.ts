@@ -6,6 +6,7 @@ import { APPLICATION_DATABASE_OPTIONS } from "../lib/database-options.mjs";
 import { SafetyError } from "../lib/kids-safety";
 import {
   consumeApprovedHold,
+  approvalClassroomsSQL,
   decideHold,
   recordModerationOutcome,
 } from "../lib/prompt-hold";
@@ -100,6 +101,18 @@ test("questionable prompts are held, approved once, and blocked ones never can b
   };
   assert.equal(await consumeApprovedHold(pool, same), false);
 
+  const eligibleClasses = async (actor: string, child = ids.child) =>
+    (
+      await pool.query(
+        `select ${approvalClassroomsSQL("$2", "$1")} as classrooms`,
+        [actor, child],
+      )
+    ).rows[0].classrooms;
+  assert.deepEqual(
+    (await eligibleClasses(ids.teacher)).map((c: { id: string }) => c.id),
+    [ids.classId],
+  );
+  assert.deepEqual(await eligibleClasses(ids.other), []);
   // Only a teacher of this student can decide, and only on a held prompt.
   assert.equal(
     await decideHold(pool, {
@@ -171,6 +184,10 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     }),
     true,
   );
+  assert.deepEqual(
+    (await eligibleClasses(ids.other)).map((c: { id: string }) => c.id),
+    [ids.classId],
+  );
 
   // The approval covers exactly this text, in this conversation, once.
   assert.equal(
@@ -218,7 +235,13 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     false,
   );
 
-  // With no teacher to approve it, a questionable prompt is not held.
+  // Even a legacy teacher link does not enable approval without classroom membership.
+  await pool.query(
+    "insert into teacher_builders(teacher_id,child_id) values($1,$2) on conflict do nothing",
+    [ids.teacher, ids.loner],
+  );
+  assert.deepEqual(await eligibleClasses(ids.teacher, ids.loner), []);
+  // With no classroom teacher to approve it, a questionable prompt is not held.
   const solo = await review(
     ids.loner,
     "vm-holdloner",
@@ -235,6 +258,15 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     )
   ).rows[0];
   assert.deepEqual(row, { decision: "review", hold_status: null });
+  assert.equal(
+    await decideHold(pool, {
+      id: solo,
+      teacherId: ids.teacher,
+      classId: ids.classId,
+      action: "approve",
+    }),
+    false,
+  );
 
   // A denied prompt can be declined and is never released.
   const declined = await review(
@@ -256,4 +288,31 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     await consumeApprovedHold(pool, { ...same, content: "another ghost idea" }),
     false,
   );
+  const departed = await review(
+    ids.child,
+    "vm-holdchild",
+    "a request before leaving class",
+  );
+  await recordModerationOutcome(pool, departed, ids.child, outcome("review"));
+  assert.equal(
+    await decideHold(pool, {
+      id: departed,
+      teacherId: ids.teacher,
+      classId: ids.classId,
+      action: "approve",
+    }),
+    true,
+  );
+  await pool.query(
+    "delete from class_members where class_id=$1 and child_id=$2",
+    [ids.classId, ids.child],
+  );
+  assert.equal(
+    await consumeApprovedHold(pool, {
+      ...same,
+      content: "a request before leaving class",
+    }),
+    false,
+  );
+  assert.deepEqual(await eligibleClasses(ids.teacher), []);
 });
