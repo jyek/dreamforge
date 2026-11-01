@@ -3313,8 +3313,6 @@
 .df-group-avatar-student { width:140px; text-align:center; list-style:none; }
 .df-group-avatar-button { display:flex; flex-direction:column; align-items:center; gap:8px; padding:8px; background:transparent; border:0; width:100%; cursor:grab; }
 .df-group-avatar-button:active { cursor:grabbing; }
-.df-group-move-menu { margin-top:8px; font-size:12px; }
-.df-group-move-menu summary { cursor:pointer; color:#71677f; }
 .df-group-avatar-student .df-group-indicators { justify-content:center; }
 .df-ungrouped-roster { grid-column:1/-1; border:0; padding:0; }
 .df-ungrouped-roster > h4 { display:none; }

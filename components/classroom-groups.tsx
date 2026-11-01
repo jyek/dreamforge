@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StatusToast } from "./status-toast";
 import { MoreVertical } from "lucide-react";
 import {
@@ -45,6 +46,7 @@ export type ClassroomGroupsData = {
   classroomProjects?: (Project & { group_name?: string | null })[];
 };
 export function ClassroomGroups({ classId }: { classId: string }) {
+  const router = useRouter();
   const [projectOwner, setProjectOwner] = useState("");
   const endpoint = `/api/platform/classes/${classId}/groups`;
   const [data, setData] = useState<ClassroomGroupsData | null>(null);
@@ -60,7 +62,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
   );
   const [name, setName] = useState("");
   const [view, setView] = useState<{
-    kind: "group" | "student";
+    kind: "group";
     id: string;
   } | null>(null);
   const [dragging, setDragging] = useState("");
@@ -122,23 +124,15 @@ export function ClassroomGroups({ classId }: { classId: string }) {
   }
   const assign = (studentId: string, groupId: string | null) =>
     act({ action: "assign", studentId, groupId }, "Student assignment saved.");
-  const projectsFor = (ids: string[]) =>
-    data?.projects.filter(
-      (p) =>
-        ids.includes(p.owner_id) || p.member_ids.some((id) => ids.includes(id)),
-    ) || [];
   const activeGroup = data?.groups.find(
     (g) => view?.kind === "group" && g.id === view.id,
-  );
-  const activeStudent = data?.students.find(
-    (s) => view?.kind === "student" && s.id === view.id,
   );
   const members = activeGroup
     ? data!.students.filter((s) => s.group_id === activeGroup.id)
     : [];
   const selectedProjects = activeGroup
     ? data!.projects.filter((p) => p.group_id === activeGroup.id)
-    : projectsFor(activeStudent ? [activeStudent.id] : []);
+    : [];
   function studentCard(student: Student) {
     return (
       <li key={student.id} className="df-group-avatar-student">
@@ -152,7 +146,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
             setDragging(student.id);
           }}
           onDragEnd={() => setDragging("")}
-          onClick={() => setView({ kind: "student", id: student.id })}
+          onClick={() => router.push(`/students/${student.id}/projects`)}
         >
           <ClassroomAvatar identity={student.id} role="student" />
           <strong>{student.display_name}</strong>
@@ -171,31 +165,6 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               </a>
             )}
           </div>
-        )}
-        {!!data?.groups.length && (
-          <details className="df-group-move-menu">
-            <summary>Move to group</summary>
-            <label>
-              <span className="sr-only">
-                Assign {student.display_name} to group
-              </span>
-              <select
-                className="df-input"
-                value={student.group_id || ""}
-                disabled={busy}
-                onChange={(e) =>
-                  void assign(student.id, e.target.value || null)
-                }
-              >
-                <option value="">Unassigned</option>
-                {data.groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </details>
         )}
       </li>
     );
@@ -262,10 +231,10 @@ export function ClassroomGroups({ classId }: { classId: string }) {
       )}
       {!data ? (
         !error && <ClassroomPeople people={[]} role="student" loading />
-      ) : view && (activeGroup || activeStudent) ? (
+      ) : view && activeGroup ? (
         <div>
           <DashboardDetailHeader
-            title={`${activeGroup?.name || activeStudent?.display_name} · Projects`}
+            title={`${activeGroup.name} · Projects`}
             back={
               <button
                 className="df-button secondary small"
@@ -280,25 +249,13 @@ export function ClassroomGroups({ classId }: { classId: string }) {
               {members.length} students · {activeGroup.category}
             </p>
           )}
-          {activeStudent && (
-            <p>
-              {activeStudent.alert_count} safety alerts ·{" "}
-              {activeStudent.pending_count} awaiting approval ·{" "}
-              <Link
-                className="df-purple"
-                href={`/students/${activeStudent.id}/projects`}
-              >
-                View student safety and prompts
-              </Link>
-            </p>
-          )}
           {!!members.length && (
             <ul className="df-group-member-links">
               {members.map((s) => (
                 <li key={s.id}>
                   <button
                     className="df-purple"
-                    onClick={() => setView({ kind: "student", id: s.id })}
+                    onClick={() => router.push(`/students/${s.id}/projects`)}
                   >
                     {s.display_name}
                   </button>
@@ -307,9 +264,7 @@ export function ClassroomGroups({ classId }: { classId: string }) {
             </ul>
           )}
           <p className="df-muted">
-            {activeGroup
-              ? "Projects students have shared with this group."
-              : "Projects owned or shared by this student."}
+            Projects students have shared with this group.
           </p>
           {selectedProjects.length ? (
             selectedProjects.map((p) => (
