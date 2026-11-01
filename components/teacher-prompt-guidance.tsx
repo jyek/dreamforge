@@ -1,7 +1,6 @@
 "use client";
 import { StudentReviewTable } from "./student-review-table";
 import { TableEmptyState } from "./table-empty-state";
-import { SimpleLoading } from "./dream-loading";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { guidanceCategories, guidanceLabel } from "@/lib/prompt-guidance";
@@ -236,14 +235,6 @@ export function TeacherPromptGuidance({
           </label>
         )}
       </div>
-      <div className="df-guidance-loading-status">
-        {loading && (
-          <SimpleLoading
-            inline
-            label={`Loading ${selected ? "prompts" : "students"}…`}
-          />
-        )}
-      </div>
       {error ? (
         <div role="alert" className="df-empty">
           {error}
@@ -252,6 +243,8 @@ export function TeacherPromptGuidance({
         <StudentReviewTable
           compact={!selected}
           busy={loading}
+          columns={selected ? 6 : 7}
+          loadingLabel={`Loading ${selected ? "prompts" : "students"}…`}
           empty={!loading && !(selected ? prompts.length : shown.length)}
         >
           <thead>

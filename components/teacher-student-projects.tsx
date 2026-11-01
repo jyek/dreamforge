@@ -7,7 +7,6 @@ import { NoClassroomProjects } from "./no-classroom-projects";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DreamLoading } from "./dream-loading";
 import {
   ClassProjectAssignments,
   type AssignableProject,
@@ -139,7 +138,26 @@ export function TeacherStudentProjects({
           {error}
         </p>
       ) : !data ? (
-        <DreamLoading label="Loading projects…" />
+        <StudentReviewTable
+          busy
+          columns={5}
+          loadingLabel="Loading projects…"
+          className="df-student-project-table"
+        >
+          <thead>
+            <tr>
+              {[
+                "Student",
+                "Project",
+                "Prompts",
+                "Safety alerts",
+                "Explore",
+              ].map((label) => (
+                <th key={label}>{label}</th>
+              ))}
+            </tr>
+          </thead>
+        </StudentReviewTable>
       ) : selection ? (
         <>
           <button

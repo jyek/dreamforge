@@ -2723,10 +2723,7 @@
   min-height: 128px;
   flex-direction: column;
 }
-.df-guidance-loading-status {
-  min-height: 28px;
-  margin-bottom: 8px;
-}
+
 .df-guidance-table {
   min-height: 0;
 }
@@ -3274,3 +3271,6 @@
 
 
 .df-school-safety-summary { margin: 24px 0; padding: 16px 20px; border: 1px solid #e4dfed; border-radius: 12px; color: #71677f; }
+
+.df-table td.df-table-loading { padding: 32px 24px; text-align: center; }
+.df-table-loading [role="status"] { justify-content: center; }
