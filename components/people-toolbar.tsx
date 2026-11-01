@@ -153,7 +153,7 @@ export function PeopleToolbar({
           </label>
         )}
         <button
-          className={buttonOnly ? "df-button small" : "df-button"}
+          className={buttonOnly ? "df-button secondary small" : "df-button"}
           onClick={() => {
             setOpen(true);
             setClassId(buttonOnly ? classrooms[0]?.id || "" : filter || "");

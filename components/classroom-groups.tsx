@@ -213,7 +213,7 @@ export function ClassroomGroups({
         title={<>Students{data ? ` · ${data.students.length}` : ""}</>}
         action={
           <button
-            className="df-button small"
+            className="df-button secondary small"
             disabled={!data || busy}
             onClick={() => {
               setAddingSingle(!!data?.groups.length);
