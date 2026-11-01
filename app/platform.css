@@ -3459,3 +3459,17 @@
 @media (max-width: 640px) { .df-group-grid { grid-template-columns: minmax(0,1fr); } }
 
 .df-classroom-project-filter-action { margin-left: auto; align-self: flex-end; }
+
+.df-group-project-dialog { max-width: 560px; }
+.df-group-project-members { display: grid; gap: 0; list-style: none; padding: 0; margin: 0; }
+.df-group-project-member { display: grid; grid-template-columns: minmax(0,1fr) 140px; align-items: center; gap: 16px; min-height: 68px; padding: 14px 0; border-bottom: 1px solid #e8e3ef; }
+.df-group-project-member:last-child { border-bottom: 0; }
+.df-group-member-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.df-group-member-identity > strong { overflow-wrap: anywhere; font-size: 14px; }
+.df-group-owner-badge { padding: 3px 8px; border-radius: 6px; background: #f0eaff; color: #7253ad; font-size: 11px; font-weight: 600; }
+.df-group-member-controls { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.df-group-editing-status { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; font-size: 13px; font-weight: 600; color: #7253ad; }
+.df-group-editing-status > span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.df-group-member-controls > .df-button { min-height: 36px; margin: 0; }
+.df-group-member-remove { padding: 2px 4px; border: 0; background: transparent; color: #81758f; box-shadow: none; font-size: 12px; cursor: pointer; }
+@media(max-width: 420px) { .df-group-project-member { grid-template-columns: minmax(0,1fr) 120px; gap: 12px; } }

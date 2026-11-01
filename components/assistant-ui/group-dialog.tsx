@@ -72,8 +72,6 @@ export function GroupDialog({
     { id: group.ownerId, display_name: group.ownerName, username: "" },
     ...group.members,
   ];
-  const nameOf = (id: string) =>
-    everyone.find((p) => p.id === id)?.display_name || "Someone";
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -83,44 +81,60 @@ export function GroupDialog({
           {group.members.length ? ` (${group.members.length + 1})` : ""}
         </button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="df-card df-group-project-dialog">
         <DialogHeader>
           <DialogTitle>Group project</DialogTitle>
           <DialogDescription>
-            Everyone in the group can look at this project. Only one student can
-            change it at a time: {nameOf(group.editorId)}
-            {group.editorId === group.you ? " (you)" : ""} is editing now.
+            Everyone in this group can view the project. Only one student can
+            edit at a time.
           </DialogDescription>
         </DialogHeader>
-        <ul className="grid gap-2">
+        <ul className="df-group-project-members">
           {everyone.map((p) => (
-            <li key={p.id} className="flex items-center gap-2">
-              <span className="flex-1">
-                {p.display_name}
-                {p.id === group.ownerId ? " · owner" : ""}
-                {p.id === group.editorId ? " · editing" : ""}
-              </span>
-              {group.canPass && p.id !== group.editorId && (
-                <button
-                  className="rounded-md border px-2 py-1 text-xs"
-                  disabled={busy}
-                  onClick={() => void act({ action: "editor", editorId: p.id })}
-                >
-                  Let {p.display_name.split(" ")[0]} edit
-                </button>
-              )}
-              {(group.canManage || p.id === group.you) &&
-                p.id !== group.ownerId && (
-                  <button
-                    className="rounded-md border px-2 py-1 text-xs"
-                    disabled={busy}
-                    onClick={() =>
-                      void act({ action: "remove", childId: p.id })
-                    }
-                  >
-                    {p.id === group.you ? "Leave" : "Remove"}
-                  </button>
+            <li key={p.id} className="df-group-project-member">
+              <div className="df-group-member-identity">
+                <strong>
+                  {p.display_name}
+                  {p.id === group.you ? " (you)" : ""}
+                </strong>
+                {p.id === group.ownerId && (
+                  <span className="df-group-owner-badge">Owner</span>
                 )}
+              </div>
+              <div className="df-group-member-controls">
+                {p.id === group.editorId ? (
+                  <span className="df-group-editing-status">
+                    <span aria-hidden="true" />
+                    Editing
+                  </span>
+                ) : (
+                  group.canPass && (
+                    <button
+                      type="button"
+                      className="df-button secondary small"
+                      disabled={busy}
+                      onClick={() =>
+                        void act({ action: "editor", editorId: p.id })
+                      }
+                    >
+                      Let {p.display_name.split(" ")[0]} edit
+                    </button>
+                  )
+                )}
+                {(group.canManage || p.id === group.you) &&
+                  p.id !== group.ownerId && (
+                    <button
+                      type="button"
+                      className="df-group-member-remove"
+                      disabled={busy}
+                      onClick={() =>
+                        void act({ action: "remove", childId: p.id })
+                      }
+                    >
+                      {p.id === group.you ? "Leave" : "Remove"}
+                    </button>
+                  )}
+              </div>
             </li>
           ))}
         </ul>
