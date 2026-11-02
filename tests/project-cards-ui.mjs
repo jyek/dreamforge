@@ -38,6 +38,11 @@ await writeFile(
   dir + "/app/layout.tsx",
   `import '${root}/app/platform.css';export default function Layout({children}){return <html><body>{children}</body></html>}`,
 );
+await writeFile(dir + "/postcss.config.mjs", `export default {plugins:{"@tailwindcss/postcss":{}}}`);
+await writeFile(dir + "/app/toolbar.css", `@import "${root}/app/globals.css";
+@source "${root}/components/assistant-ui";`);
+await mkdir(dir + "/app/toolbar", { recursive: true });
+await writeFile(dir + "/app/toolbar/page.tsx", `import '../toolbar.css';import {GroupDialog} from '${root}/components/assistant-ui/group-dialog';import {ShareDialog} from '${root}/components/assistant-ui/share-dialog';export default function Page(){const project={id:'vm-toolbar',name:'Toolbar test',previewUrl:'',productionUrl:'',prodVmId:null,conversations:[],releases:[],liveReleaseId:null};return <div style={{display:'flex',alignItems:'center',gap:8,padding:20}}><GroupDialog project={project}/><ShareDialog project={project}/></div>}`);
 const classId = "00000000-0000-4000-8000-000000000111",
   groupId = "00000000-0000-4000-8000-000000000112";
 const fixture = {
@@ -266,6 +271,13 @@ try {
     teacherAdded = true;
     return route.fulfill({ json: { person: sharedTeacher } });
   });
+  let markedGroupProject = false;
+  await context.route("**/api/projects/vm-toolbar/group", route => route.fulfill({json: {
+    visible: markedGroupProject,
+    isGroupProject: markedGroupProject,
+    you: "student",ownerId: "student",ownerName: "Student",editorId: "student",
+    members: [],candidates: [],canManage: false,canPass: true,
+  }}));
   await page.goto(origin);
   await page.getByRole("heading", { name: "Projects", exact: true }).waitFor();
   assert.equal(
@@ -479,6 +491,22 @@ try {
   await keyboardRow.focus();
   await keyboardRow.press("Enter");
   await page.waitForURL("**/vm-card/conversation");
+  const individualResponse = page.waitForResponse(r=>r.url().endsWith('/api/projects/vm-toolbar/group'));
+  await page.goto(origin + '/toolbar');
+  await individualResponse;
+  await page.getByRole('button',{name:'Share',exact:true}).waitFor();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.equal(await page.getByRole('button',{name:'Group',exact:true}).count(),0);
+  markedGroupProject=true;
+  await page.reload();
+  const groupButton=page.getByRole('button',{name:'Group',exact:true});
+  await groupButton.waitFor();
+  const groupBox=await groupButton.boundingBox(),shareBox=await page.getByRole('button',{name:'Share',exact:true}).boundingBox();
+  assert.equal(groupBox.height,28);
+  assert.equal(groupBox.height,shareBox.height);
+  await groupButton.click();
+  await page.getByRole('dialog').getByText('Editing',{exact:true}).waitFor();
+  console.log('PASS individual projects hide Group; marked group projects show Group with the same 28px height as Share');
   console.log(
     "PASS student classroom uses a visible row menu, shows read-only groups and shares only the owner's project with their assigned group",
   );

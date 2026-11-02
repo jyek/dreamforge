@@ -38,6 +38,7 @@ export function GroupDialog({
     [pick, setPick] = useState("");
   useEffect(() => {
     let stopped = false;
+    setGroup(null);
     void fetch(endpoint, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => !stopped && d && setGroup(d))
@@ -75,7 +76,7 @@ export function GroupDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium">
+        <button className="box-border inline-flex h-7 items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-medium">
           <UsersIcon className="size-3" />
           Group
           {group.members.length ? ` (${group.members.length + 1})` : ""}

@@ -69,6 +69,7 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
   );
 
   // Only classmates of the owner can be added; students outside the class cannot.
+  assert.equal((await groupView(pool, vm, p.owner))!.isGroupProject, false);
   const add = (childId: string, actorId: string) =>
     addMember(pool, { vmId: vm, childId, actorId });
   assert.deepEqual(await add(p.outsider, p.teacher), {
@@ -89,6 +90,7 @@ test("group projects: one editor, classmates only, teacher can manage", async ()
 
   // The owner edits first. Pass the pen to Bea; now only Bea may pass it on.
   let view = (await groupView(pool, vm, p.owner))!;
+  assert.equal(view.isGroupProject, true);
   assert.equal(view.editorId, p.owner);
   const pass = (editorId: string, actorId: string) =>
     setEditor(pool, { vmId: vm, editorId, actorId });

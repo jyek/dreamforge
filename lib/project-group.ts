@@ -53,7 +53,7 @@ export const projectGroupMemberSQL = (project = "p", actor = "$1") =>
 export async function loadGroup(db: Db, vmId: string) {
   const project = (
     await db.query(
-      "select p.owner_id,p.editor_id,p.group_class_id,o.display_name as owner_name from projects p left join profiles o on o.id=p.owner_id where p.vm_id=$1 and not p.is_example and o.role='child'",
+      "select p.owner_id,p.editor_id,p.group_class_id,(p.group_class_id is not null or coalesce(p.metadata->>'classroomGroupProject','false')='true') as is_group_project,o.display_name as owner_name from projects p left join profiles o on o.id=p.owner_id where p.vm_id=$1 and not p.is_example and o.role='child'",
       [vmId],
     )
   ).rows[0];
@@ -65,6 +65,7 @@ export async function loadGroup(db: Db, vmId: string) {
     )
   ).rows;
   return {
+    isGroupProject: project.is_group_project === true,
     classId: project.group_class_id as string | null,
     ownerId: project.owner_id as string,
     ownerName: project.owner_name as string,
