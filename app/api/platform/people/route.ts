@@ -28,7 +28,11 @@ export async function POST(req: Request) {
     );
   try {
     if (b.action === "invite" && b.role === "student") {
-      const token = await createStudentSchoolInvite(database(), user.id);
+      const token = await createStudentSchoolInvite(
+        database(),
+        user.id,
+        b.classId || undefined,
+      );
       const origin = process.env.DREAMFORGE_SITE_URL || new URL(req.url).origin;
       return Response.json({ link: `${origin}/signup?studentInvite=${token}` });
     }
@@ -53,7 +57,7 @@ export async function POST(req: Request) {
       const db = database();
       const c = (
         await db.query(
-          `select c.id,c.invite_code,o.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
+          `select c.id,c.invite_code,c.school_id from classes c join profiles o on o.id=c.teacher_id where c.id=$1 and ${groupManagerSQL("c.id", "$2")}`,
           [b.classId, user.id],
         )
       ).rows[0];

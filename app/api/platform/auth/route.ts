@@ -108,7 +108,7 @@ export async function POST(req: Request) {
             }
           : code
             ? await db.query(
-                "select c.id,t.school_id from classes c join profiles t on t.id=c.teacher_id where c.invite_code=$1 for share of c",
+                "select c.id,c.school_id from classes c where c.invite_code=$1 for share of c",
                 [code],
               )
             : { rows: [] };

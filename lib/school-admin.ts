@@ -40,7 +40,7 @@ export async function listSchools(db: Db) {
   const { rows } = await db.query(
     `select s.id,s.name,s.created_at,
        (select count(*)::int from school_admins a where a.school_id=s.id) as admins,
-       (select count(*)::int from profiles p where p.school_id=s.id and p.role='teacher') as teachers,
+       (select count(*)::int from school_teachers t where t.school_id=s.id) as teachers,
        (select count(*)::int from profiles p where p.school_id=s.id and p.role='child') as students
      from schools s order by lower(s.name)`,
     [],
@@ -56,9 +56,9 @@ export async function schoolOverview(db: Db, schoolId: string) {
   const teachers = (
     await db.query(
       `select p.id,p.display_name,p.username,
-         exists(select 1 from school_admins a where a.school_id=p.school_id and a.profile_id=p.id) as is_admin,
-         (select count(*)::int from classes c join profiles owner on owner.id=c.teacher_id where owner.school_id=$1 and (c.teacher_id=p.id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.id))) as classes
-       from profiles p where p.school_id=$1 and p.role='teacher' order by lower(p.display_name)`,
+         exists(select 1 from school_admins a where a.school_id=$1 and a.profile_id=p.id) as is_admin,
+         (select count(*)::int from classes c join profiles owner on owner.id=c.teacher_id where c.school_id=$1 and (c.teacher_id=p.id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.id))) as classes
+       from profiles p where p.role='teacher' and exists(select 1 from school_teachers st where st.school_id=$1 and st.teacher_id=p.id) order by lower(p.display_name)`,
       [schoolId],
     )
   ).rows;
@@ -68,7 +68,7 @@ export async function schoolOverview(db: Db, schoolId: string) {
          (select count(*)::int from class_members m where m.class_id=c.id) as students,
          (select count(*)::int from class_projects cp join projects p on p.vm_id=cp.vm_id where cp.class_id=c.id and not p.is_example) as projects
        from classes c join profiles t on t.id=c.teacher_id
-       where t.school_id=$1 order by lower(c.name)`,
+       where c.school_id=$1 order by lower(c.name)`,
       [schoolId],
     )
   ).rows;
@@ -86,7 +86,7 @@ export async function schoolOverview(db: Db, schoolId: string) {
       await db.query(
         `select p.id,p.display_name,p.username,(p.id=c.teacher_id) as is_owner
       from classes c join profiles p on (p.id=c.teacher_id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=p.id))
-      where c.id=$2 and p.school_id=$1 order by (p.id=c.teacher_id) desc,p.display_name`,
+      where c.id=$2 and c.school_id=$1 order by (p.id=c.teacher_id) desc,p.display_name`,
         [schoolId, classroom.id],
       )
     ).rows;
@@ -101,7 +101,7 @@ export async function schoolOverview(db: Db, schoolId: string) {
     await db.query(
       `select r.id,r.child_id,r.content,r.decision,r.categories,r.hold_status,r.created_at,r.reviewed_at,
     p.display_name as child_name, reviewer.display_name as reviewer_name, projects.metadata->>'name' as project_name,
-    coalesce((select json_agg(json_build_object('id',c.id,'name',c.name)) from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id where m.child_id=r.child_id and owner.school_id=$1),'[]'::json) as classrooms
+    coalesce((select json_agg(json_build_object('id',c.id,'name',c.name)) from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id where m.child_id=r.child_id and c.school_id=$1),'[]'::json) as classrooms
     from prompt_reviews r join profiles p on p.id=r.child_id left join profiles reviewer on reviewer.id=r.reviewed_by left join projects on projects.vm_id=r.vm_id
     where p.school_id=$1 and (r.decision<>'allow' or r.hold_status is not null)
     order by r.created_at desc,r.id desc`,
@@ -115,10 +115,10 @@ export async function schoolOverview(db: Db, schoolId: string) {
           (project.owner_id=p.id or exists(select 1 from project_members pm
             join class_members cm on cm.child_id=pm.child_id and cm.class_id=project.group_class_id
             join profiles owner on owner.id=project.owner_id
-            where pm.vm_id=project.vm_id and pm.child_id=p.id and owner.school_id=$1))) as project_count,
+            where pm.vm_id=project.vm_id and pm.child_id=p.id and exists(select 1 from classes scope where scope.id=project.group_class_id and scope.school_id=$1)))) as project_count,
         coalesce((select json_agg(json_build_object('id',c.id,'name',c.name) order by lower(c.name))
           from class_members m join classes c on c.id=m.class_id join profiles owner on owner.id=c.teacher_id
-          where m.child_id=p.id and owner.school_id=$1),'[]'::json) as classrooms
+          where m.child_id=p.id and c.school_id=$1),'[]'::json) as classrooms
       from profiles p where p.school_id=$1 and p.role='child' order by lower(p.display_name),p.id`,
       [schoolId],
     )

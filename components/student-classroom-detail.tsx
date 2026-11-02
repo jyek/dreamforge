@@ -14,6 +14,7 @@ import { ClassroomPeople } from "./classroom-people";
 import { ClassroomProjectFilter } from "./classroom-project-filter";
 import { StudentReviewTable } from "./student-review-table";
 import { SimpleLoading } from "./dream-loading";
+import { StudentProjectActions } from "./student-project-actions";
 type Project = {
   vm_id: string;
   group_name?: string;
@@ -23,9 +24,11 @@ type Project = {
   can_collaborate?: boolean;
   owner_name: string;
   name: string;
+  description?: string | null;
   conversation_id: string | null;
 };
 type Data = {
+  groups?: { id: string; name: string }[];
   myGroups?: { id: string; name: string }[];
   classroom: {
     name: string;
@@ -34,7 +37,7 @@ type Data = {
     teacher_id?: string;
   };
   teachers?: { id: string; display_name: string; is_owner: boolean }[];
-  students: { id: string; display_name: string }[];
+  students: { id: string; display_name: string; group_id?: string | null }[];
   projects: Project[];
   availableProjects: AssignableProject[];
 };
@@ -57,27 +60,16 @@ export function StudentClassroomDetail({
     if (!r.ok) throw Error(d.error || "Could not load classroom.");
     setData(d);
   }
-  const [groupError, setGroupError] = useState("");
-  const [sharing, setSharing] = useState(false);
-  async function shareGroup(projectId: string, groupId: string) {
-    setSharing(true);
-    setGroupError("");
-    try {
-      const r = await fetch(`/api/platform/classes/${classId}/groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, groupId }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw Error(d.error);
-      await refresh();
-    } catch (e) {
-      setGroupError((e as Error).message);
-    } finally {
-      setSharing(false);
+  const shown = data.projects.filter((p) => !student || p.owner_id === student);
+  function openProject(project: Project) {
+    if (project.owner_id === user.id || project.can_collaborate) {
+      router.push(
+        `/${project.vm_id}${project.conversation_id ? `/${project.conversation_id}` : ""}`,
+      );
+    } else {
+      setPreview(project);
     }
   }
-  const shown = data.projects.filter((p) => !student || p.owner_id === student);
   const teachers = data.teachers || [
     {
       id: data.classroom.teacher_id || data.classroom.teacher_name,
@@ -114,44 +106,6 @@ export function StudentClassroomDetail({
         <ClassroomSectionHeader title="Teachers" />
         <ClassroomPeople people={teachers} role="teacher" />
       </section>
-      {groupError && <p role="alert">{groupError}</p>}
-      {!!data.myGroups?.length && (
-        <section>
-          <h3>Share projects with your group</h3>
-          {data.projects
-            .filter((p) => p.owner_id === user.id)
-            .map((p) => (
-              <div className="df-school-row" key={p.vm_id}>
-                <strong>{p.name}</strong>
-                <span>
-                  {p.group_name ||
-                    (p.is_group_project
-                      ? "Group project · Unassigned"
-                      : "Individual project")}
-                </span>
-                <label>
-                  Group
-                  <select
-                    className="df-input"
-                    disabled={sharing}
-                    aria-label={`Share ${p.name} with your group`}
-                    value={p.classroom_group_id || ""}
-                    onChange={(e) => void shareGroup(p.vm_id, e.target.value)}
-                  >
-                    <option value="" disabled>
-                      Make group project…
-                    </option>
-                    {data.myGroups?.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            ))}
-        </section>
-      )}
       {preview ? (
         <>
           <ClassroomProjectPreview classId={classId} project={preview} />
@@ -160,11 +114,59 @@ export function StudentClassroomDetail({
         <>
           <section className="df-classroom-section">
             <ClassroomSectionHeader title="Students" />
-            <ClassroomPeople
-              people={data.students}
-              role="student"
-              userId={user.id}
-            />
+            {data.groups?.length ? (
+              <div className="df-student-classroom-groups">
+                {!!data.students.some((s) => !s.group_id) && (
+                  <ClassroomPeople
+                    people={data.students.filter((s) => !s.group_id)}
+                    role="student"
+                    userId={user.id}
+                  />
+                )}
+                <div className="df-group-grid">
+                  {data.groups.map((group) => {
+                    const members = data.students.filter(
+                      (s) => s.group_id === group.id,
+                    );
+                    return (
+                      <article
+                        className="df-group-card"
+                        key={group.id}
+                        aria-label={`${group.name} group`}
+                      >
+                        <div className="df-group-card-header">
+                          <div className="df-group-card-heading">
+                            <h3>{group.name}</h3>
+                            <small className="df-muted">
+                              {members.length}{" "}
+                              {members.length === 1 ? "student" : "students"}
+                            </small>
+                          </div>
+                          {members.some((s) => s.id === user.id) && (
+                            <span className="df-classmate-you">Your group</span>
+                          )}
+                        </div>
+                        {members.length ? (
+                          <ClassroomPeople
+                            people={members}
+                            role="student"
+                            userId={user.id}
+                          />
+                        ) : (
+                          <p className="df-muted">No students yet.</p>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <ClassroomPeople
+                people={data.students}
+                role="student"
+                userId={user.id}
+              />
+            )}
           </section>
           <section className="df-classroom-section">
             <ClassroomSectionHeader title="Projects" />
@@ -206,7 +208,22 @@ export function StudentClassroomDetail({
               </thead>
               <tbody>
                 {shown.map((p) => (
-                  <tr key={p.vm_id}>
+                  <tr
+                    key={p.vm_id}
+                    className="df-clickable-row"
+                    tabIndex={0}
+                    aria-label={`Open ${p.name || "Untitled project"}`}
+                    onClick={() => openProject(p)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.target === e.currentTarget &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        e.preventDefault();
+                        openProject(p);
+                      }
+                    }}
+                  >
                     <td>
                       <strong>{p.name || "Untitled project"}</strong>
                     </td>
@@ -222,22 +239,28 @@ export function StudentClassroomDetail({
                         </span>
                       )}
                     </td>
-                    <td>
-                      {p.owner_id === user.id || p.can_collaborate ? (
-                        <Link
-                          className="df-button secondary small"
-                          href={`/${p.vm_id}${p.conversation_id ? `/${p.conversation_id}` : ""}`}
-                        >
-                          Open project
-                        </Link>
-                      ) : (
-                        <button
-                          className="df-button secondary small"
-                          onClick={() => setPreview(p)}
-                        >
-                          View project
-                        </button>
-                      )}
+                    <td
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <div className="df-classroom-project-row-actions">
+                        {p.owner_id === user.id && (
+                          <StudentProjectActions
+                            projectId={p.vm_id}
+                            name={p.name || "Untitled project"}
+                            description={p.description || ""}
+                            classId={classId}
+                            withinTable
+                            canMakeGroup={
+                              !!data.myGroups?.length &&
+                              !data.myGroups.some(
+                                (g) => g.id === p.classroom_group_id,
+                              )
+                            }
+                            onChanged={refresh}
+                          />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

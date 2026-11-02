@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 const permitted = (alias: string, role: "teacher" | "student") =>
-  `(${alias}.created_by=$1 or exists(select 1 from school_admins a where a.profile_id=$1 and a.school_id=${alias}.school_id) ${role === "teacher" ? `or exists(select 1 from classes manage_class join profiles owner on owner.id=manage_class.teacher_id where manage_class.id=${alias}.classroom_id and (manage_class.teacher_id=$1 or exists(select 1 from school_admins a where a.profile_id=$1 and a.school_id=owner.school_id)))` : ""})`;
+  `(${alias}.created_by=$1 or exists(select 1 from school_admins a where a.profile_id=$1 and a.school_id=${alias}.school_id) ${role === "teacher" ? `or exists(select 1 from classes manage_class join profiles owner on owner.id=manage_class.teacher_id where manage_class.id=${alias}.classroom_id and (manage_class.teacher_id=$1 or exists(select 1 from school_admins a where a.profile_id=$1 and a.school_id=manage_class.school_id)))` : ""})`;
 export async function listInvitations(
   db: Pool,
   actorId: string,

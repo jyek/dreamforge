@@ -22,16 +22,18 @@ export function ClassroomPeople({
       {people.map((p) => (
         <div className="df-class-person" key={p.id}>
           <ClassroomAvatar identity={p.id} role={role} />
-          <strong>{p.display_name}</strong>
-          {p.id === userId ? (
-            <span className="df-classmate-you">You</span>
-          ) : (
-            role === "teacher" && (
-              <small className="df-muted">
-                {p.is_owner ? "Lead teacher" : "Co-teacher"}
-              </small>
-            )
-          )}
+          <div className="df-class-person-info">
+            <strong>{p.display_name}</strong>
+            {p.id === userId ? (
+              <span className="df-classmate-you">You</span>
+            ) : (
+              role === "teacher" && (
+                <small className="df-muted">
+                  {p.is_owner ? "Lead teacher" : "Co-teacher"}
+                </small>
+              )
+            )}
+          </div>
         </div>
       ))}
     </div>

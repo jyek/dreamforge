@@ -41,7 +41,7 @@ export function TeacherClassroomDetail({
     <PlatformDashboardLayout
       teacher
       schoolMode={schoolMode}
-      schoolName={schoolName}
+      schoolName={data?.classroom?.school_name ?? schoolName}
       name={teacherName}
       section={schoolMode ? "classes" : "classrooms"}
       onSectionChange={(s) =>

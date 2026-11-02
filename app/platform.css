@@ -3405,6 +3405,8 @@
 .df-class-person .df-classroom-avatar, .df-group-avatar-button .df-classroom-avatar { width:44px; height:44px; }
 .df-class-person, .df-group-avatar-student { width:112px; }
 .df-class-person { gap:6px; }
+.df-class-person-info { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.df-class-person-info > strong, .df-class-person-info > small { margin:0; line-height:1.3; }
 .df-group-avatar-button { gap:6px; padding:6px; }
 
 .df-people-search-results { border:1px solid var(--df-divider); border-radius:12px; overflow:hidden; max-height:240px; overflow-y:auto; }
@@ -3432,7 +3434,7 @@
 .df-group-menu-button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #81758f; box-shadow: none; cursor: pointer; }
 .df-group-menu-button:hover { background: #f3effb; color: #6b3ff7; }
 .df-group-menu-button:focus-visible { outline: 2px solid #6b3ff7; outline-offset: 2px; }
-.df-status-toast { position: fixed; top: 24px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); padding: 14px 18px; border: 1px solid #e0dfea; border-radius: 12px; background: white; color: #24183b; box-shadow: 0 8px 28px #21163d26; font-size: 14px; }
+.df-status-toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); padding: 14px 18px; border: 1px solid #e0dfea; border-radius: 12px; background: white; color: #24183b; box-shadow: 0 8px 28px #21163d26; font-size: 14px; }
 .df-status-toast > svg { color: #6b3ff7; flex-shrink: 0; }
 .df-status-toast > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #81758f; box-shadow: none; cursor: pointer; }
 .df-status-toast > button:hover { background: #f3effb; }
@@ -3511,3 +3513,8 @@
 .df-approval-history th:nth-child(5) { width:20%; }
 .df-approval-history th:nth-child(6) { width:18%; }
 .df-approval-history .df-guidance-content, .df-approval-history .df-guidance-tip { min-width:0; max-width:none; white-space:normal; }
+
+.df-classroom-project-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.df-student-classroom-groups { display: grid; gap: 20px; }
+.df-student-classroom-groups .df-group-card-heading h3 { margin: 0; font-size: 18px; line-height: 1.3; }
+.df-student-classroom-groups .df-group-card .df-class-people { margin-top: 16px; }

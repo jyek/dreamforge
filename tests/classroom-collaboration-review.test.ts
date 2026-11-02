@@ -109,6 +109,41 @@ async function fixture() {
     access,
   };
 }
+test("students see classroom groups and rosters but cannot move themselves or classmates", async () => {
+  const f = await fixture();
+  const data = (await classroomData(f.classId, f.profile(f.owner), db))!;
+  assert.deepEqual(
+    new Set(data.groups.map((g) => g.name)),
+    new Set(["Foxes", "Owls"]),
+  );
+  assert.equal(data.students.find((s) => s.id === f.owner)?.group_id, f.group);
+  assert.equal(data.students.find((s) => s.id === f.peer)?.group_id, f.group);
+  assert.equal(data.students.find((s) => s.id === f.other)?.group_id, null);
+  assert.deepEqual(
+    data.myGroups.map((g) => g.id),
+    [f.group],
+  );
+  for (const studentId of [f.owner, f.peer]) {
+    await assert.rejects(() =>
+      changeClassroomGroups(db, f.classId, f.owner, {
+        action: "assign",
+        studentId,
+        groupId: f.secondGroup,
+      }),
+    );
+  }
+  await assert.rejects(() =>
+    shareGroupProject(db, f.classId, f.owner, f.project, f.secondGroup),
+  );
+  const after = (await classroomData(f.classId, f.profile(f.owner), db))!;
+  assert.equal(after.students.find((s) => s.id === f.owner)?.group_id, f.group);
+  assert.equal(after.students.find((s) => s.id === f.peer)?.group_id, f.group);
+  await db.query(
+    "delete from class_members where class_id=$1 and child_id=$2",
+    [f.classId, f.owner],
+  );
+  assert.equal(await classroomData(f.classId, f.profile(f.owner), db), null);
+});
 test("current group members get workspace links and shared project cards; stale membership does not grant access", async () => {
   const f = await fixture();
   const peerProject = (await classroomData(

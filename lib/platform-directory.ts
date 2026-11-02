@@ -5,7 +5,7 @@ type Db = {
 export async function platformDirectory(db: Db) {
   const people = (
     await db.query(
-      `select p.id,p.display_name as name,p.username,p.role,p.school_id,s.name as school,
+      `select p.id,p.display_name as name,p.username,p.role,p.school_id,case when p.role='teacher' then (select string_agg(sch.name,', ' order by sch.name) from school_teachers st join schools sch on sch.id=st.school_id where st.teacher_id=p.id) else s.name end as school,
     exists(select 1 from school_admins a where a.profile_id=p.id) as school_admin,
     coalesce((select string_agg(c.name,', ' order by c.name) from classes c where c.teacher_id=p.id or exists(select 1 from class_teachers t where t.class_id=c.id and t.teacher_id=p.id) or exists(select 1 from class_members m where m.class_id=c.id and m.child_id=p.id)),'') as classrooms
     from profiles p left join schools s on s.id=p.school_id order by p.display_name`,
@@ -14,10 +14,10 @@ export async function platformDirectory(db: Db) {
   ).rows;
   const classrooms = (
     await db.query(
-      `select c.id,c.name,p.school_id,s.name as school,
+      `select c.id,c.name,c.school_id,s.name as school,
     (select string_agg(t.display_name,', ' order by t.display_name) from profiles t where t.id=c.teacher_id or exists(select 1 from class_teachers ct where ct.class_id=c.id and ct.teacher_id=t.id)) as teachers,
     coalesce((select string_agg(t.display_name,', ' order by t.display_name) from class_members m join profiles t on t.id=m.child_id where m.class_id=c.id),'') as students
-    from classes c join profiles p on p.id=c.teacher_id left join schools s on s.id=p.school_id order by c.name`,
+    from classes c join profiles p on p.id=c.teacher_id left join schools s on s.id=c.school_id order by c.name`,
       [],
     )
   ).rows;

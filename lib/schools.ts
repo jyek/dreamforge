@@ -4,7 +4,7 @@ type Db = {
     params: unknown[],
   ) => Promise<{ rows: any[]; rowCount: number | null }>;
 };
-/** The school an account belongs to, or null for an independent account. */
+/** The default school for an account. Teachers may also have other memberships. */
 export async function schoolOf(db: Db, profileId: string) {
   const { rows } = await db.query(
     "select school_id from profiles where id=$1",
@@ -20,8 +20,7 @@ export async function administeredSchool(db: Db, profileId: string) {
   );
   return (rows[0]?.school_id as string | undefined) ?? null;
 }
-/** Accounts may only be linked when both are in the same school, or both are
- * independent. This is the rule for joining a class and for co-teaching. */
+/** Student enrollment remains scoped to one school (or independent accounts). */
 export const sameSchool = (a: string | null, b: string | null) =>
   (a ?? null) === (b ?? null);
 export const SCHOOL_MISMATCH_MESSAGE =

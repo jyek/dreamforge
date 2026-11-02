@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import type { CSSProperties } from "react";
 import { EllipsisVertical } from "lucide-react";
 import {
   Dialog,
@@ -11,23 +13,59 @@ import { ProjectRename } from "./assistant-ui/project-rename";
 import { ProjectClassroomSharing } from "./project-classroom-sharing";
 type Classroom = { id: string; name: string; attached: boolean };
 type Group = { id: string; name: string; class_id: string };
+function menuPosition(el: HTMLDetailsElement): CSSProperties {
+  const rect = el.querySelector("summary")!.getBoundingClientRect();
+  return {
+    right: Math.max(8, window.innerWidth - rect.right),
+    ...(window.innerHeight - rect.bottom < 220
+      ? { bottom: window.innerHeight - rect.top + 6, top: "auto" }
+      : { top: rect.bottom + 6, bottom: "auto" }),
+  };
+}
 export function StudentProjectActions({
   projectId,
   name,
   description,
   canMakeGroup = false,
+  classId,
+  withinTable = false,
   onChanged,
 }: {
   projectId: string;
   name: string;
   description?: string;
   canMakeGroup?: boolean;
+  classId?: string;
+  withinTable?: boolean;
   onChanged?: () => Promise<void>;
 }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [position, setPosition] = useState<CSSProperties>({});
+  useEffect(() => {
+    if (withinTable) setMounted(true);
+  }, [withinTable]);
+  useEffect(() => {
+    if (!withinTable) return;
+    const reposition = () => {
+      if (menuRef.current?.open) setPosition(menuPosition(menuRef.current));
+    };
+    window.addEventListener("resize", reposition);
+    document.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      document.removeEventListener("scroll", reposition, true);
+    };
+  }, [withinTable]);
   useEffect(() => {
     function dismiss(event: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node))
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        !contentRef.current?.contains(event.target as Node)
+      )
         menuRef.current.open = false;
     }
     function escape(event: KeyboardEvent) {
@@ -67,8 +105,10 @@ export function StudentProjectActions({
       setLoading(false);
     }
   }
-  const choices = groups.filter((g) =>
-    classes.some((c) => c.id === g.class_id && c.attached),
+  const choices = groups.filter(
+    (g) =>
+      (!classId || g.class_id === classId) &&
+      classes.some((c) => c.id === g.class_id && c.attached),
   );
   async function share() {
     const group = choices.find((g) => g.id === groupId);
@@ -91,39 +131,66 @@ export function StudentProjectActions({
       setBusy(false);
     }
   }
+  const menu = (
+    <div
+      ref={contentRef}
+      className="df-student-project-menu"
+      style={
+        withinTable && mounted
+          ? {
+              ...position,
+              position: "fixed",
+              display: expanded ? "grid" : "none",
+              zIndex: 40,
+            }
+          : undefined
+      }
+    >
+      <ProjectRename
+        projectId={projectId}
+        name={name}
+        description={description}
+        editDescription
+        onRenamed={() => void onChanged?.()}
+        className="df-button secondary small"
+      >
+        Rename project
+      </ProjectRename>
+      <ProjectClassroomSharing
+        projectId={projectId}
+        name={name}
+        student
+        onChanged={onChanged}
+      />
+      {canMakeGroup && (
+        <button
+          type="button"
+          className="df-button secondary small"
+          onClick={() => void load()}
+        >
+          Make group project
+        </button>
+      )}
+    </div>
+  );
   return (
     <>
-      <details ref={menuRef} className="df-student-project-actions">
+      <details
+        ref={menuRef}
+        className="df-student-project-actions"
+        onToggle={(e) => {
+          if (!withinTable) return;
+          const el = e.currentTarget;
+          setExpanded(el.open);
+          if (el.open && withinTable) {
+            setPosition(menuPosition(el));
+          }
+        }}
+      >
         <summary aria-label={`Actions for ${name}`}>
           <EllipsisVertical size={20} />
         </summary>
-        <div className="df-student-project-menu">
-          <ProjectRename
-            projectId={projectId}
-            name={name}
-            description={description}
-            editDescription
-            onRenamed={() => void onChanged?.()}
-            className="df-button secondary small"
-          >
-            Rename project
-          </ProjectRename>
-          <ProjectClassroomSharing
-            projectId={projectId}
-            name={name}
-            student
-            onChanged={onChanged}
-          />
-          {canMakeGroup && (
-            <button
-              type="button"
-              className="df-button secondary small"
-              onClick={() => void load()}
-            >
-              Make group project
-            </button>
-          )}
-        </div>
+        {withinTable && mounted ? createPortal(menu, document.body) : menu}
       </details>
       <Dialog
         open={open}

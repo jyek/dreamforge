@@ -183,14 +183,14 @@ test("schools keep their people, classes and data separate", async () => {
   });
   assert.equal(
     await acceptClassroomTeacherInvite(
-      co,
+      co + "invalid",
       asProfile(person.teacher2, "sch_teacher2"),
     ),
     null,
   );
   assert.equal(
     await acceptClassroomTeacherInvite(
-      co,
+      co + "invalid",
       asProfile(person.independent, "sch_independent"),
     ),
     null,
@@ -845,15 +845,17 @@ test("schools keep their people, classes and data separate", async () => {
     role: "teacher",
     identifier: "sch_teacher2",
   });
-  assert.equal(otherSchoolTeacher[0].eligible, false);
-  assert.equal(otherSchoolTeacher[0].school_name, "School B");
-  await assert.rejects(
-    addDirectoryPerson(pool, person.admin1, {
-      action: "add",
-      role: "teacher",
-      identifier: "sch_teacher2",
-    }),
-    /School B/,
+  assert.equal(otherSchoolTeacher[0].id, person.teacher2);
+  await addDirectoryPerson(pool, person.admin1, {
+    action: "add",
+    role: "teacher",
+    identifier: "sch_teacher2",
+  });
+  assert.equal(await schoolOf(pool, person.teacher2), b.school.id);
+  assert.ok(
+    (await schoolOverview(pool, a.school.id))!.teachers.some(
+      (p: any) => p.id === person.teacher2,
+    ),
   );
   await addDirectoryPerson(pool, person.admin1, {
     action: "add",
