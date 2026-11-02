@@ -29,7 +29,7 @@ export async function GET(
     return Response.json({ error: "Project not found" }, { status: 404 });
   try {
     const view = await groupView(database(), projectId, user.id);
-    if (!view) return Response.json({ visible: false });
+    if (!view?.isGroupProject) return Response.json({ visible: false });
     // Students only get the dialog when they own the project or are in its group.
     const visible =
       user.role === "teacher" ? view.canManage || view.canPass : view.isMember;
@@ -73,8 +73,15 @@ export async function POST(
   else return Response.json({ error: "Invalid request." }, { status: 400 });
   if (!result.ok)
     return Response.json({ error: result.error }, { status: result.status });
+  const view = await groupView(db, projectId, user.id);
   return Response.json({
     ok: true,
-    ...(await groupView(db, projectId, user.id)),
+    ...view,
+    visible:
+      !!view?.isGroupProject &&
+      (user.role === "teacher"
+        ? view.canManage || view.canPass
+        : view.isMember),
+    you: user.id,
   });
 }

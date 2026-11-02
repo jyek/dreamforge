@@ -61,7 +61,7 @@ export function ShareDialog({ project }: { project: ProjectItem }) {
       }}
     >
       <DialogTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background">
+        <button className="box-border inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-medium text-background">
           <Share2Icon className="size-3" />
           Share
         </button>
