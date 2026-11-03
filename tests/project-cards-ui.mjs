@@ -554,6 +554,12 @@ try {
   });
   await page.goto(origin+'/approval-conversation');
   await page.getByLabel('Prompt actions',{exact:true}).waitFor();
+  const blockedMessage = page.locator('.aui-user-message-root').first();
+  const bubbleBox = await blockedMessage.locator('.aui-user-message-content').boundingBox();
+  const copyBox = await blockedMessage.getByRole('button',{name:'Copy',exact:true}).boundingBox();
+  const promptMenuBox = await blockedMessage.getByRole('button',{name:'Prompt actions',exact:true}).boundingBox();
+  assert(copyBox.y >= bubbleBox.y + bubbleBox.height, 'Blocked prompt actions should sit below the prompt');
+  assert(Math.abs(copyBox.y + copyBox.height/2 - promptMenuBox.y - promptMenuBox.height/2) < 1, 'Copy and prompt actions should share a horizontal row');
   assert.equal(resumedCalls,0);
   assert.equal(await page.getByRole('button',{name:'Approve',exact:true}).count(),0);
   await page.getByLabel('Prompt actions',{exact:true}).click();

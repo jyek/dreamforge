@@ -398,8 +398,15 @@ const UserMessage: FC = () => {
           )}
           <MessagePrimitive.Parts />
         </div>
-        <div className="aui-user-action-bar-wrapper absolute top-1/2 left-0 -translate-x-full -translate-y-1/2 pr-2">
-          <UserActionBar />
+        <div
+          className={cn(
+            "aui-user-action-bar-wrapper",
+            blocked || held
+              ? "mt-1 pl-1"
+              : "absolute top-1/2 left-0 -translate-x-full -translate-y-1/2 pr-2",
+          )}
+        >
+          <UserActionBar below={blocked || held} />
         </div>
       </div>
 
@@ -408,7 +415,7 @@ const UserMessage: FC = () => {
   );
 };
 
-const UserActionBar: FC = () => {
+const UserActionBar: FC<{ below?: boolean }> = ({ below = false }) => {
   const { prompts, request } = useContext(PromptApprovalsContext);
   const reviewId = useAuiState(
     ({ message }) =>
@@ -419,10 +426,16 @@ const UserActionBar: FC = () => {
     <ActionBarPrimitive.Root
       hideWhenRunning
       autohide={approval ? "never" : "not-last"}
-      className="aui-user-action-bar-root flex flex-col items-end"
+      className={cn(
+        "aui-user-action-bar-root flex",
+        below ? "flex-row items-center gap-1" : "flex-col items-end",
+      )}
     >
       <ActionBarPrimitive.Copy asChild>
-        <TooltipIconButton tooltip="Copy" className="aui-user-action-copy p-4">
+        <TooltipIconButton
+          tooltip="Copy"
+          className={cn("aui-user-action-copy", !below && "p-4")}
+        >
           <AssistantIf condition={({ message }) => message.isCopied}>
             <CheckIcon />
           </AssistantIf>
