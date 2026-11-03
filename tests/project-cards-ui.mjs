@@ -559,6 +559,7 @@ try {
   const copyBox = await blockedMessage.getByRole('button',{name:'Copy',exact:true}).boundingBox();
   const promptMenuBox = await blockedMessage.getByRole('button',{name:'Prompt actions',exact:true}).boundingBox();
   assert(copyBox.y >= bubbleBox.y + bubbleBox.height, 'Blocked prompt actions should sit below the prompt');
+  assert(bubbleBox.x + bubbleBox.width - promptMenuBox.x - promptMenuBox.width <= 8, 'Blocked prompt actions should align with the right edge of the prompt');
   assert(Math.abs(copyBox.y + copyBox.height/2 - promptMenuBox.y - promptMenuBox.height/2) < 1, 'Copy and prompt actions should share a horizontal row');
   assert.equal(resumedCalls,0);
   assert.equal(await page.getByRole('button',{name:'Approve',exact:true}).count(),0);

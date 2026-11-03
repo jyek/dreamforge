@@ -402,7 +402,7 @@ const UserMessage: FC = () => {
           className={cn(
             "aui-user-action-bar-wrapper",
             blocked || held
-              ? "mt-1 pl-1"
+              ? "mt-1 pr-1"
               : "absolute top-1/2 left-0 -translate-x-full -translate-y-1/2 pr-2",
           )}
         >
@@ -428,7 +428,7 @@ const UserActionBar: FC<{ below?: boolean }> = ({ below = false }) => {
       autohide={approval ? "never" : "not-last"}
       className={cn(
         "aui-user-action-bar-root flex",
-        below ? "flex-row items-center gap-1" : "flex-col items-end",
+        below ? "flex-row items-center justify-end gap-1" : "flex-col items-end",
       )}
     >
       <ActionBarPrimitive.Copy asChild>

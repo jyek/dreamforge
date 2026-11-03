@@ -38,7 +38,7 @@ export function PromptApprovalMenu({
         </ActionBarMorePrimitive.Trigger>
         <ActionBarMorePrimitive.Content
           side="bottom"
-          align="start"
+        align="end"
           className="z-50 min-w-44 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
         >
           <ActionBarMorePrimitive.Item
