@@ -388,7 +388,7 @@ const UserMessage: FC = () => {
                   ? "Approved by teacher"
                   : approval?.status === "denied"
                     ? "Declined by teacher · not sent to the AI"
-                    : "Blocked · not sent to the AI"}
+                    : "Blocked"}
             </span>
           )}
           {held && (
