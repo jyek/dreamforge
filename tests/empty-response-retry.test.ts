@@ -125,6 +125,9 @@ test("truncated arguments recover once without leaking or replaying the discarde
   assert(!out.some((p) => p.id === "discarded"));
   assert.equal(out.filter((p) => p.type === "tool-call").length, 1);
   assert.match(m.prompts[1][0].content, /NOT executed/);
+  // The retry asks for one small file, not several files in a single command.
+  assert.match(m.prompts[1][0].content, /several files in one command/);
+  assert.match(m.prompts[1][0].content, /ONE small complete file/);
   assert.equal(out.at(-1).usage.outputTokens.total, 4);
 });
 

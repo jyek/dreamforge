@@ -31,7 +31,7 @@ export function withEmptyResponseRetry(
                   role: "system" as const,
                   content:
                     recovery === "truncated-tool"
-                      ? "The previous tool arguments were cut off at the response limit and were NOT executed. Do not repeat the large file. Write a small complete scaffold (under 100 lines), then implement the remaining features through small files or patches in later steps. Do not claim the unfinished write succeeded."
+                      ? "The previous tool arguments were cut off at the response limit and were NOT executed. Do not repeat the large file or write several files in one command. Write ONE small complete file (under 100 lines) with the file-writing tool, then implement the remaining features through small separate files or patches in later steps. Do not claim the unfinished write succeeded."
                       : "Your previous response was empty. Continue using the existing tool results, or clearly explain why you cannot finish. Return visible text or a tool call.",
                 },
                 ...options.prompt,
