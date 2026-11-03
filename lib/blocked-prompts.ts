@@ -28,25 +28,31 @@ export function flagTeacherApprovedPrompt(message: UIMessage): UIMessage {
     },
   };
 }
-export function flagHeldPrompt(message: UIMessage): UIMessage {
+export function flagHeldPrompt(
+  message: UIMessage,
+  reviewId?: string,
+): UIMessage {
   return {
     ...message,
     parts: message.parts.filter((part) => part.type === "text"),
     metadata: {
       ...(message.metadata as object | undefined),
-      custom: { held: true },
+      custom: { held: true, ...(reviewId ? { reviewId } : {}) },
     },
   };
 }
 /** Keeps what the student typed so they can see it, flagged as blocked. Images
  * from a blocked request are dropped rather than stored. */
-export function flagBlockedPrompt(message: UIMessage): UIMessage {
+export function flagBlockedPrompt(
+  message: UIMessage,
+  reviewId?: string,
+): UIMessage {
   return {
     ...message,
     parts: message.parts.filter((part) => part.type === "text"),
     metadata: {
       ...(message.metadata as object | undefined),
-      custom: { blocked: true },
+      custom: { blocked: true, ...(reviewId ? { reviewId } : {}) },
     },
   };
 }
@@ -58,4 +64,48 @@ export function maskBlockedPrompts<T extends Message>(messages: T[]): T[] {
       ? { ...message, parts: [{ type: "text", text: BLOCKED_PLACEHOLDER }] }
       : message,
   );
+}
+/** Match older saved blocked messages to their author's server-side reviews.
+ * Duplicate prompt text is paired in conversation order, never by a global lookup. */
+export function attachPromptReviewIds(
+  messages: UIMessage[],
+  reviews: { id: string; content: string }[],
+): UIMessage[] {
+  const used = new Set(
+    messages
+      .map(
+        (m) =>
+          (m.metadata as { custom?: { reviewId?: string } } | undefined)?.custom
+            ?.reviewId,
+      )
+      .filter(Boolean),
+  );
+  let changed = false;
+  const result = messages.map((message) => {
+    if (
+      (!isBlockedPrompt(message) && !isHeldPrompt(message)) ||
+      (message.metadata as { custom?: { reviewId?: string } } | undefined)
+        ?.custom?.reviewId
+    )
+      return message;
+    const text = message.parts
+      .filter((p) => p.type === "text")
+      .map((p) => p.text)
+      .join("");
+    const review = reviews.find((r) => !used.has(r.id) && r.content === text);
+    if (!review) return message;
+    used.add(review.id);
+    changed = true;
+    return {
+      ...message,
+      metadata: {
+        ...(message.metadata as object | undefined),
+        custom: {
+          ...(message.metadata as { custom?: object } | undefined)?.custom,
+          reviewId: review.id,
+        },
+      },
+    };
+  });
+  return changed ? result : messages;
 }

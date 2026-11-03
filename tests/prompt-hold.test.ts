@@ -9,6 +9,8 @@ import {
   approvalClassroomsSQL,
   decideHold,
   recordModerationOutcome,
+  requestPromptApproval,
+  studentPromptApprovals,
 } from "../lib/prompt-hold";
 const pool = new pg.Pool({
   connectionString: process.env.TEST_DATABASE_URL,
@@ -37,7 +39,7 @@ async function review(child: string, project: string, content: string) {
   );
   return rows[0].id as string;
 }
-test("questionable prompts are held, approved once, and blocked ones never can be", async () => {
+test("classified rejections require a student request before either classroom teacher can approve once", async () => {
   for (const [id, name, role] of [
     [ids.teacher, "hold_teacher", "teacher"],
     [ids.other, "hold_other", "teacher"],
@@ -73,6 +75,17 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       [project, owner],
     );
 
+  const request = (
+    id: string,
+    childId = ids.child,
+    projectId = "vm-holdchild",
+  ) =>
+    requestPromptApproval(pool, {
+      id,
+      childId,
+      projectId,
+      conversationId: ids.conversation,
+    });
   // A questionable prompt from a student with a teacher is held.
   const held = await review(
     ids.child,
@@ -89,7 +102,38 @@ test("questionable prompts are held, approved once, and blocked ones never can b
       [held],
     )
   ).rows[0];
-  assert.deepEqual(row, { decision: "review", hold_status: "pending" });
+  assert.deepEqual(row, { decision: "review", hold_status: null });
+  assert.equal(
+    await decideHold(pool, {
+      id: held,
+      teacherId: ids.teacher,
+      classId: ids.classId,
+      action: "approve",
+    }),
+    false,
+  );
+  assert.equal(await request(held, ids.loner), null);
+  assert.equal(
+    await requestPromptApproval(pool, {
+      id: held,
+      childId: ids.child,
+      projectId: "vm-wrong",
+      conversationId: ids.conversation,
+    }),
+    null,
+  );
+  const requested = await Promise.all([request(held), request(held)]);
+  assert.equal(requested.filter(Boolean).length, 1);
+  assert.equal(
+    (
+      await studentPromptApprovals(pool, {
+        childId: ids.child,
+        projectId: "vm-holdchild",
+        conversationId: ids.conversation,
+      })
+    ).find((p) => p.id === held).status,
+    "pending",
+  );
 
   // The student cannot continue until it is approved.
   const content = "make a scary ghost game";
@@ -153,6 +197,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     "classroom approval only",
   );
   await recordModerationOutcome(pool, restricted, ids.child, outcome("review"));
+  await request(restricted);
   assert.equal(
     await decideHold(pool, {
       id: restricted,
@@ -212,11 +257,11 @@ test("questionable prompts are held, approved once, and blocked ones never can b
   assert.deepEqual(attempts.sort(), [false, true]);
   assert.equal(await consumeApprovedHold(pool, same), false);
 
-  // A blocked prompt is recorded for the teacher but can never be approved.
+  // A blocked classification also stays blocked until the student requests it.
   const blocked = await review(ids.child, "vm-holdchild", "something blocked");
   assert.equal(
     await recordModerationOutcome(pool, blocked, ids.child, outcome("block")),
-    false,
+    true,
   );
   row = (
     await pool.query(
@@ -235,6 +280,33 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     false,
   );
 
+  assert.ok(await request(blocked));
+  assert.equal(
+    await decideHold(pool, {
+      id: blocked,
+      teacherId: ids.other,
+      classId: ids.classId,
+      action: "approve",
+    }),
+    true,
+  );
+  assert.equal(await request(blocked), null);
+  assert.equal(
+    await consumeApprovedHold(pool, { ...same, content: "something blocked" }),
+    true,
+  );
+  assert.equal(
+    await consumeApprovedHold(pool, { ...same, content: "something blocked" }),
+    false,
+  );
+  assert.equal(
+    (
+      await pool.query("select decision from prompt_reviews where id=$1", [
+        blocked,
+      ])
+    ).rows[0].decision,
+    "block",
+  );
   // Even a legacy teacher link does not enable approval without classroom membership.
   await pool.query(
     "insert into teacher_builders(teacher_id,child_id) values($1,$2) on conflict do nothing",
@@ -249,7 +321,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
   );
   assert.equal(
     await recordModerationOutcome(pool, solo, ids.loner, outcome("review")),
-    false,
+    true,
   );
   row = (
     await pool.query(
@@ -268,6 +340,29 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     false,
   );
 
+  assert.equal(await request(solo, ids.loner, "vm-holdloner"), null);
+  assert.equal(
+    (
+      await studentPromptApprovals(pool, {
+        childId: ids.loner,
+        projectId: "vm-holdloner",
+        conversationId: ids.conversation,
+      })
+    )[0].can_request,
+    false,
+  );
+  const unclassified = await review(
+    ids.child,
+    "vm-holdchild",
+    "provider unavailable",
+  );
+  await recordModerationOutcome(
+    pool,
+    unclassified,
+    ids.child,
+    new SafetyError("unavailable", "unavailable"),
+  );
+  assert.equal(await request(unclassified), null);
   // A denied prompt can be declined and is never released.
   const declined = await review(
     ids.child,
@@ -275,6 +370,7 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     "another ghost idea",
   );
   await recordModerationOutcome(pool, declined, ids.child, outcome("review"));
+  await request(declined);
   assert.equal(
     await decideHold(pool, {
       id: declined,
@@ -288,12 +384,14 @@ test("questionable prompts are held, approved once, and blocked ones never can b
     await consumeApprovedHold(pool, { ...same, content: "another ghost idea" }),
     false,
   );
+  assert.equal(await request(declined), null);
   const departed = await review(
     ids.child,
     "vm-holdchild",
     "a request before leaving class",
   );
   await recordModerationOutcome(pool, departed, ids.child, outcome("review"));
+  await request(departed);
   assert.equal(
     await decideHold(pool, {
       id: departed,

@@ -43,6 +43,10 @@ await writeFile(dir + "/app/toolbar.css", `@import "${root}/app/globals.css";
 @source "${root}/components/assistant-ui";`);
 await mkdir(dir + "/app/toolbar", { recursive: true });
 await writeFile(dir + "/app/toolbar/page.tsx", `import '../toolbar.css';import {GroupDialog} from '${root}/components/assistant-ui/group-dialog';import {ShareDialog} from '${root}/components/assistant-ui/share-dialog';export default function Page(){const project={id:'vm-toolbar',name:'Toolbar test',previewUrl:'',productionUrl:'',prodVmId:null,conversations:[],releases:[],liveReleaseId:null};return <div style={{display:'flex',alignItems:'center',gap:8,padding:20}}><GroupDialog project={project}/><ShareDialog project={project}/></div>}`);
+await mkdir(dir + "/app/request-approval", { recursive: true });
+await writeFile(dir + "/app/request-approval/page.tsx", `"use client";import '../toolbar.css';import {useState} from 'react';import {PromptApprovalMenu} from '${root}/components/assistant-ui/prompt-approval-menu';import {PromptApprovalActions} from '${root}/components/prompt-approval-actions';export default function Page(){const [status,setStatus]=useState(null),[eligible,setEligible]=useState(true);const id='00000000-0000-4000-8000-000000000999';return <main style={{padding:40}}><h1>Student prompt</h1><p>Blocked · not sent to the AI</p><PromptApprovalMenu approval={{id,status,eligible,used:false,can_request:eligible&&!status}} onRequest={async(id)=>{const r=await fetch('/api/platform/held-prompts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,action:'request',projectId:'vm-fixture',conversationId:'00000000-0000-4000-8000-000000000998'})});if(!r.ok)throw Error('Request failed');setStatus('pending');}}/><h2>Teacher queue</h2>{status==='pending'?<PromptApprovalActions reviewId={id} classrooms={[{id:'00000000-0000-4000-8000-000000000111',name:'Classroom'}]} onDecided={()=>setStatus('approved')}/>:<p>No requests waiting.</p>}<label><input type='checkbox' checked={eligible} onChange={e=>setEligible(e.target.checked)}/>Student belongs to a classroom</label></main>}`);
+await mkdir(dir + "/app/approval-conversation", { recursive: true });
+await writeFile(dir + "/app/approval-conversation/page.tsx", `"use client";import '../toolbar.css';import {useEffect,useState} from 'react';import {Assistant} from '${root}/app/assistant';import {ModelSettingsProvider} from '${root}/components/assistant-ui/model-settings';import {TooltipProvider} from '${root}/components/ui/tooltip';import {PromptApprovalActions} from '${root}/components/prompt-approval-actions';const reviewId='00000000-0000-4000-8000-000000000999',conversationId='00000000-0000-4000-8000-000000000998';const initial=[{id:'blocked-user',role:'user',parts:[{type:'text',text:'A fictional spooky maze'}],metadata:{custom:{blocked:true,reviewId}}},{id:'blocked-answer',role:'assistant',parts:[{type:'text',text:'This request was blocked.'}]}];export default function Page(){const [pending,setPending]=useState(false);useEffect(()=>{let stopped=false;const timer=setInterval(()=>{fetch('/api/platform/held-prompts?projectId=vm-fixture&conversationId='+conversationId).then(r=>r.json()).then(d=>{if(!stopped)setPending(d.holds.some(h=>h.status==='pending'));});},500);return()=>{stopped=true;clearInterval(timer);};},[]);return <TooltipProvider><ModelSettingsProvider><section style={{padding:20}}><h1>Teacher queue</h1>{pending?<PromptApprovalActions reviewId={reviewId} classrooms={[{id:'00000000-0000-4000-8000-000000000111',name:'Classroom'}]} onDecided={()=>setPending(false)}/>:<p>No requests waiting.</p>}</section><section style={{display:'flex',height:650,padding:20}}><Assistant selectedProjectId='vm-fixture' selectedConversationId={conversationId} initialMessages={initial}/></section></ModelSettingsProvider></TooltipProvider>}`);
 const classId = "00000000-0000-4000-8000-000000000111",
   groupId = "00000000-0000-4000-8000-000000000112";
 const fixture = {
@@ -278,6 +282,13 @@ try {
     you: "student",ownerId: "student",ownerName: "Student",editorId: "student",
     members: [],candidates: [],canManage: false,canPass: true,
   }}));
+  let approvalRequested=false,teacherDecided=false;
+  await context.route('**/api/platform/held-prompts',async route=>{
+    const body=route.request().postDataJSON();assert.equal(body.action,'request');assert.equal(body.id,'00000000-0000-4000-8000-000000000999');approvalRequested=true;return route.fulfill({json:{ok:true,status:'pending'}});
+  });
+  await context.route('**/api/platform/reviews',async route=>{
+    assert.equal(approvalRequested,true);const body=route.request().postDataJSON();assert.equal(body.action,'approve');teacherDecided=true;return route.fulfill({json:{ok:true}});
+  });
   await page.goto(origin);
   await page.getByRole("heading", { name: "Projects", exact: true }).waitFor();
   assert.equal(
@@ -507,6 +518,53 @@ try {
   await groupButton.click();
   await page.getByRole('dialog').getByText('Editing',{exact:true}).waitFor();
   console.log('PASS individual projects hide Group; marked group projects show Group with the same 28px height as Share');
+  await page.goto(origin+'/request-approval');
+  assert.equal(await page.getByRole('button',{name:'Approve',exact:true}).count(),0);
+  await page.getByLabel('Prompt actions',{exact:true}).click();
+  await page.getByRole('menuitem',{name:'Ask for approval',exact:true}).click();
+  await page.getByRole('button',{name:'Approve',exact:true}).waitFor();
+  assert.equal(approvalRequested,true);
+  await page.getByLabel('Prompt actions',{exact:true}).click();
+  assert.equal(await page.getByRole('menuitem',{name:'Awaiting teacher approval',exact:true}).isDisabled(),true);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Approve',exact:true}).click();
+  assert.equal(teacherDecided,true);
+  await page.getByLabel('Prompt actions',{exact:true}).click();
+  assert.equal(await page.getByRole('menuitem',{name:'Approved by teacher',exact:true}).isDisabled(),true);
+  await page.keyboard.press('Escape');
+  await page.getByRole('checkbox',{name:'Student belongs to a classroom'}).uncheck();
+  assert.equal(await page.getByLabel('Prompt actions',{exact:true}).count(),0);
+  console.log('PASS approval menu requires a student request, prevents repeats, enables the teacher decision and hides outside a classroom');
+  let requestedStatus=null, resumedCalls=0;
+  const requestId='00000000-0000-4000-8000-000000000999';
+  await context.route('**/api/models',route=>route.fulfill({json:{models:[]}}));
+  await context.route('**/api/projects/vm-fixture/execution*',route=>route.fulfill({json:{revision:0,activeRun:null}}));
+  await context.route('**/api/platform/held-prompts*',async route=>{
+    if(route.request().method()==='POST'){
+      const body=route.request().postDataJSON();assert.equal(body.action,'request');assert.equal(body.id,requestId);requestedStatus='pending';return route.fulfill({json:{ok:true,status:'pending'}});
+    }
+    const row={id:requestId,content:'A fictional spooky maze',status:requestedStatus,can_request:!requestedStatus,eligible:true,used:false};
+    return route.fulfill({json:{prompts:[row],holds:requestedStatus?[row]:[]}});
+  });
+  await context.route('**/api/platform/reviews',async route=>{assert.equal(requestedStatus,'pending');requestedStatus='approved';return route.fulfill({json:{ok:true}});});
+  await context.route('**/api/chat',async route=>{
+    const body=route.request().postDataJSON();assert.equal(requestedStatus,'approved');assert.equal(body.projectId,'vm-fixture');assert.equal(body.messages.at(-1).parts[0].text,'A fictional spooky maze');resumedCalls++;
+    const events=[{type:'start',messageId:'continued-answer'},{type:'text-start',id:'text'},{type:'text-delta',id:'text',delta:'APPROVAL_FIXTURE_CONTINUED'},{type:'text-end',id:'text'},{type:'finish',finishReason:'stop'}];
+    return route.fulfill({contentType:'text/event-stream',headers:{'x-vercel-ai-ui-message-stream':'v1'},body:events.map(e=>'data: '+JSON.stringify(e)+'\n\n').join('')+'data: [DONE]\n\n'});
+  });
+  await page.goto(origin+'/approval-conversation');
+  await page.getByLabel('Prompt actions',{exact:true}).waitFor();
+  assert.equal(resumedCalls,0);
+  assert.equal(await page.getByRole('button',{name:'Approve',exact:true}).count(),0);
+  await page.getByLabel('Prompt actions',{exact:true}).click();
+  await page.getByRole('menuitem',{name:'Ask for approval',exact:true}).click();
+  await page.getByRole('button',{name:'Approve',exact:true}).waitFor();
+  assert.equal(resumedCalls,0);
+  await page.getByRole('button',{name:'Approve',exact:true}).click();
+  await page.getByText('APPROVAL_FIXTURE_CONTINUED',{exact:true}).waitFor({timeout:20000});
+  await page.waitForTimeout(5500);
+  assert.equal(resumedCalls,1,'Repeated approval polling must not send the prompt twice');
+  console.log('PASS the real Assistant resumes the exact requested prompt once after a teacher decision');
   console.log(
     "PASS student classroom uses a visible row menu, shows read-only groups and shares only the owner's project with their assigned group",
   );

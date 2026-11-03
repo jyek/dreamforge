@@ -30,12 +30,10 @@ import {
 import { resolveModel } from "@/lib/allowed-models";
 import {
   flagBlockedPrompt,
-  flagHeldPrompt,
   flagTeacherApprovedPrompt,
   maskBlockedPrompts,
 } from "@/lib/blocked-prompts";
 import {
-  HELD_PROMPT_MESSAGE,
   consumeApprovedHold,
   recordModerationOutcome,
 } from "@/lib/prompt-hold";
@@ -60,7 +58,7 @@ const SAFE_SYSTEM =
 function automaticResponse(
   id: string,
   text: string,
-  safety?: { messageId: string; status: "blocked" | "held" },
+  safety?: { messageId: string; status: "blocked" | "held"; reviewId?: string },
 ) {
   const chunks = [
     { type: "start", messageId: id },
@@ -179,7 +177,8 @@ async function handleChat(req: Request) {
         );
         const prompt = redactIdentity(raw);
         let reviewId: string | undefined;
-        if (learner) {
+        async function ensureReview() {
+          if (!learner || reviewId) return;
           const decision = localSafetyDecision(raw);
           const inserted = await database().query(
             "insert into prompt_reviews(vm_id,child_id,conversation_id,content,decision,categories,severity) values($1,$2,$3,$4,$5,$6,$7) returning id",
@@ -220,51 +219,48 @@ async function handleChat(req: Request) {
             throw new SafetyError(
               "Please remove private personal details from your prompt and try again.",
             );
-          // A teacher can approve a held (questionable) prompt. That approval
-          // covers exactly this text, once, and never overrides the local rules.
+          // A classroom teacher can release this exact rejected input once.
+          // Output and tool safety checks still apply to the resulting run.
           const approved =
             learner &&
-            localSafetyDecision(raw).decision === "allow" &&
             (await consumeApprovedHold(database(), {
               childId: learner.id,
               projectId: payload.projectId,
               conversationId: payload.conversationId,
               content: prompt,
             }));
-          if (!approved)
+          if (!approved) {
+            await ensureReview();
             await screenContent(
               payload.projectId,
               null,
               "input",
               moderationConversation(messages),
             );
-          else
+          } else
             messages[messages.length - 1] = flagTeacherApprovedPrompt(
               messages.at(-1)!,
             );
         } catch (error) {
           if (!(error instanceof SafetyError)) throw error;
-          const held =
-            !!learner &&
-            !!reviewId &&
-            (await recordModerationOutcome(
+          await ensureReview();
+          if (learner && reviewId)
+            await recordModerationOutcome(
               database(),
               reviewId,
               learner.id,
               error,
-            ));
-          const answer = held ? HELD_PROMPT_MESSAGE : error.message;
+            );
+          const answer = error.message;
           const id = crypto.randomUUID();
           await saveConversationMessages(
             payload.projectId,
             payload.conversationId,
             [
               ...messages.slice(0, -1),
-              held
-                ? flagHeldPrompt(messages.at(-1)!)
-                : error.preservesPrompt
-                  ? messages.at(-1)!
-                  : flagBlockedPrompt(messages.at(-1)!),
+              error.preservesPrompt
+                ? messages.at(-1)!
+                : flagBlockedPrompt(messages.at(-1)!, reviewId),
               {
                 id,
                 role: "assistant",
@@ -275,13 +271,14 @@ async function handleChat(req: Request) {
           return automaticResponse(
             id,
             answer,
-            held || !error.preservesPrompt
+            !error.preservesPrompt
               ? {
                   messageId:
                     typeof payload.messages.at(-1)?.id === "string"
                       ? payload.messages.at(-1).id
                       : messages.at(-1)!.id,
-                  status: held ? "held" : "blocked",
+                  status: "blocked",
+                  reviewId,
                 }
               : undefined,
           );

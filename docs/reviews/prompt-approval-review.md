@@ -1,5 +1,9 @@
 # Prompt approval verification — 1 November 2026
 
+**Historical report:** the workflow below was replaced on 3 November 2026 by
+[student-requested prompt approval](../e2e/prompting.md#student-requested-prompt-approval).
+New flagged or blocked inputs no longer enter the approval queue automatically.
+
 A student prompt is held automatically only when moderation returns `review` and the student currently belongs to a classroom. A `block` decision is never teacher-overridable. Classless students receive the ordinary safety response, with no approval hold. Existing direct teacher links do not qualify as classroom membership.
 
 Either the current lead teacher or a current co-teacher of a classroom containing the student can approve or decline. School Admin access alone does not grant approval rights. Decisions are atomic; only the first decision wins. Approval is bound to the exact student, project, conversation and prompt, and consumed once. Current classroom/teacher membership is checked again before consumption.

@@ -1,7 +1,11 @@
 "use client";
 
-import { flagBlockedPrompt, flagHeldPrompt } from "@/lib/blocked-prompts";
-import { HELD_PROMPT_MESSAGE } from "@/lib/prompt-hold";
+import {
+  flagBlockedPrompt,
+  flagHeldPrompt,
+  attachPromptReviewIds,
+} from "@/lib/blocked-prompts";
+import { HELD_PROMPT_MESSAGE } from "@/lib/prompt-approval-messages";
 import { AssistantRuntimeProvider, useAuiState } from "@assistant-ui/react";
 import {
   useAISDKRuntime,
@@ -11,6 +15,7 @@ import { useChat } from "@ai-sdk/react";
 import { type UIMessage } from "ai";
 import { useModelSettings } from "@/components/assistant-ui/model-settings";
 import { ProjectRevisionSync } from "@/components/project-revision-sync";
+import type { PromptApproval } from "@/components/assistant-ui/prompt-approval-menu";
 import { Thread } from "@/components/assistant-ui/thread";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -67,6 +72,7 @@ export const Assistant = ({
   const [promptSafety, setPromptSafety] = useState<{
     messageId: string;
     status: "blocked" | "held";
+    reviewId?: string;
   } | null>(null);
   const { choice: modelChoice, ready: modelReady } = useModelSettings();
   const modelChoiceRef = useRef(modelChoice);
@@ -368,12 +374,21 @@ export const Assistant = ({
       if (part.type === "data-progress")
         setProgress((part.data as { message: string }).message);
       if (part.type === "data-prompt-safety") {
-        const value = part.data as { messageId?: unknown; status?: unknown };
+        const value = part.data as {
+          messageId?: unknown;
+          status?: unknown;
+          reviewId?: unknown;
+        };
         if (
           typeof value.messageId === "string" &&
           (value.status === "blocked" || value.status === "held")
         )
-          setPromptSafety({ messageId: value.messageId, status: value.status });
+          setPromptSafety({
+            messageId: value.messageId,
+            status: value.status,
+            reviewId:
+              typeof value.reviewId === "string" ? value.reviewId : undefined,
+          });
       }
     },
     onError: () => setProgress(""),
@@ -439,21 +454,88 @@ export const Assistant = ({
       messages.map((message) =>
         message.id === promptSafety.messageId && message.role === "user"
           ? promptSafety.status === "held"
-            ? flagHeldPrompt(message)
-            : flagBlockedPrompt(message)
+            ? flagHeldPrompt(message, promptSafety.reviewId)
+            : flagBlockedPrompt(message, promptSafety.reviewId)
           : message,
       ),
     );
   }, [promptSafety, chat.setMessages]);
 
-  // A questionable prompt waits for the teacher. While the chat is open, pick up
-  // their decision: approved prompts continue on their own.
+  const [promptApprovals, setPromptApprovals] = useState<PromptApproval[]>([]);
+  const handledDecisions = useRef(new Set<string>());
   const lastMessage = chat.messages.at(-1);
-  const waitingForTeacher =
-    lastMessage?.role === "assistant" &&
-    lastMessage.parts.some(
-      (part) => part.type === "text" && part.text === HELD_PROMPT_MESSAGE,
+  useEffect(() => {
+    setPromptApprovals([]);
+  }, [selectedProjectId, selectedConversationId]);
+  useEffect(() => {
+    if (
+      readOnly ||
+      !selectedConversationId ||
+      !selectedProjectId ||
+      chat.status === "submitted" ||
+      chat.status === "streaming"
+    )
+      return;
+    let stopped = false;
+    void fetch(
+      `/api/platform/held-prompts?conversationId=${selectedConversationId}&projectId=${selectedProjectId}`,
+      { cache: "no-store" },
+    )
+      .then(async (r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!stopped && Array.isArray(d?.prompts)) {
+          setPromptApprovals(d.prompts);
+          chat.setMessages((current) =>
+            attachPromptReviewIds(current, d.prompts),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      stopped = true;
+    };
+  }, [
+    readOnly,
+    selectedProjectId,
+    selectedConversationId,
+    chat.status,
+    lastMessage?.id,
+    promptSafety,
+    chat.setMessages,
+  ]);
+  const requestApproval = async (id: string) => {
+    if (readOnly || !selectedProjectId || !selectedConversationId)
+      throw Error("Open your own project to request approval.");
+    const r = await fetch("/api/platform/held-prompts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "request",
+        id,
+        projectId: selectedProjectId,
+        conversationId: selectedConversationId,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw Error(d.error || "Could not request approval.");
+    setPromptApprovals((current) =>
+      current.map((p) =>
+        p.id === id ? { ...p, status: "pending", can_request: false } : p,
+      ),
     );
+  };
+  // Only a student-requested queue item (or a legacy pending hold) is polled.
+  const waitingForTeacher =
+    promptApprovals.some(
+      (p) =>
+        p.eligible &&
+        !p.used &&
+        (p.status === "pending" || p.status === "approved"),
+    ) ||
+    (lastMessage?.role === "assistant" &&
+      lastMessage.parts.some(
+        (part) => part.type === "text" && part.text === HELD_PROMPT_MESSAGE,
+      ));
   useEffect(() => {
     if (
       readOnly ||
@@ -471,15 +553,26 @@ export const Assistant = ({
         { cache: "no-store" },
       ).catch(() => null);
       if (!r?.ok || stopped) return;
-      const { holds } = (await r.json()) as {
+      const { holds, prompts } = (await r.json()) as {
         holds: { id: string; status: string; content: string }[];
+        prompts: PromptApproval[];
       };
-      const approved = holds.find((hold) => hold.status === "approved");
-      const denied = holds.find((hold) => hold.status === "denied");
+      if (stopped) return;
+      if (Array.isArray(prompts)) setPromptApprovals(prompts);
+      const approved = holds.find(
+        (hold) =>
+          hold.status === "approved" && !handledDecisions.current.has(hold.id),
+      );
+      const denied = holds.find(
+        (hold) =>
+          hold.status === "denied" && !handledDecisions.current.has(hold.id),
+      );
       if (approved && !stopped) {
+        handledDecisions.current.add(approved.id);
         stopped = true;
         void chat.sendMessage({ text: approved.content });
       } else if (denied && !stopped) {
+        handledDecisions.current.add(denied.id);
         stopped = true;
         await fetch("/api/platform/held-prompts", {
           method: "POST",
@@ -552,7 +645,13 @@ export const Assistant = ({
         projectId={localProjectId}
         onRevision={rememberRevision}
       />
-      <Thread welcome={welcome} progress={progress} readOnly={readOnly} />
+      <Thread
+        welcome={welcome}
+        progress={progress}
+        readOnly={readOnly}
+        promptApprovals={promptApprovals}
+        onRequestApproval={requestApproval}
+      />
     </AssistantRuntimeProvider>
   );
 };

@@ -1,4 +1,8 @@
 import { InlineSpinner } from "@/components/dream-loading";
+import {
+  PromptApprovalMenu,
+  type PromptApproval,
+} from "./prompt-approval-menu";
 import { ModelUsed } from "./model-settings";
 import { ModelSelector } from "./model-selector";
 import {
@@ -64,55 +68,74 @@ import {
 } from "react";
 
 const ReadOnlyContext = createContext(false);
+const PromptApprovalsContext = createContext<{
+  prompts: PromptApproval[];
+  request?: (id: string) => Promise<void>;
+}>({ prompts: [] });
 
 export const Thread: FC<{
   welcome?: ReactNode;
   progress?: string;
   readOnly?: boolean;
-}> = ({ welcome, readOnly = false, progress }) => {
+  promptApprovals?: PromptApproval[];
+  onRequestApproval?: (id: string) => Promise<void>;
+}> = ({
+  welcome,
+  readOnly = false,
+  progress,
+  promptApprovals = [],
+  onRequestApproval,
+}) => {
   return (
     <ReadOnlyContext.Provider value={readOnly}>
-      <ThreadPrimitive.Root
-        className="aui-root aui-thread-root @container flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
-        style={{
-          ["--thread-max-width" as string]: "44rem",
+      <PromptApprovalsContext.Provider
+        value={{
+          prompts: promptApprovals,
+          request: readOnly ? undefined : onRequestApproval,
         }}
       >
-        <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll px-4 pt-4">
-          {welcome && (
-            <AssistantIf condition={({ thread }) => thread.isEmpty}>
-              {welcome}
-            </AssistantIf>
-          )}
-
-          <ThreadPrimitive.Messages
-            components={{
-              UserMessage,
-              AssistantMessage,
-            }}
-          />
-
-          <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) shrink-0 flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
-            <AssistantIf condition={({ thread }) => thread.isRunning}>
-              <div
-                role="status"
-                className="flex items-center gap-2 px-3 text-xs text-slate-400"
-              >
-                <InlineSpinner className="size-3.5" />
-                {progress || "Thinking about your request…"}
-              </div>
-            </AssistantIf>
-            <ThreadScrollToBottom />
-            {readOnly ? (
-              <p className="text-center text-sm text-muted-foreground">
-                Viewing project history · This workspace is read-only.
-              </p>
-            ) : (
-              <Composer />
+        <ThreadPrimitive.Root
+          className="aui-root aui-thread-root @container flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+          style={{
+            ["--thread-max-width" as string]: "44rem",
+          }}
+        >
+          <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-scroll px-4 pt-4">
+            {welcome && (
+              <AssistantIf condition={({ thread }) => thread.isEmpty}>
+                {welcome}
+              </AssistantIf>
             )}
-          </ThreadPrimitive.ViewportFooter>
-        </ThreadPrimitive.Viewport>
-      </ThreadPrimitive.Root>
+
+            <ThreadPrimitive.Messages
+              components={{
+                UserMessage,
+                AssistantMessage,
+              }}
+            />
+
+            <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-auto flex w-full max-w-(--thread-max-width) shrink-0 flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
+              <AssistantIf condition={({ thread }) => thread.isRunning}>
+                <div
+                  role="status"
+                  className="flex items-center gap-2 px-3 text-xs text-slate-400"
+                >
+                  <InlineSpinner className="size-3.5" />
+                  {progress || "Thinking about your request…"}
+                </div>
+              </AssistantIf>
+              <ThreadScrollToBottom />
+              {readOnly ? (
+                <p className="text-center text-sm text-muted-foreground">
+                  Viewing project history · This workspace is read-only.
+                </p>
+              ) : (
+                <Composer />
+              )}
+            </ThreadPrimitive.ViewportFooter>
+          </ThreadPrimitive.Viewport>
+        </ThreadPrimitive.Root>
+      </PromptApprovalsContext.Provider>
     </ReadOnlyContext.Provider>
   );
 };
@@ -324,6 +347,12 @@ const AssistantActionBar: FC = () => {
 };
 
 const UserMessage: FC = () => {
+  const { prompts } = useContext(PromptApprovalsContext);
+  const reviewId = useAuiState(
+    ({ message }) =>
+      (message.metadata?.custom as { reviewId?: string } | undefined)?.reviewId,
+  );
+  const approval = prompts.find((p) => p.id === reviewId);
   const blocked = useAuiState(
     ({ message }) =>
       (message.metadata?.custom as { blocked?: boolean } | undefined)
@@ -353,7 +382,13 @@ const UserMessage: FC = () => {
         >
           {blocked && (
             <span className="mb-1 block text-xs font-semibold tracking-wide text-red-700 uppercase">
-              Blocked · not sent to the AI
+              {approval?.status === "pending"
+                ? "Awaiting teacher approval · not sent to the AI"
+                : approval?.status === "approved"
+                  ? "Approved by teacher"
+                  : approval?.status === "denied"
+                    ? "Declined by teacher · not sent to the AI"
+                    : "Blocked · not sent to the AI"}
             </span>
           )}
           {held && (
@@ -374,10 +409,16 @@ const UserMessage: FC = () => {
 };
 
 const UserActionBar: FC = () => {
+  const { prompts, request } = useContext(PromptApprovalsContext);
+  const reviewId = useAuiState(
+    ({ message }) =>
+      (message.metadata?.custom as { reviewId?: string } | undefined)?.reviewId,
+  );
+  const approval = prompts.find((p) => p.id === reviewId);
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
-      autohide="not-last"
+      autohide={approval ? "never" : "not-last"}
       className="aui-user-action-bar-root flex flex-col items-end"
     >
       <ActionBarPrimitive.Copy asChild>
@@ -390,6 +431,9 @@ const UserActionBar: FC = () => {
           </AssistantIf>
         </TooltipIconButton>
       </ActionBarPrimitive.Copy>
+      {approval && request && (
+        <PromptApprovalMenu approval={approval} onRequest={request} />
+      )}
     </ActionBarPrimitive.Root>
   );
 };

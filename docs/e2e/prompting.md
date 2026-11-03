@@ -94,6 +94,30 @@ Browser checks run before cleanup; afterward the report's project URL is histori
 
 The full browser journey passed against `https://dreamforge2.vercel.app` after correcting the stale local target. Project creation took 7.630s. The read-only reply delivered first feedback in 665ms and first model text in 2.608s; completion took 2.922s. The code edit delivered first feedback in 548ms, first model text in 100.307s and completion in 101.248s. The long gap between feedback and text remains a latency concern despite functional success. Browser counter interactions, refresh feedback, a typed follow-up and saved history all passed. The disposable project and one snapshot were removed. This verifies the deployed prompting journey, not the new local checkout changes or a real Stripe sandbox payment.
 
+## Student-requested prompt approval
+
+A classified input rejection (`review` or `block`) is saved and shown as blocked;
+it does not automatically become an approval request. An enrolled student can
+open that prompt's three-dot menu and choose **Ask for approval**. Only their own
+prompt in a project they can still access can be requested. Students without a
+classroom and unclassified service/configuration failures have no request action.
+
+The request changes the existing review to `pending`; repeat requests cannot
+create another queue item or reset a teacher decision. Either the current lead
+teacher or a co-teacher may approve or decline. Approval releases exactly that
+text in that project and conversation once. The open student conversation picks
+up the decision and continues automatically; output and tool moderation remain
+in force. The original safety classification stays in the teacher's record.
+
+`tests/prompt-hold.test.ts` covers the request, classroom authorization,
+classification preservation, concurrent requests, single-use approvals, refusal
+of unclassified failures, declines, and leaving the classroom. The real-component
+browser suite (`npm run test:classroom-ui`) covers the student menu and teacher
+actions, including the absent action outside a classroom. Live verification must
+use only a fresh marked E2E project and disposable teachers/classroom, with all
+of them removed in `finally`. Do not force a live moderation outcome or use a
+real student's project to create a queue item.
+
 ## Moderation availability diagnostics
 
 A failed live run records `moderationDiagnostics` before deleting its disposable project. These contain only fixed event/phase/reason codes, HTTP status and classification decision; prompts, provider response bodies and cookies are excluded. `diagnosticsUnavailable` indicates collection failed; cleanup and the original failure still apply. An input `http_error` with status 429 identifies an upstream moderation rate limit rather than a safety classification or classroom approval failure.

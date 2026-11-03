@@ -377,7 +377,7 @@ export function TeacherPromptGuidance({
                                 ? "Blocked"
                                 : "Flagged"}
                       {p.hold_status === "pending" &&
-                        p.decision === "review" && (
+                        (p.decision === "review" || p.decision === "block") && (
                           <PromptApprovalActions
                             reviewId={p.id}
                             classrooms={p.approval_classrooms || []}

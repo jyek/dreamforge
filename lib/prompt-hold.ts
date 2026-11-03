@@ -1,4 +1,5 @@
 import type { SafetyError } from "./kids-safety";
+import { projectGroupMemberSQL } from "./project-group";
 import { classroomTeacherSQL } from "./classroom-permissions";
 type Db = {
   query: (
@@ -23,12 +24,9 @@ async function failSafe<T>(fallback: T, run: () => Promise<T>): Promise<T> {
     return fallback;
   }
 }
-export const HELD_PROMPT_MESSAGE =
-  "Your teacher needs to check this request first. It will continue on its own once they approve it.";
-/** Records the real moderation outcome on the teacher's record. A "review"
- * outcome is also held for the teacher, but only when the student has a teacher
- * who can act on it. Blocked prompts are never held, so they can't be approved.
- * Returns true when the prompt is waiting for approval. */
+export { HELD_PROMPT_MESSAGE } from "./prompt-approval-messages";
+/** Record a classified rejection without creating an approval request. The
+ * student must explicitly ask before a teacher can approve it. */
 export async function recordModerationOutcome(
   db: Db,
   reviewId: string,
@@ -37,23 +35,19 @@ export async function recordModerationOutcome(
 ) {
   const outcome = error.outcome;
   if (!outcome || outcome.decision === "allow") return false;
-  const hold = outcome.decision === "review";
   return failSafe(false, async () => {
     const { rows } = await db.query(
-      `update prompt_reviews r set decision=$3,categories=$4,severity=$5,
-       hold_status=case when $6::boolean and exists(select 1 from class_members m join classes c on c.id=m.class_id where m.child_id=r.child_id) then 'pending' else r.hold_status end
-     where r.id=$1 and r.child_id=$2 and r.reviewed_at is null
-     returning (r.hold_status='pending') as held`,
+      `update prompt_reviews r set decision=$3,categories=$4,severity=$5
+       where r.id=$1 and r.child_id=$2 and r.reviewed_at is null returning r.id`,
       [
         reviewId,
         childId,
         outcome.decision,
         outcome.categories,
         outcome.severity,
-        hold,
       ],
     );
-    return rows[0]?.held === true;
+    return !!rows[0];
   });
 }
 /** If the teacher approved exactly this prompt, use that approval once. */
@@ -70,7 +64,7 @@ export async function consumeApprovedHold(
     const { rowCount } = await db.query(
       `update prompt_reviews set held_prompt_used_at=now()
      where id=(select id from prompt_reviews where child_id=$1 and conversation_id=$2
-       and content=$3 and vm_id=$4 and decision='review' and hold_status='approved' and held_prompt_used_at is null
+       and content=$3 and vm_id=$4 and decision in ('review','block') and hold_status='approved' and held_prompt_used_at is null
        and exists(select 1 from class_members current_class where current_class.child_id=prompt_reviews.child_id and ${classroomTeacherSQL("current_class.class_id", "prompt_reviews.reviewed_by")})
        order by created_at desc limit 1)
      and held_prompt_used_at is null`,
@@ -90,9 +84,8 @@ export const approvalClassroomsSQL = (
     where m.child_id=${childId} and ${classroomTeacherSQL("c.id", actorId)}
     and (${classId}::uuid is null or c.id=${classId}::uuid)),'[]'::json)`;
 
-/** A teacher approves or declines a held prompt. Only a prompt held for review
- * can be approved (blocked prompts never are), and only by a teacher of that
- * student. Returns false when nothing was changed. */
+/** Only a current classroom teacher can decide an explicitly requested prompt.
+ * A classification stays recorded even when the teacher grants an exception. */
 export async function decideHold(
   db: Db,
   input: {
@@ -104,7 +97,7 @@ export async function decideHold(
 ) {
   const { rowCount } = await db.query(
     `update prompt_reviews r set hold_status=$3,reviewed_by=$1,reviewed_at=now()
-     where r.id=$2 and r.hold_status='pending' and r.decision='review' and exists(select 1 from class_members m where m.child_id=r.child_id and m.class_id=$4::uuid and ${classroomTeacherSQL("m.class_id")})`,
+     where r.id=$2 and r.hold_status='pending' and r.decision in ('review','block') and exists(select 1 from class_members m where m.child_id=r.child_id and m.class_id=$4::uuid and ${classroomTeacherSQL("m.class_id")})`,
     [
       input.teacherId,
       input.id,
@@ -113,4 +106,46 @@ export async function decideHold(
     ],
   );
   return !!rowCount;
+}
+
+/** The author must still have a classroom teacher and access to this project. */
+const requestAccessSQL = (
+  review = "r",
+) => `exists(select 1 from class_members m join classes c on c.id=m.class_id join profiles t on t.id=c.teacher_id where m.child_id=${review}.child_id and t.role='teacher')
+ and exists(select 1 from projects p where p.vm_id=${review}.vm_id and not p.is_example and (p.owner_id=${review}.child_id or ${projectGroupMemberSQL("p", `${review}.child_id`)}))`;
+export async function studentPromptApprovals(
+  db: Db,
+  input: { childId: string; projectId: string; conversationId: string },
+) {
+  return (
+    await db.query(
+      `select r.id,r.content,r.hold_status as status,r.reviewed_at,r.held_prompt_used_at is not null as used,
+   (${requestAccessSQL()}) as eligible,
+   exists(select 1 from class_members current_class where current_class.child_id=r.child_id and ${classroomTeacherSQL("current_class.class_id", "r.reviewed_by")}) as can_resume,
+   (r.hold_status is null and r.held_prompt_used_at is null and ${requestAccessSQL()}) as can_request
+   from prompt_reviews r where r.child_id=$1 and r.vm_id=$2 and r.conversation_id=$3 and r.decision in ('review','block')
+   order by r.created_at,r.id`,
+      [input.childId, input.projectId, input.conversationId],
+    )
+  ).rows;
+}
+/** Atomic, idempotent request: never creates a second queue item or resets a decision. */
+export async function requestPromptApproval(
+  db: Db,
+  input: {
+    id: string;
+    childId: string;
+    projectId: string;
+    conversationId: string;
+  },
+) {
+  const { rows } = await db.query(
+    `update prompt_reviews r set hold_status='pending',reviewed_by=null,reviewed_at=null
+   where r.id=$1 and r.child_id=$2 and r.vm_id=$3 and r.conversation_id=$4
+    and r.decision in ('review','block') and r.hold_status is null and r.held_prompt_used_at is null
+    and exists(select 1 from profiles author where author.id=$2 and author.role='child') and ${requestAccessSQL()}
+   returning r.id,r.hold_status as status`,
+    [input.id, input.childId, input.projectId, input.conversationId],
+  );
+  return rows[0] || null;
 }
