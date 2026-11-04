@@ -8,7 +8,33 @@ import {
   isHeldPrompt,
   isBlockedPrompt,
   maskBlockedPrompts,
+  attachPromptReviewIds,
 } from "../lib/blocked-prompts";
+test("blocked prompt review ids survive history and repeated text is paired separately", () => {
+  const first = flagBlockedPrompt({
+    id: "one",
+    role: "user",
+    parts: [{ type: "text", text: "same idea" }],
+  } as UIMessage);
+  const second = { ...first, id: "two" };
+  const linked = attachPromptReviewIds(
+    [first, second],
+    [
+      { id: "review-one", content: "same idea" },
+      { id: "review-two", content: "same idea" },
+    ],
+  );
+  assert.equal((linked[0].metadata as any)?.custom.reviewId, "review-one");
+  assert.equal((linked[1].metadata as any)?.custom.reviewId, "review-two");
+  assert.equal(
+    attachPromptReviewIds(linked, [{ id: "review-one", content: "same idea" }]),
+    linked,
+  );
+  assert.equal(
+    (flagBlockedPrompt(first, "review-new").metadata as any)?.custom.reviewId,
+    "review-new",
+  );
+});
 import { moderationConversation } from "../lib/moderation-decision";
 const typed = {
   id: "1",
